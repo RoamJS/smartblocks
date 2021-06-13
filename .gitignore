@@ -3,3 +3,6 @@ build
 dist
 out
 .env.local
+smartblocks.js
+smartBlocksCmd.js
+smartBlocksRB.js
