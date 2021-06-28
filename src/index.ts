@@ -36,7 +36,7 @@ runExtension("smartblocks", () => {
               title: "trigger",
               description:
                 "The key combination to used to pull up the smart blocks menu",
-              defaultValue: "ss",
+              defaultValue: "xx",
             },
           ],
         },
@@ -50,7 +50,7 @@ runExtension("smartblocks", () => {
     getSettingValueFromTree({
       tree,
       key: "trigger",
-      defaultValue: "ss",
+      defaultValue: "xx",
     })
       .replace(/"/g, "")
       .trim();

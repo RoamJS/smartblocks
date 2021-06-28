@@ -1,4 +1,4 @@
-import { Menu, MenuItem, Popover, Position, TextArea } from "@blueprintjs/core";
+import { Menu, MenuItem, Popover, Position } from "@blueprintjs/core";
 import React, {
   useCallback,
   useEffect,
