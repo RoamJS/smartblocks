@@ -3,13 +3,23 @@ import {
   runExtension,
   getTreeByPageName,
   getBlockUidsAndTextsReferencingPage,
-  getUids,
+  addStyle,
 } from "roam-client";
 import {
   createConfigObserver,
   getSettingValueFromTree,
 } from "roamjs-components";
 import { render } from "./SmartblocksMenu";
+import lego from './img/lego3blocks.png';
+
+addStyle(`.rm-page-ref--tag[data-tag="42SmartBlock"]:before, .rm-page-ref--tag[data-tag="SmartBlock"]:before {
+  display:inline-block;
+  height:14px;
+  width:24px;
+  content: "";
+  background:url(${lego}) no-repeat 0 0;
+  background-size: auto 14px;
+}`);
 
 const getLegacy42Setting = (name: string) => {
   const settings = Object.fromEntries(
@@ -68,7 +78,7 @@ runExtension("smartblocks", () => {
         textarea.selectionStart
       );
       if (triggerRegex.test(valueToCursor)) {
-        render({ textarea });
+        render({ textarea, triggerLength: triggerRegex.source.length - 1 });
       }
     }
   });

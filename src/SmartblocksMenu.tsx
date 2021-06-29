@@ -17,11 +17,16 @@ import {
   getUids,
   updateBlock,
 } from "roam-client";
+import { getCoords } from "./dom";
+import lego from "./img/lego3blocks.png";
+import { sbBomb } from "./smartblocks";
 
 type Props = {
   textarea: HTMLTextAreaElement;
+  triggerLength: number;
 };
 
+const HIDE_REGEX = /<%HIDE%>/;
 const getWorkflows = (tag: string) =>
   getBlockUidsAndTextsReferencingPage(tag).map(({ text, uid }) => ({
     uid,
@@ -31,16 +36,17 @@ const getWorkflows = (tag: string) =>
 const SmartblocksMenu = ({
   onClose,
   textarea,
+  triggerLength,
 }: { onClose: () => void } & Props) => {
   const blockUid = useMemo(() => getUids(textarea).blockUid, [textarea]);
   const menuRef = useRef<HTMLUListElement>(null);
   const [filter, setFilter] = useState("");
   const filterRegex = useMemo(() => new RegExp(`(${filter})`, "i"), [filter]);
   const initialWorkflows = useMemo(() => {
-    return [
-      ...getWorkflows("42SmartBlock"),
-      ...getWorkflows("SmartBlock"),
-    ].sort(({ name: a }, { name: b }) => a.localeCompare(b));
+    return [...getWorkflows("42SmartBlock"), ...getWorkflows("SmartBlock")]
+      .filter(({ name }) => !HIDE_REGEX.test(name))
+      .map(({ name, uid }) => ({ uid, name: name.replace(HIDE_REGEX, "") }))
+      .sort(({ name: a }, { name: b }) => a.localeCompare(b));
   }, []);
   const workflows = useMemo(() => {
     if (filter) {
@@ -52,20 +58,21 @@ const SmartblocksMenu = ({
   const [activeIndex, setActiveIndex] = useState(0);
   const onSelect = useCallback(
     (index) => {
-      const uid = menuRef.current.children[index].querySelector('.bp3-menu-item').getAttribute("data-uid");
-      const [firstChild, ...tree] = getTreeByBlockUid(uid).children;
-      const startingOrder = getOrderByBlockUid(blockUid);
-      const parentUid = getParentUidByBlockUid(blockUid);
-      updateBlock({ uid: blockUid, text: firstChild.text });
-      firstChild.children.forEach((node, order) =>
-        createBlock({ order, parentUid: blockUid, node })
-      );
-      tree.forEach((node, i) =>
-        createBlock({ parentUid, order: startingOrder + 1 + i, node })
-      );
+      const uid = menuRef.current.children[index]
+        .querySelector(".bp3-menu-item")
+        .getAttribute("data-uid");
+      const value = menuRef.current.getAttribute("data-filter");
+      sbBomb({
+        srcUid: uid,
+        target: {
+          uid: blockUid,
+          start: textarea.selectionStart - triggerLength - value.length,
+          end: textarea.selectionStart,
+        },
+      });
       onClose();
     },
-    [menuRef, blockUid, onClose]
+    [menuRef, blockUid, onClose, triggerLength, textarea]
   );
   const inputListener = useCallback(
     (e: InputEvent) => {
@@ -75,7 +82,7 @@ const SmartblocksMenu = ({
           if (!value) {
             onClose();
           } else {
-            setFilter(value.slice(-1));
+            setFilter(value.slice(0, -1));
           }
         }
       } else {
@@ -124,37 +131,43 @@ const SmartblocksMenu = ({
       target={<span />}
       position={Position.BOTTOM_RIGHT}
       content={
-        <Menu
-          ulRef={menuRef}
-          data-active-index={activeIndex}
-          data-filter={filter}
-        >
-          {workflows.map((wf, i) => {
-            const parts = filter
-              ? wf.name.split(new RegExp(`(${filter})`, "i"))
-              : [wf.name];
-            return (
-              <MenuItem
-                key={wf.uid}
-                data-uid={wf.uid}
-                text={
-                  <>
-                    {parts.map((part, i) =>
-                      filter && filterRegex.test(part) ? (
-                        <b key={i}>{part}</b>
-                      ) : (
-                        <span key={i}>{part}</span>
-                      )
-                    )}
-                  </>
-                }
-                active={i === activeIndex}
-                onMouseEnter={() => setActiveIndex(i)}
-                onClick={() => onSelect(i)}
-              />
-            );
-          })}
-        </Menu>
+        workflows.length ? (
+          <Menu
+            ulRef={menuRef}
+            data-active-index={activeIndex}
+            data-filter={filter}
+            style={{ width: 300 }}
+          >
+            {workflows.map((wf, i) => {
+              const parts = filter
+                ? wf.name.split(new RegExp(`(${filter})`, "i"))
+                : [wf.name];
+              return (
+                <MenuItem
+                  key={wf.uid}
+                  data-uid={wf.uid}
+                  text={
+                    <>
+                      <img src={lego} alt={""} width={15} />
+                      {parts.map((part, i) =>
+                        filter && filterRegex.test(part) ? (
+                          <b key={i}>{part}</b>
+                        ) : (
+                          <span key={i}>{part}</span>
+                        )
+                      )}
+                    </>
+                  }
+                  active={i === activeIndex}
+                  onMouseEnter={() => setActiveIndex(i)}
+                  onClick={() => onSelect(i)}
+                />
+              );
+            })}
+          </Menu>
+        ) : (
+          <span>No Workflows Found</span>
+        )
       }
     />
   );
@@ -162,6 +175,10 @@ const SmartblocksMenu = ({
 
 export const render = (props: Props) => {
   const parent = document.createElement("span");
+  const coords = getCoords(props.textarea);
+  parent.style.position = "absolute";
+  parent.style.left = `${coords.left}px`;
+  parent.style.top = `${coords.top}px`;
   props.textarea.parentElement.insertBefore(parent, props.textarea);
   ReactDOM.render(
     <SmartblocksMenu
