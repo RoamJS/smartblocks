@@ -51,13 +51,14 @@ const SmartblocksMenu = ({
       .sort(({ name: a }, { name: b }) => a.localeCompare(b))
       .concat(isCustomOnly ? [] : predefinedWorkflows);
   }, []);
-  const workflows = useMemo(() => {
-    if (filter) {
-      return initialWorkflows.filter(({ name }) => filterRegex.test(name));
-    } else {
-      return initialWorkflows;
-    }
-  }, [filter, initialWorkflows]);
+  const workflows = useMemo(
+    () =>
+      (filter
+        ? initialWorkflows.filter(({ name }) => filterRegex.test(name))
+        : initialWorkflows
+      ).slice(0, 10),
+    [filter, initialWorkflows]
+  );
   const [activeIndex, setActiveIndex] = useState(0);
   const onSelect = useCallback(
     (index) => {
@@ -104,7 +105,7 @@ const SmartblocksMenu = ({
           onClose();
           return;
         }
-      } else {
+      } else if (e.key !== "Shift") {
         onClose();
         return;
       }
