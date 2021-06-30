@@ -8,25 +8,23 @@ import React, {
 } from "react";
 import ReactDOM from "react-dom";
 import {
-  createBlock,
   createTagRegex,
   getBlockUidsAndTextsReferencingPage,
-  getOrderByBlockUid,
-  getParentUidByBlockUid,
-  getTreeByBlockUid,
   getUids,
-  updateBlock,
 } from "roam-client";
 import { getCoords } from "./dom";
 import lego from "./img/lego3blocks.png";
-import { sbBomb } from "./smartblocks";
+import gear from "./img/gear.png";
+import { predefinedWorkflows, PREDEFINED_REGEX, sbBomb } from "./smartblocks";
 
 type Props = {
   textarea: HTMLTextAreaElement;
   triggerLength: number;
+  isCustomOnly: boolean;
 };
 
 const HIDE_REGEX = /<%HIDE%>/;
+const VALID_FILTER = /^[\w\d\s_-]$/;
 const getWorkflows = (tag: string) =>
   getBlockUidsAndTextsReferencingPage(tag).map(({ text, uid }) => ({
     uid,
@@ -37,6 +35,7 @@ const SmartblocksMenu = ({
   onClose,
   textarea,
   triggerLength,
+  isCustomOnly,
 }: { onClose: () => void } & Props) => {
   const blockUid = useMemo(() => getUids(textarea).blockUid, [textarea]);
   const menuRef = useRef<HTMLUListElement>(null);
@@ -45,8 +44,12 @@ const SmartblocksMenu = ({
   const initialWorkflows = useMemo(() => {
     return [...getWorkflows("42SmartBlock"), ...getWorkflows("SmartBlock")]
       .filter(({ name }) => !HIDE_REGEX.test(name))
-      .map(({ name, uid }) => ({ uid, name: name.replace(HIDE_REGEX, "") }))
-      .sort(({ name: a }, { name: b }) => a.localeCompare(b));
+      .map(({ name, uid }) => ({
+        uid,
+        name: name.replace(HIDE_REGEX, ""),
+      }))
+      .sort(({ name: a }, { name: b }) => a.localeCompare(b))
+      .concat(isCustomOnly ? [] : predefinedWorkflows);
   }, []);
   const workflows = useMemo(() => {
     if (filter) {
@@ -58,40 +61,24 @@ const SmartblocksMenu = ({
   const [activeIndex, setActiveIndex] = useState(0);
   const onSelect = useCallback(
     (index) => {
-      const uid = menuRef.current.children[index]
+      const srcUid = menuRef.current.children[index]
         .querySelector(".bp3-menu-item")
         .getAttribute("data-uid");
-      const value = menuRef.current.getAttribute("data-filter");
-      sbBomb({
-        srcUid: uid,
-        target: {
-          uid: blockUid,
-          start: textarea.selectionStart - triggerLength - value.length,
-          end: textarea.selectionStart,
-        },
-      });
+      const start = textarea.selectionStart - triggerLength;
+      const end = textarea.selectionStart;
       onClose();
+      setTimeout(() => {
+        sbBomb({
+          srcUid,
+          target: {
+            uid: blockUid,
+            start,
+            end,
+          },
+        });
+      }, 1);
     },
     [menuRef, blockUid, onClose, triggerLength, textarea]
-  );
-  const inputListener = useCallback(
-    (e: InputEvent) => {
-      const value = menuRef.current.getAttribute("data-filter");
-      if (!e.data) {
-        if (e.inputType === "deleteContentBackward") {
-          if (!value) {
-            onClose();
-          } else {
-            setFilter(value.slice(0, -1));
-          }
-        }
-      } else {
-        setFilter(`${value}${e.data}`);
-      }
-      e.stopPropagation();
-      e.preventDefault();
-    },
-    [setFilter, menuRef]
   );
   const keydownListener = useCallback(
     (e: KeyboardEvent) => {
@@ -106,22 +93,32 @@ const SmartblocksMenu = ({
       } else if (e.key === "Enter") {
         const index = Number(menuRef.current.getAttribute("data-active-index"));
         onSelect(index);
+      } else if (VALID_FILTER.test(e.key)) {
+        const value = menuRef.current.getAttribute("data-filter");
+        setFilter(`${value}${e.key}`);
+      } else if (e.key === "Backspace") {
+        const value = menuRef.current.getAttribute("data-filter");
+        if (value) {
+          setFilter(value.slice(0, -1));
+        } else {
+          onClose();
+          return;
+        }
       } else {
+        onClose();
         return;
       }
       e.stopPropagation();
       e.preventDefault();
     },
-    [menuRef, setActiveIndex]
+    [menuRef, setActiveIndex, setFilter, onClose]
   );
   useEffect(() => {
-    textarea.addEventListener("input", inputListener);
     textarea.addEventListener("keydown", keydownListener);
     return () => {
-      textarea.removeEventListener("input", inputListener);
       textarea.removeEventListener("keydown", keydownListener);
     };
-  }, [inputListener, keydownListener]);
+  }, [keydownListener]);
   return (
     <Popover
       onClose={onClose}
@@ -131,14 +128,14 @@ const SmartblocksMenu = ({
       target={<span />}
       position={Position.BOTTOM_RIGHT}
       content={
-        workflows.length ? (
-          <Menu
-            ulRef={menuRef}
-            data-active-index={activeIndex}
-            data-filter={filter}
-            style={{ width: 300 }}
-          >
-            {workflows.map((wf, i) => {
+        <Menu
+          ulRef={menuRef}
+          data-active-index={activeIndex}
+          data-filter={filter}
+          style={{ width: 300 }}
+        >
+          {workflows.length ? (
+            workflows.map((wf, i) => {
               const parts = filter
                 ? wf.name.split(new RegExp(`(${filter})`, "i"))
                 : [wf.name];
@@ -148,7 +145,12 @@ const SmartblocksMenu = ({
                   data-uid={wf.uid}
                   text={
                     <>
-                      <img src={lego} alt={""} width={15} />
+                      <img
+                        src={PREDEFINED_REGEX.test(wf.uid) ? gear : lego}
+                        alt={""}
+                        width={15}
+                        style={{ marginRight: 4 }}
+                      />
                       {parts.map((part, i) =>
                         filter && filterRegex.test(part) ? (
                           <b key={i}>{part}</b>
@@ -163,11 +165,19 @@ const SmartblocksMenu = ({
                   onClick={() => onSelect(i)}
                 />
               );
-            })}
-          </Menu>
-        ) : (
-          <span>No Workflows Found</span>
-        )
+            })
+          ) : (
+            <MenuItem
+              text={
+                <span style={{ opacity: 0.75 }}>
+                  <i>No Workflows Found</i>
+                </span>
+              }
+              active={false}
+              disabled={true}
+            />
+          )}
+        </Menu>
       }
     />
   );

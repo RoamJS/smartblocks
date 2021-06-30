@@ -8,9 +8,10 @@ import {
 import {
   createConfigObserver,
   getSettingValueFromTree,
+  toFlexRegex,
 } from "roamjs-components";
 import { render } from "./SmartblocksMenu";
-import lego from './img/lego3blocks.png';
+import lego from "./img/lego3blocks.png";
 
 addStyle(`.rm-page-ref--tag[data-tag="42SmartBlock"]:before, .rm-page-ref--tag[data-tag="SmartBlock"]:before {
   display:inline-block;
@@ -48,6 +49,12 @@ runExtension("smartblocks", () => {
                 "The key combination to used to pull up the smart blocks menu",
               defaultValue: "xx",
             },
+            {
+              title: "custom only",
+              type: "flag",
+              description:
+                "If checked, will exclude all the predefined workflows from Smart Blocks Menu",
+            },
           ],
         },
       ],
@@ -63,8 +70,12 @@ runExtension("smartblocks", () => {
       defaultValue: "xx",
     })
       .replace(/"/g, "")
+      .replace(/\\/, "\\\\")
       .trim();
   const triggerRegex = new RegExp(`${trigger}$`);
+  const isCustomOnly = tree.some((t) =>
+    toFlexRegex("custom only").test(t.text)
+  );
 
   document.addEventListener("input", (e) => {
     const target = e.target as HTMLElement;
@@ -78,7 +89,7 @@ runExtension("smartblocks", () => {
         textarea.selectionStart
       );
       if (triggerRegex.test(valueToCursor)) {
-        render({ textarea, triggerLength: triggerRegex.source.length - 1 });
+        render({ textarea, triggerLength: triggerRegex.source.length - 1, isCustomOnly });
       }
     }
   });
