@@ -4,14 +4,26 @@ import {
   getTreeByPageName,
   getBlockUidsAndTextsReferencingPage,
   addStyle,
+  toRoamDateUid,
+  getChildrenLengthByPageUid,
+  createPage,
+  toRoamDate,
+  createBlock,
 } from "roam-client";
 import {
   createConfigObserver,
   getSettingValueFromTree,
   toFlexRegex,
 } from "roamjs-components";
+import addDays from "date-fns/addDays";
+import addHours from "date-fns/addHours";
+import addMinutes from "date-fns/addMinutes";
+import startOfDay from "date-fns/startOfDay";
+import isBefore from "date-fns/isBefore";
+import differenceInMilliseconds from "date-fns/differenceInMilliseconds";
 import { render } from "./SmartblocksMenu";
 import lego from "./img/lego3blocks.png";
+import { getCustomWorkflows, sbBomb } from "./smartblocks";
 
 addStyle(`.rm-page-ref--tag[data-tag="42SmartBlock"]:before, .rm-page-ref--tag[data-tag="SmartBlock"]:before {
   display:inline-block;
@@ -57,6 +69,25 @@ runExtension("smartblocks", () => {
             },
           ],
         },
+        {
+          id: "daily",
+          fields: [
+            {
+              type: "text",
+              title: "workflow name",
+              description:
+                "The workflow name used to automatically trigger on each day's daily note page.",
+              defaultValue: "Daily",
+            },
+            {
+              type: "time",
+              title: "time",
+              description:
+                "The time (24hr format) when the daily workflow is triggered each day.",
+            },
+          ],
+          toggleable: true,
+        },
       ],
     },
   });
@@ -89,8 +120,72 @@ runExtension("smartblocks", () => {
         textarea.selectionStart
       );
       if (triggerRegex.test(valueToCursor)) {
-        render({ textarea, triggerLength: triggerRegex.source.length - 1, isCustomOnly });
+        render({
+          textarea,
+          triggerLength: triggerRegex.source.length - 1,
+          isCustomOnly,
+        });
       }
     }
   });
+
+  const runDaily = () => {
+    const dailyConfig = tree.find((t) => toFlexRegex("daily").test(t.text));
+    if (dailyConfig) {
+      const time = getSettingValueFromTree({
+        tree: dailyConfig.children,
+        key: "time",
+        defaultValue: "00:00",
+      });
+      const [hours, minutes] = time.split(":").map((s) => Number(s));
+      const today = new Date();
+      const triggerTime = addMinutes(
+        addHours(startOfDay(today), hours),
+        minutes
+      );
+      if (isBefore(today, triggerTime)) {
+        const ms = differenceInMilliseconds(triggerTime, today);
+        setTimeout(runDaily, ms + 1000);
+      } else {
+        const todayUid = toRoamDateUid(today);
+        const childrenLength = getChildrenLengthByPageUid(todayUid);
+        if (childrenLength === 0) {
+          createPage({ title: toRoamDate(today) });
+          const dailyWorkflowName = getSettingValueFromTree({
+            tree: dailyConfig.children,
+            key: "workflow name",
+            defaultValue: "Daily",
+          });
+          const srcUid = getCustomWorkflows().find(
+            ({ name }) => name === dailyWorkflowName
+          )?.uid;
+          if (srcUid) {
+            const text = "Loading...";
+            const targetUid = createBlock({
+              node: { text },
+              parentUid: todayUid,
+            });
+            setTimeout(
+              () =>
+                sbBomb({
+                  srcUid,
+                  target: { uid: targetUid, start: 0, end: text.length },
+                }),
+              1
+            );
+          } else {
+            createBlock({
+              node: {
+                text: `RoamJS Error: Daily SmartBlocks enabled, but couldn't find SmartBlock Workflow named "${dailyWorkflowName}"`,
+              },
+              parentUid: todayUid,
+            });
+          }
+        }
+        const ms = differenceInMilliseconds(addDays(triggerTime, 1), today);
+        setTimeout(runDaily, ms + 1000);
+      }
+    }
+  };
+  runDaily();
 });

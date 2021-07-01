@@ -15,7 +15,7 @@ import {
 import { getCoords } from "./dom";
 import lego from "./img/lego3blocks.png";
 import gear from "./img/gear.png";
-import { predefinedWorkflows, PREDEFINED_REGEX, sbBomb } from "./smartblocks";
+import { getCustomWorkflows, predefinedWorkflows, PREDEFINED_REGEX, sbBomb } from "./smartblocks";
 
 type Props = {
   textarea: HTMLTextAreaElement;
@@ -23,13 +23,7 @@ type Props = {
   isCustomOnly: boolean;
 };
 
-const HIDE_REGEX = /<%HIDE%>/;
 const VALID_FILTER = /^[\w\d\s_-]$/;
-const getWorkflows = (tag: string) =>
-  getBlockUidsAndTextsReferencingPage(tag).map(({ text, uid }) => ({
-    uid,
-    name: text.replace(createTagRegex(tag), "").trim(),
-  }));
 
 const SmartblocksMenu = ({
   onClose,
@@ -42,12 +36,7 @@ const SmartblocksMenu = ({
   const [filter, setFilter] = useState("");
   const filterRegex = useMemo(() => new RegExp(`(${filter})`, "i"), [filter]);
   const initialWorkflows = useMemo(() => {
-    return [...getWorkflows("42SmartBlock"), ...getWorkflows("SmartBlock")]
-      .filter(({ name }) => !HIDE_REGEX.test(name))
-      .map(({ name, uid }) => ({
-        uid,
-        name: name.replace(HIDE_REGEX, ""),
-      }))
+    return getCustomWorkflows()
       .sort(({ name: a }, { name: b }) => a.localeCompare(b))
       .concat(isCustomOnly ? [] : predefinedWorkflows);
   }, []);

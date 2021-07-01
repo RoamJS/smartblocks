@@ -7,6 +7,8 @@ import {
   getTextByBlockUid,
   InputTextNode,
   toRoamDate,
+  getBlockUidsAndTextsReferencingPage,
+  createTagRegex,
 } from "roam-client";
 import { parseDate } from "chrono-node";
 import datefnsFormat from "date-fns/format";
@@ -44,6 +46,20 @@ export const predefinedWorkflows = (
 const predefinedChildrenByUid = Object.fromEntries(
   predefinedWorkflows.map((pw) => [pw.uid, pw.children])
 );
+
+const HIDE_REGEX = /<%HIDE%>/;
+const getWorkflows = (tag: string) =>
+  getBlockUidsAndTextsReferencingPage(tag).map(({ text, uid }) => ({
+    uid,
+    name: text.replace(createTagRegex(tag), "").trim(),
+  }));
+export const getCustomWorkflows = () =>
+  [...getWorkflows("42SmartBlock"), ...getWorkflows("SmartBlock")]
+    .filter(({ name }) => !HIDE_REGEX.test(name))
+    .map(({ name, uid }) => ({
+      uid,
+      name: name.replace(HIDE_REGEX, ""),
+    }));
 
 const COMMAND_REGEX = /<%([A-Z0-9]*)(?::(.*))?%>/;
 const COMMANDS: {
