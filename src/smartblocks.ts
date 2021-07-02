@@ -8,7 +8,13 @@ import {
   InputTextNode,
   toRoamDate,
   getBlockUidsAndTextsReferencingPage,
+  getBlockUidsWithParentUid,
   createTagRegex,
+  getAllBlockUids,
+  getAllPageNames,
+  extractTag,
+  getPageUidByPageTitle,
+  getBlockUidsReferencingBlock,
 } from "roam-client";
 import { parseDate } from "chrono-node";
 import datefnsFormat from "date-fns/format";
@@ -36,6 +42,8 @@ export const predefinedWorkflows = (
     })),
     { text: "Time 24", children: [{ text: "<%TIME%>" }] },
     { text: "Time AM/PM", children: [{ text: "<%TIMEAMPM%>" }] },
+    { text: "Random Block", children: [{ text: "<%RANDOMBLOCK%>" }] },
+    { text: "Random Page", children: [{ text: "<%RANDOMPAGE%>" }] },
   ] as InputTextNode[]
 ).map((s, i) => ({
   name: s.text,
@@ -61,18 +69,18 @@ export const getCustomWorkflows = () =>
       name: name.replace(HIDE_REGEX, ""),
     }));
 
-const COMMAND_REGEX = /<%([A-Z0-9]*)(?::(.*))?%>/;
+const COMMAND_REGEX = /<%([A-Z0-9]*)(?::(.*?))?%>/;
 const COMMANDS: {
   text: string;
   help: string;
   args?: true;
-  handler: (args?: string[]) => string;
+  handler: (...args: string[]) => string;
 }[] = [
   {
     text: "DATE",
     help: "Returns a Roam formatted dated page reference.\n\n1: NLP expression\n2: optional: format for returned date, example: YYYY-MM-DD",
     args: true,
-    handler: ([nlp, format]) => {
+    handler: (nlp, format) => {
       if (!nlp) {
         return `[[${toRoamDate(new Date())}]]`;
       }
@@ -113,6 +121,46 @@ const COMMANDS: {
       return strTime;
     },
   },
+  {
+    text: "RANDOMBLOCK",
+    help: "Returns random block from graph.",
+    handler: () => {
+      const uids = getAllBlockUids();
+      const uid = uids[Math.floor(Math.random() * uids.length)];
+      return `((${uid}))`;
+    },
+  },
+  {
+    text: "RANDOMBLOCKFROM",
+    help: "Returns a random child block from a page or block ref\n\n1: Page name or UID.",
+    handler: (titleOrUid = '') => {
+      const possibleTitle = extractTag(titleOrUid)
+      const parentUid = getPageUidByPageTitle(possibleTitle) || titleOrUid;
+      const uids = getBlockUidsWithParentUid(parentUid);
+      const uid = uids[Math.floor(Math.random() * uids.length)];
+      return `((${uid}))`;
+    },
+  },
+  {
+    text: "RANDOMBLOCKMENTION",
+    help: "Returns random block where page ref mentioned\n\n1: Page name or UID",
+    handler: (titleOrUid = '') => {
+      const possibleTitle = extractTag(titleOrUid)
+      const refUid = getPageUidByPageTitle(possibleTitle) || titleOrUid;
+      const uids = getBlockUidsReferencingBlock(refUid)
+      const uid = uids[Math.floor(Math.random() * uids.length)];
+      return `((${uid}))`;
+    },
+  },
+  {
+    text: "RANDOMPAGE",
+    help: "Returns random page from graph",
+    handler: () => {
+      const pages = getAllPageNames();
+      const page = pages[Math.floor(Math.random() * pages.length)];
+      return `[[${page}]]`;
+    },
+  },
 ];
 const handlerByCommand = Object.fromEntries(
   COMMANDS.map((c) => [c.text, c.handler])
@@ -122,7 +170,7 @@ const handlerByCommand = Object.fromEntries(
 const proccessBlockWithSmartness = (n: InputTextNode): InputTextNode => {
   return {
     text: n.text.replace(COMMAND_REGEX, (_, cmd, args) =>
-      handlerByCommand[cmd](args && args.split(","))
+      handlerByCommand[cmd](...(args ? args.split(",") : []))
     ),
     children: (n.children || []).map((c) => proccessBlockWithSmartness(c)),
   };
