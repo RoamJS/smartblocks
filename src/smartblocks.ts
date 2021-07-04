@@ -133,8 +133,8 @@ const COMMANDS: {
   {
     text: "RANDOMBLOCKFROM",
     help: "Returns a random child block from a page or block ref\n\n1: Page name or UID.",
-    handler: (titleOrUid = '') => {
-      const possibleTitle = extractTag(titleOrUid)
+    handler: (titleOrUid = "") => {
+      const possibleTitle = extractTag(titleOrUid);
       const parentUid = getPageUidByPageTitle(possibleTitle) || titleOrUid;
       const uids = getBlockUidsWithParentUid(parentUid);
       const uid = uids[Math.floor(Math.random() * uids.length)];
@@ -144,10 +144,10 @@ const COMMANDS: {
   {
     text: "RANDOMBLOCKMENTION",
     help: "Returns random block where page ref mentioned\n\n1: Page name or UID",
-    handler: (titleOrUid = '') => {
-      const possibleTitle = extractTag(titleOrUid)
+    handler: (titleOrUid = "") => {
+      const possibleTitle = extractTag(titleOrUid);
       const refUid = getPageUidByPageTitle(possibleTitle) || titleOrUid;
-      const uids = getBlockUidsReferencingBlock(refUid)
+      const uids = getBlockUidsReferencingBlock(refUid);
       const uid = uids[Math.floor(Math.random() * uids.length)];
       return `((${uid}))`;
     },
@@ -168,12 +168,21 @@ const handlerByCommand = Object.fromEntries(
 
 // ridiculous method names in this file are a tribute to the original author of SmartBlocks, RoamHacker 🙌
 const proccessBlockWithSmartness = (n: InputTextNode): InputTextNode => {
-  return {
-    text: n.text.replace(COMMAND_REGEX, (_, cmd, args) =>
-      handlerByCommand[cmd](...(args ? args.split(",") : []))
-    ),
-    children: (n.children || []).map((c) => proccessBlockWithSmartness(c)),
-  };
+  try {
+    return {
+      text: n.text.replace(COMMAND_REGEX, (orig, cmd, args) =>
+        handlerByCommand[cmd]
+          ? handlerByCommand[cmd](...(args ? args.split(",") : []))
+          : orig
+      ),
+      children: (n.children || []).map((c) => proccessBlockWithSmartness(c)),
+    };
+  } catch (e) {
+    return {
+      children: [],
+      text: `Block threw an error while running: ${n.text}`,
+    };
+  }
 };
 
 export const sbBomb = ({
