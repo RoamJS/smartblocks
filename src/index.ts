@@ -94,7 +94,7 @@ runExtension("smartblocks", () => {
 
   const tree = getTreeByPageName(CONFIG);
   const trigger =
-    getLegacy42Setting("SmartBlockTrigger") ||
+    // getLegacy42Setting("SmartBlockTrigger") ||
     getSettingValueFromTree({
       tree,
       key: "trigger",
