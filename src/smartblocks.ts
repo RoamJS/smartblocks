@@ -1,4 +1,5 @@
 import {
+  DAILY_NOTE_PAGE_REGEX,
   getTreeByBlockUid,
   getOrderByBlockUid,
   getParentUidByBlockUid,
@@ -15,9 +16,16 @@ import {
   extractTag,
   getPageUidByPageTitle,
   getBlockUidsReferencingBlock,
+  getPageTitleByBlockUid,
+  parseRoamDate,
 } from "roam-client";
 import { parseDate } from "chrono-node";
 import datefnsFormat from "date-fns/format";
+import subDays from "date-fns/subDays";
+import isBefore from "date-fns/isBefore";
+import addDays from "date-fns/addDays";
+import isAfter from "date-fns/isAfter";
+import { DAILY_NOTE_PAGE_TITLE_REGEX } from "roam-client/lib/date";
 
 export const PREDEFINED_REGEX = /#\d*-predefined/;
 
@@ -44,6 +52,12 @@ export const predefinedWorkflows = (
     { text: "Time AM/PM", children: [{ text: "<%TIMEAMPM%>" }] },
     { text: "Random Block", children: [{ text: "<%RANDOMBLOCK%>" }] },
     { text: "Random Page", children: [{ text: "<%RANDOMPAGE%>" }] },
+    { text: "TODOs for Today", children: [{ text: "<%TODOTODAY%>" }] },
+    { text: "TODOs Overdue", children: [{ text: "<%TODOOVERDUE%>" }] },
+    { text: "TODOs Overdue + DNP", children: [{ text: "<%TODOOVERDUEDNP%>" }] },
+    { text: "TODOs Future", children: [{ text: "<%TODOFUTURE%>" }] },
+    { text: "TODOs Future + DNP", children: [{ text: "<%TODOFUTUREDNP%>" }] },
+    { text: "TODOs Undated", children: [{ text: "<%TODOUNDATED%>" }] },
   ] as InputTextNode[]
 ).map((s, i) => ({
   name: s.text,
@@ -69,12 +83,42 @@ export const getCustomWorkflows = () =>
       name: name.replace(HIDE_REGEX, ""),
     }));
 
-const COMMAND_REGEX = /<%([A-Z0-9]*)(?::(.*?))?%>/;
+const outputTodoBlocks = (
+  blocks: { text: string; uid: string }[],
+  limit = "20",
+  format = "(({uid}))",
+  ...search: string[]
+) =>
+  blocks
+    .filter(({ text }) => !/{{(\[\[)?query(\]\])?/.test(text))
+    .filter(({ text }) =>
+      search.every((s) =>
+        /^-/.test(s) ? !text.includes(s.substring(1)) : text.includes(s)
+      )
+    )
+    .slice(0, Number(limit))
+    .map(({ uid }) => ({
+      text: format
+        .replace("{uid}", uid)
+        .replace("{page}", getPageTitleByBlockUid(uid))
+        .replace(
+          "{path}",
+          window.roamAlphaAPI
+            .q(
+              `[:find ?u :where [?p :block/uid ?u] [?e :block/parents ?p] [?e :block/uid "${uid}"]]`
+            )
+            .map((t) => `((${t[0]}))`)
+            .reverse()
+            .join(" > ")
+        ),
+    }));
+
+const COMMAND_REGEX = /<%([A-Z0-9]*)(?::(.*?))?%>/g;
 const COMMANDS: {
   text: string;
   help: string;
   args?: true;
-  handler: (...args: string[]) => string;
+  handler: (...args: string[]) => string | string[] | InputTextNode[];
 }[] = [
   {
     text: "DATE",
@@ -161,27 +205,166 @@ const COMMANDS: {
       return `[[${page}]]`;
     },
   },
+  {
+    text: "TODOTODAY",
+    help: "Returns a list of block refs of TODOs for today\n\n1. Max # blocks\n2. optional filter values",
+    handler: (...args) => {
+      const blocks = getBlockUidsAndTextsReferencingPage("TODO");
+      const today = toRoamDate(new Date());
+      const todos = blocks.filter(({ text }) => text.includes(today));
+      return outputTodoBlocks(todos, ...args);
+    },
+  },
+  {
+    text: "TODOOVERDUE",
+    help: "Returns a list of block refs of TODOs that are Overdue\n\n1. Max # blocks\n2. optional filter values",
+    handler: (...args) => {
+      const blocks = getBlockUidsAndTextsReferencingPage("TODO");
+      const yesterday = subDays(new Date(), 1);
+      const dailyRegex = new RegExp(
+        `\\[\\[(${DAILY_NOTE_PAGE_REGEX.source})\\]\\]`
+      );
+      const todos = blocks
+        .filter(({ text }) => dailyRegex.test(text))
+        .map(({ text, uid }) => ({
+          text,
+          uid,
+          date: parseRoamDate(dailyRegex.exec(text)[1]),
+        }))
+        .filter(({ date }) => isBefore(date, yesterday))
+        .sort(({ date: a }, { date: b }) => a.valueOf() - b.valueOf());
+      return outputTodoBlocks(todos, ...args);
+    },
+  },
+  {
+    text: "TODOOVERDUEDNP",
+    help: "Returns a list of block refs of TODOs that are Overdue including DNP TODOs\n\n1. Max # blocks\n2. optional filter values",
+    handler: (...args) => {
+      const blocks = getBlockUidsAndTextsReferencingPage("TODO");
+      const yesterday = subDays(new Date(), 1);
+      const dailyRegex = new RegExp(
+        `\\[\\[(${DAILY_NOTE_PAGE_REGEX.source})\\]\\]`
+      );
+      const todos = blocks
+        .map(({ text, uid }) => ({
+          text,
+          uid,
+          date: dailyRegex.exec(text)?.[1] || getPageTitleByBlockUid(uid),
+        }))
+        .filter(({ date }) => DAILY_NOTE_PAGE_TITLE_REGEX.test(date))
+        .map(({ text, uid, date }) => ({
+          text,
+          uid,
+          date: parseRoamDate(date),
+        }))
+        .filter(({ date }) => isBefore(date, yesterday))
+        .sort(({ date: a }, { date: b }) => a.valueOf() - b.valueOf());
+      return outputTodoBlocks(todos, ...args);
+    },
+  },
+  {
+    text: "TODOFUTURE",
+    help: "Returns a list of block refs of TODOs that are due in the future\n\n1. Max # blocks\n2. optional filter values",
+    handler: (...args) => {
+      const blocks = getBlockUidsAndTextsReferencingPage("TODO");
+      const today = new Date();
+      const dailyRegex = new RegExp(
+        `\\[\\[(${DAILY_NOTE_PAGE_REGEX.source})\\]\\]`
+      );
+      const todos = blocks
+        .filter(({ text }) => dailyRegex.test(text))
+        .map(({ text, uid }) => ({
+          text,
+          uid,
+          date: parseRoamDate(dailyRegex.exec(text)[1]),
+        }))
+        .filter(({ date }) => isAfter(date, today))
+        .sort(({ date: a }, { date: b }) => a.valueOf() - b.valueOf());
+      return outputTodoBlocks(todos, ...args);
+    },
+  },
+  {
+    text: "TODOFUTUREDNP",
+    help: "Returns a list of block refs of TODOs that are due in the future including DNP TODOs\n\n1. Max # blocks\n2. optional filter values",
+    handler: (...args) => {
+      const blocks = getBlockUidsAndTextsReferencingPage("TODO");
+      const today = new Date();
+      const dailyRegex = new RegExp(
+        `\\[\\[(${DAILY_NOTE_PAGE_REGEX.source})\\]\\]`
+      );
+      const todos = blocks
+        .map(({ text, uid }) => ({
+          text,
+          uid,
+          date: dailyRegex.exec(text)?.[1] || getPageTitleByBlockUid(uid),
+        }))
+        .filter(({ date }) => DAILY_NOTE_PAGE_TITLE_REGEX.test(date))
+        .map(({ text, uid, date }) => ({
+          text,
+          uid,
+          date: parseRoamDate(date),
+        }))
+        .filter(({ date }) => isAfter(date, today))
+        .sort(({ date: a }, { date: b }) => a.valueOf() - b.valueOf());
+      return outputTodoBlocks(todos, ...args);
+    },
+  },
+  {
+    text: "TODOUNDATED",
+    help: "Returns a list of block refs of TODOs with no date\n\n1. Max # blocks\n2. optional filter values",
+    handler: (...args) => {
+      const blocks = getBlockUidsAndTextsReferencingPage("TODO");
+      const dailyRegex = new RegExp(
+        `\\[\\[(${DAILY_NOTE_PAGE_REGEX.source})\\]\\]`
+      );
+      const todos = blocks
+        .filter(({ text }) => !dailyRegex.test(text))
+        .sort(({ text: a }, { text: b }) => a.localeCompare(b));
+      return outputTodoBlocks(todos, ...args);
+    },
+  },
 ];
 const handlerByCommand = Object.fromEntries(
   COMMANDS.map((c) => [c.text, c.handler])
 );
 
 // ridiculous method names in this file are a tribute to the original author of SmartBlocks, RoamHacker 🙌
-const proccessBlockWithSmartness = (n: InputTextNode): InputTextNode => {
+const proccessBlockWithSmartness = (n: InputTextNode): InputTextNode[] => {
   try {
-    return {
-      text: n.text.replace(COMMAND_REGEX, (orig, cmd, args) =>
-        handlerByCommand[cmd]
-          ? handlerByCommand[cmd](...(args ? args.split(",") : []))
-          : orig
-      ),
-      children: (n.children || []).map((c) => proccessBlockWithSmartness(c)),
-    };
+    const nextBlocks: InputTextNode[] = [];
+    const currentChildren: InputTextNode[] = [];
+    const text = n.text.replace(COMMAND_REGEX, (orig, cmd, args) => {
+      const output = handlerByCommand[cmd]
+        ? handlerByCommand[cmd](...(args ? args.split(",") : []))
+        : orig;
+      const blocks =
+        typeof output === "string"
+          ? [{ text: output }]
+          : output.map((o: string | InputTextNode) =>
+              typeof o === "string" ? { text: o } : o
+            );
+      currentChildren.push(...(blocks[0]?.children || []));
+      nextBlocks.push(...blocks.slice(1));
+      return blocks[0]?.text || "";
+    });
+    return [
+      {
+        text,
+        children: [
+          ...currentChildren,
+          ...(n.children || []).flatMap((c) => proccessBlockWithSmartness(c)),
+        ],
+      },
+      ...nextBlocks,
+    ];
   } catch (e) {
-    return {
-      children: [],
-      text: `Block threw an error while running: ${n.text}`,
-    };
+    console.error(e);
+    return [
+      {
+        children: [],
+        text: `Block threw an error while running: ${n.text}`,
+      },
+    ];
   }
 };
 
@@ -195,7 +378,7 @@ export const sbBomb = ({
   const childNodes = PREDEFINED_REGEX.test(srcUid)
     ? predefinedChildrenByUid[srcUid]
     : getTreeByBlockUid(srcUid).children;
-  const [firstChild, ...tree] = childNodes.map((n) =>
+  const [firstChild, ...tree] = childNodes.flatMap((n) =>
     proccessBlockWithSmartness(n)
   );
   const startingOrder = getOrderByBlockUid(uid);
