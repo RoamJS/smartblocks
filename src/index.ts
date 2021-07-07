@@ -32,6 +32,10 @@ addStyle(`.rm-page-ref--tag[data-tag="42SmartBlock"]:before, .rm-page-ref--tag[d
   content: "";
   background:url(${lego}) no-repeat 0 0;
   background-size: auto 14px;
+}
+
+.roamjs-prompt-dropdown {
+  z-index: 1020;
 }`);
 
 const getLegacy42Setting = (name: string) => {
@@ -122,7 +126,7 @@ runExtension("smartblocks", () => {
       if (triggerRegex.test(valueToCursor)) {
         render({
           textarea,
-          triggerLength: triggerRegex.source.length - 1,
+          triggerLength: triggerRegex.source.replace("\\\\", "\\").length - 1,
           isCustomOnly,
         });
       }

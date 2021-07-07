@@ -76,8 +76,7 @@ const SmartblocksMenu = ({
             start,
             end,
           },
-        });
-        deleteBlock(loadingUid);
+        }).then(() => deleteBlock(loadingUid));
       }, 10);
     },
     [menuRef, blockUid, onClose, triggerLength, textarea]

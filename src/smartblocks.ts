@@ -26,6 +26,7 @@ import isBefore from "date-fns/isBefore";
 import addDays from "date-fns/addDays";
 import isAfter from "date-fns/isAfter";
 import { DAILY_NOTE_PAGE_TITLE_REGEX } from "roam-client/lib/date";
+import { renderPrompt } from "./Prompt";
 
 export const PREDEFINED_REGEX = /#\d*-predefined/;
 
@@ -58,6 +59,15 @@ export const predefinedWorkflows = (
     { text: "TODOs Future", children: [{ text: "<%TODOFUTURE%>" }] },
     { text: "TODOs Future + DNP", children: [{ text: "<%TODOFUTUREDNP%>" }] },
     { text: "TODOs Undated", children: [{ text: "<%TODOUNDATED%>" }] },
+    {
+      text: "Workflow Smartblock Starter",
+      children: [
+        {
+          text: "#SmartBlock <%INPUT:What is the name of the new workflow?%>",
+          children: [{ text: "Edit workflow here" }],
+        },
+      ],
+    },
   ] as InputTextNode[]
 ).map((s, i) => ({
   name: s.text,
@@ -113,12 +123,13 @@ const outputTodoBlocks = (
         ),
     }));
 
+type CommandOutput = string | string[] | InputTextNode[];
 const COMMAND_REGEX = /<%([A-Z0-9]*)(?::(.*?))?%>/g;
 const COMMANDS: {
   text: string;
   help: string;
   args?: true;
-  handler: (...args: string[]) => string | string[] | InputTextNode[];
+  handler: (...args: string[]) => CommandOutput | Promise<CommandOutput>;
 }[] = [
   {
     text: "DATE",
@@ -207,7 +218,7 @@ const COMMANDS: {
   },
   {
     text: "TODOTODAY",
-    help: "Returns a list of block refs of TODOs for today\n\n1. Max # blocks\n2. optional filter values",
+    help: "Returns a list of block refs of TODOs for today\n\n1. Max # blocks\n2. Format of output.\n3. optional filter values",
     handler: (...args) => {
       const blocks = getBlockUidsAndTextsReferencingPage("TODO");
       const today = toRoamDate(new Date());
@@ -217,7 +228,7 @@ const COMMANDS: {
   },
   {
     text: "TODOOVERDUE",
-    help: "Returns a list of block refs of TODOs that are Overdue\n\n1. Max # blocks\n2. optional filter values",
+    help: "Returns a list of block refs of TODOs that are Overdue\n\n1. Max # blocks\n2. Format of output.\n3. optional filter values",
     handler: (...args) => {
       const blocks = getBlockUidsAndTextsReferencingPage("TODO");
       const yesterday = subDays(new Date(), 1);
@@ -238,7 +249,7 @@ const COMMANDS: {
   },
   {
     text: "TODOOVERDUEDNP",
-    help: "Returns a list of block refs of TODOs that are Overdue including DNP TODOs\n\n1. Max # blocks\n2. optional filter values",
+    help: "Returns a list of block refs of TODOs that are Overdue including DNP TODOs\n\n1. Max # blocks\n2. Format of output.\n3. optional filter values",
     handler: (...args) => {
       const blocks = getBlockUidsAndTextsReferencingPage("TODO");
       const yesterday = subDays(new Date(), 1);
@@ -264,7 +275,7 @@ const COMMANDS: {
   },
   {
     text: "TODOFUTURE",
-    help: "Returns a list of block refs of TODOs that are due in the future\n\n1. Max # blocks\n2. optional filter values",
+    help: "Returns a list of block refs of TODOs that are due in the future\n\n1. Max # blocks\n2. Format of output.\n3. optional filter values",
     handler: (...args) => {
       const blocks = getBlockUidsAndTextsReferencingPage("TODO");
       const today = new Date();
@@ -285,7 +296,7 @@ const COMMANDS: {
   },
   {
     text: "TODOFUTUREDNP",
-    help: "Returns a list of block refs of TODOs that are due in the future including DNP TODOs\n\n1. Max # blocks\n2. optional filter values",
+    help: "Returns a list of block refs of TODOs that are due in the future including DNP TODOs\n\n1. Max # blocks\n2. Format of output.\n3. optional filter values",
     handler: (...args) => {
       const blocks = getBlockUidsAndTextsReferencingPage("TODO");
       const today = new Date();
@@ -311,7 +322,7 @@ const COMMANDS: {
   },
   {
     text: "TODOUNDATED",
-    help: "Returns a list of block refs of TODOs with no date\n\n1. Max # blocks\n2. optional filter values",
+    help: "Returns a list of block refs of TODOs with no date\n\n1. Max # blocks\n2. Format of output.\n3. optional filter values",
     handler: (...args) => {
       const blocks = getBlockUidsAndTextsReferencingPage("TODO");
       const dailyRegex = new RegExp(
@@ -323,26 +334,53 @@ const COMMANDS: {
       return outputTodoBlocks(todos, ...args);
     },
   },
+  {
+    text: "INPUT",
+    help: "Prompts user for input which will then be inserted into block\n\n1: text to display in prompt. Add a @@ followed by text for a default value",
+    handler: async (...args) => {
+      const [display, initialValue, ...options] = args.join(",").split("%%");
+      return await renderPrompt({ display, initialValue, options });
+    },
+  },
 ];
 const handlerByCommand = Object.fromEntries(
   COMMANDS.map((c) => [c.text, c.handler])
 );
 
 // ridiculous method names in this file are a tribute to the original author of SmartBlocks, RoamHacker 🙌
-const proccessBlockWithSmartness = (n: InputTextNode): InputTextNode[] => {
+const proccessBlockWithSmartness = async (
+  n: InputTextNode
+): Promise<InputTextNode[]> => {
   try {
     const nextBlocks: InputTextNode[] = [];
     const currentChildren: InputTextNode[] = [];
-    const text = n.text.replace(COMMAND_REGEX, (orig, cmd, args) => {
+    const promises: Promise<InputTextNode[]>[] = [];
+    n.text.replace(COMMAND_REGEX, (orig, cmd, args) => {
       const output = handlerByCommand[cmd]
         ? handlerByCommand[cmd](...(args ? args.split(",") : []))
         : orig;
-      const blocks =
+      const promise =
         typeof output === "string"
-          ? [{ text: output }]
-          : output.map((o: string | InputTextNode) =>
-              typeof o === "string" ? { text: o } : o
+          ? Promise.resolve([{ text: output }])
+          : Array.isArray(output)
+          ? Promise.resolve(
+              output.map((o: string | InputTextNode) =>
+                typeof o === "string" ? { text: o } : o
+              )
+            )
+          : output.then((text) =>
+              typeof text === "string"
+                ? [{ text }]
+                : text.map((o: string | InputTextNode) =>
+                    typeof o === "string" ? { text: o } : o
+                  )
             );
+      promises.push(promise);
+      return orig;
+    });
+    const data = await Promise.all(promises);
+    const text = n.text.replace(COMMAND_REGEX, () => {
+      const blocks = data.shift();
       currentChildren.push(...(blocks[0]?.children || []));
       nextBlocks.push(...blocks.slice(1));
       return blocks[0]?.text || "";
@@ -352,7 +390,9 @@ const proccessBlockWithSmartness = (n: InputTextNode): InputTextNode[] => {
         text,
         children: [
           ...currentChildren,
-          ...(n.children || []).flatMap((c) => proccessBlockWithSmartness(c)),
+          ...(await Promise.all(
+            (n.children || []).map((c) => proccessBlockWithSmartness(c))
+          ).then((results) => results.flatMap((r) => r))),
         ],
       },
       ...nextBlocks,
@@ -374,26 +414,27 @@ export const sbBomb = ({
 }: {
   srcUid: string;
   target: { uid: string; start: number; end: number };
-}) => {
+}): Promise<void> => {
   const childNodes = PREDEFINED_REGEX.test(srcUid)
     ? predefinedChildrenByUid[srcUid]
     : getTreeByBlockUid(srcUid).children;
-  const [firstChild, ...tree] = childNodes.flatMap((n) =>
-    proccessBlockWithSmartness(n)
-  );
-  const startingOrder = getOrderByBlockUid(uid);
-  const parentUid = getParentUidByBlockUid(uid);
-  const originalText = getTextByBlockUid(uid);
-  updateBlock({
-    uid,
-    text: `${originalText.substring(0, start)}${
-      firstChild.text
-    }${originalText.substring(end)}`,
-  });
-  (firstChild?.children || []).forEach((node, order) =>
-    createBlock({ order, parentUid: uid, node })
-  );
-  tree.forEach((node, i) =>
-    createBlock({ parentUid, order: startingOrder + 1 + i, node })
-  );
+  return Promise.all(childNodes.map((n) => proccessBlockWithSmartness(n)))
+    .then((results) => results.flatMap((r) => r))
+    .then(([firstChild, ...tree]) => {
+      const startingOrder = getOrderByBlockUid(uid);
+      const parentUid = getParentUidByBlockUid(uid);
+      const originalText = getTextByBlockUid(uid);
+      updateBlock({
+        uid,
+        text: `${originalText.substring(0, start)}${
+          firstChild.text
+        }${originalText.substring(end)}`,
+      });
+      (firstChild?.children || []).forEach((node, order) =>
+        createBlock({ order, parentUid: uid, node })
+      );
+      tree.forEach((node, i) =>
+        createBlock({ parentUid, order: startingOrder + 1 + i, node })
+      );
+    });
 };
