@@ -8,14 +8,21 @@ import React, {
 } from "react";
 import ReactDOM from "react-dom";
 import {
+  createBlock,
   createTagRegex,
+  deleteBlock,
   getBlockUidsAndTextsReferencingPage,
   getUids,
 } from "roam-client";
 import { getCoords } from "./dom";
 import lego from "./img/lego3blocks.png";
 import gear from "./img/gear.png";
-import { getCustomWorkflows, predefinedWorkflows, PREDEFINED_REGEX, sbBomb } from "./smartblocks";
+import {
+  getCustomWorkflows,
+  predefinedWorkflows,
+  PREDEFINED_REGEX,
+  sbBomb,
+} from "./smartblocks";
 
 type Props = {
   textarea: HTMLTextAreaElement;
@@ -57,6 +64,10 @@ const SmartblocksMenu = ({
       const start = textarea.selectionStart - triggerLength;
       const end = textarea.selectionStart;
       onClose();
+      const loadingUid = createBlock({
+        node: { text: "Loading..." },
+        parentUid: blockUid,
+      });
       setTimeout(() => {
         sbBomb({
           srcUid,
@@ -66,7 +77,8 @@ const SmartblocksMenu = ({
             end,
           },
         });
-      }, 1);
+        deleteBlock(loadingUid);
+      }, 10);
     },
     [menuRef, blockUid, onClose, triggerLength, textarea]
   );
