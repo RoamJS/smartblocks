@@ -9,6 +9,8 @@ import {
   createPage,
   toRoamDate,
   createBlock,
+  getPageUidByPageTitle,
+  getShallowTreeByParentUid,
 } from "roam-client";
 import {
   createConfigObserver,
@@ -22,6 +24,7 @@ import startOfDay from "date-fns/startOfDay";
 import isBefore from "date-fns/isBefore";
 import differenceInMilliseconds from "date-fns/differenceInMilliseconds";
 import { render } from "./SmartblocksMenu";
+import { render as renderStore } from "./SmartblocksStore";
 import lego from "./img/lego3blocks.png";
 import { getCustomWorkflows, sbBomb } from "./smartblocks";
 
@@ -36,6 +39,27 @@ addStyle(`.rm-page-ref--tag[data-tag="42SmartBlock"]:before, .rm-page-ref--tag[d
 
 .roamjs-prompt-dropdown {
   z-index: 1020;
+}
+
+.roamjs-smartblocks-store-item {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.roamjs-smartblocks-store-item:hover {
+  box-shadow: 0px 3px 6px #00000040;
+  transform: translate(0,-3px);
+}
+
+.roamjs-smartblocks-store-label .bp3-popover-wrapper {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }`);
 
 const getLegacy42Setting = (name: string) => {
@@ -192,4 +216,16 @@ runExtension("smartblocks", () => {
     }
   };
   runDaily();
+
+  window.roamAlphaAPI.ui.commandPalette.addCommand({
+    label: "Open SmartBlocks Store",
+    callback: () => {
+      const pageUid = getPageUidByPageTitle(CONFIG);
+      const tree = getShallowTreeByParentUid(pageUid);
+      const parentUid =
+        tree?.find((t) => toFlexRegex("workflows").test(t.text))?.uid ||
+        createBlock({ parentUid: pageUid, node: { text: "workflows" } });
+      renderStore({ parentUid });
+    },
+  });
 });
