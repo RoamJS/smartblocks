@@ -418,7 +418,17 @@ export const sbBomb = ({
   const childNodes = PREDEFINED_REGEX.test(srcUid)
     ? predefinedChildrenByUid[srcUid]
     : getTreeByBlockUid(srcUid).children;
-  return Promise.all(childNodes.map((n) => proccessBlockWithSmartness(n)))
+  return childNodes
+    .reduce(
+      (prev, cur) =>
+        prev.then((r) =>
+          proccessBlockWithSmartness(cur).then((c) => {
+            r.push(c);
+            return r;
+          })
+        ),
+      Promise.resolve([] as InputTextNode[][])
+    )
     .then((results) => results.flatMap((r) => r))
     .then(([firstChild, ...tree]) => {
       const startingOrder = getOrderByBlockUid(uid);

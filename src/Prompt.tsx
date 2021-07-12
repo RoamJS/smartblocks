@@ -1,13 +1,17 @@
+import { Alert, Classes, H3, InputGroup, Label } from "@blueprintjs/core";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { extractTag } from "roam-client";
 import {
-  Alert,
-  Classes,
-  Dialog,
-  H3,
-  InputGroup,
-  Label,
-} from "@blueprintjs/core";
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import { createOverlayRender, MenuItemSelect } from "roamjs-components";
+  createOverlayRender,
+  MenuItemSelect,
+  PageInput,
+} from "roamjs-components";
 
 type Props = {
   display?: string;
@@ -23,11 +27,27 @@ const Prompt = ({
   initialValue = "",
   resolve,
 }: { onClose: () => void } & Props) => {
-  const [value, setValue] = useState(initialValue);
+  const formattedDisplay = useMemo(
+    () => display.replace("{page}", "").trim(),
+    [display]
+  );
+  const isPageInput = useMemo(
+    () => display.trim() !== formattedDisplay,
+    [display, formattedDisplay]
+  );
+  const formattedOptions = useMemo(
+    () => (isPageInput ? options.map(extractTag) : options),
+    [options, isPageInput]
+  );
+  const formattedInitialValue = useMemo(
+    () => (isPageInput ? extractTag(initialValue) : initialValue),
+    [initialValue, isPageInput]
+  );
+  const [value, setValue] = useState(formattedInitialValue);
   const [loaded, setLoaded] = useState(false);
   const resolveAndClose = useCallback(
     (s: string) => {
-      resolve(s);
+      resolve(isPageInput && s ? `[[${s}]]` : s);
       onClose();
     },
     [resolve, onClose]
@@ -56,13 +76,20 @@ const Prompt = ({
       <H3>SmartBlocks Input</H3>
       <div className={Classes.ALERT_BODY} ref={contentRef}>
         <Label>
-          {display}
-          {options.length ? (
+          {formattedDisplay}
+          {formattedOptions.length ? (
             <MenuItemSelect
               activeItem={value}
               onItemSelect={(v) => setValue(v)}
-              items={[initialValue, ...options]}
+              items={[formattedInitialValue, ...formattedOptions]}
               popoverProps={{ portalClassName: "roamjs-prompt-dropdown" }}
+              ButtonProps={{ autoFocus: true }}
+            />
+          ) : isPageInput ? (
+            <PageInput
+              value={value}
+              setValue={setValue}
+              onConfirm={() => resolveAndClose(value)}
             />
           ) : (
             <InputGroup

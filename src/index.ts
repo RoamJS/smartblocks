@@ -37,8 +37,8 @@ addStyle(`.rm-page-ref--tag[data-tag="42SmartBlock"]:before, .rm-page-ref--tag[d
   background-size: auto 14px;
 }
 
-.roamjs-prompt-dropdown {
-  z-index: 1020;
+.bp3-portal {
+  z-index: 1000;
 }
 
 .roamjs-smartblocks-store-item {
