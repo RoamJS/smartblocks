@@ -60,11 +60,35 @@ export const predefinedWorkflows = (
     { text: "TODOs Future + DNP", children: [{ text: "<%TODOFUTUREDNP%>" }] },
     { text: "TODOs Undated", children: [{ text: "<%TODOUNDATED%>" }] },
     {
+      text: "Block Mentions List",
+      children: [
+        {
+          text: "<%SET:ref,<%INPUT:Name of page or tag reference to search for?{page}%>%><%SEARCH:<%GET:ref%>%>",
+        },
+      ],
+    },
+    {
+      text: "Search - plain text",
+      children: [
+        {
+          text: "<%SET:text,<%INPUT:Text to search for?%>%><%SEARCH:<%GET:text%>%>",
+        },
+      ],
+    },
+    {
       text: "Workflow Smartblock Starter",
       children: [
         {
           text: "#SmartBlock <%INPUT:What is the name of the new workflow?%>",
           children: [{ text: "Edit workflow here" }],
+        },
+      ],
+    },
+    {
+      text: "Button Smartblock Starter",
+      children: [
+        {
+          text: "{{<%INPUT:What is the name of the caption of the button?%>:SmartBlock:<%INPUT:What is the name of the SmartBlock?%>}}",
         },
       ],
     },
@@ -354,13 +378,13 @@ const proccessBlockWithSmartness = async (
   try {
     const nextBlocks: InputTextNode[] = [];
     const currentChildren: InputTextNode[] = [];
-    const promises: Promise<InputTextNode[]>[] = [];
+    const promises: (() => Promise<InputTextNode[]>)[] = [];
     n.text.replace(COMMAND_REGEX, (orig, cmd, args) => {
-      const output = handlerByCommand[cmd]
-        ? handlerByCommand[cmd](...(args ? args.split(",") : []))
-        : orig;
-      const promise =
-        typeof output === "string"
+      const promise = () => {
+        const output = handlerByCommand[cmd]
+          ? handlerByCommand[cmd](...(args ? args.split(",") : []))
+          : orig;
+        return typeof output === "string"
           ? Promise.resolve([{ text: output }])
           : Array.isArray(output)
           ? Promise.resolve(
@@ -375,10 +399,11 @@ const proccessBlockWithSmartness = async (
                     typeof o === "string" ? { text: o } : o
                   )
             );
+      };
       promises.push(promise);
       return orig;
     });
-    const data = await Promise.all(promises);
+    const data = await processPromises(promises);
     const text = n.text.replace(COMMAND_REGEX, () => {
       const blocks = data.shift();
       currentChildren.push(...(blocks[0]?.children || []));
@@ -388,12 +413,7 @@ const proccessBlockWithSmartness = async (
     return [
       {
         text,
-        children: [
-          ...currentChildren,
-          ...(await Promise.all(
-            (n.children || []).map((c) => proccessBlockWithSmartness(c))
-          ).then((results) => results.flatMap((r) => r))),
-        ],
+        children: [...currentChildren, ...(await processChildren(n.children))],
       },
       ...nextBlocks,
     ];
@@ -408,6 +428,23 @@ const proccessBlockWithSmartness = async (
   }
 };
 
+const processPromises = (nodes: (() => Promise<InputTextNode[]>)[] = []) =>
+  nodes.reduce(
+    (prev, cur) =>
+      prev.then((r) =>
+        cur().then((c) => {
+          r.push(c);
+          return r;
+        })
+      ),
+    Promise.resolve([] as InputTextNode[][])
+  );
+
+const processChildren = (nodes: InputTextNode[] = []) =>
+  processPromises(nodes.map((n) => () => proccessBlockWithSmartness(n))).then(
+    (results) => results.flatMap((r) => r)
+  );
+
 export const sbBomb = ({
   srcUid,
   target: { uid, start, end },
@@ -418,33 +455,21 @@ export const sbBomb = ({
   const childNodes = PREDEFINED_REGEX.test(srcUid)
     ? predefinedChildrenByUid[srcUid]
     : getTreeByBlockUid(srcUid).children;
-  return childNodes
-    .reduce(
-      (prev, cur) =>
-        prev.then((r) =>
-          proccessBlockWithSmartness(cur).then((c) => {
-            r.push(c);
-            return r;
-          })
-        ),
-      Promise.resolve([] as InputTextNode[][])
-    )
-    .then((results) => results.flatMap((r) => r))
-    .then(([firstChild, ...tree]) => {
-      const startingOrder = getOrderByBlockUid(uid);
-      const parentUid = getParentUidByBlockUid(uid);
-      const originalText = getTextByBlockUid(uid);
-      updateBlock({
-        uid,
-        text: `${originalText.substring(0, start)}${
-          firstChild.text
-        }${originalText.substring(end)}`,
-      });
-      (firstChild?.children || []).forEach((node, order) =>
-        createBlock({ order, parentUid: uid, node })
-      );
-      tree.forEach((node, i) =>
-        createBlock({ parentUid, order: startingOrder + 1 + i, node })
-      );
+  return processChildren(childNodes).then(([firstChild, ...tree]) => {
+    const startingOrder = getOrderByBlockUid(uid);
+    const parentUid = getParentUidByBlockUid(uid);
+    const originalText = getTextByBlockUid(uid);
+    updateBlock({
+      uid,
+      text: `${originalText.substring(0, start)}${
+        firstChild.text
+      }${originalText.substring(end)}`,
     });
+    (firstChild?.children || []).forEach((node, order) =>
+      createBlock({ order, parentUid: uid, node })
+    );
+    tree.forEach((node, i) =>
+      createBlock({ parentUid, order: startingOrder + 1 + i, node })
+    );
+  });
 };
