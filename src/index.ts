@@ -140,6 +140,7 @@ runExtension("smartblocks", () => {
   const isCustomOnly = tree.some((t) =>
     toFlexRegex("custom only").test(t.text)
   );
+
   window.roamjs.extension.smartblocks = {};
   window.roamjs.extension.smartblocks.registerCommand = ({
     text,
@@ -150,6 +151,13 @@ runExtension("smartblocks", () => {
   }) => {
     handlerByCommand[text] = handler;
   };
+  Object.keys(window.roamjs.extension).forEach((text) => {
+    if (window.roamjs.extension[text].registerSmartBlocksCommand) {
+      window.roamjs.extension[text].registerSmartBlocksCommand();
+      delete window.roamjs.extension[text];
+    }
+  });
+  
   document.addEventListener("input", (e) => {
     const target = e.target as HTMLElement;
     if (
