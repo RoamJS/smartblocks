@@ -148,12 +148,15 @@ const outputTodoBlocks = (
     }));
 
 type CommandOutput = string | string[] | InputTextNode[];
+export type CommandHandler = (
+  ...args: string[]
+) => CommandOutput | Promise<CommandOutput>;
 const COMMAND_REGEX = /<%([A-Z0-9]*)(?::(.*?))?%>/g;
 const COMMANDS: {
   text: string;
   help: string;
   args?: true;
-  handler: (...args: string[]) => CommandOutput | Promise<CommandOutput>;
+  handler: CommandHandler;
 }[] = [
   {
     text: "DATE",
@@ -367,7 +370,7 @@ const COMMANDS: {
     },
   },
 ];
-const handlerByCommand = Object.fromEntries(
+export const handlerByCommand = Object.fromEntries(
   COMMANDS.map((c) => [c.text, c.handler])
 );
 

@@ -26,7 +26,12 @@ import differenceInMilliseconds from "date-fns/differenceInMilliseconds";
 import { render } from "./SmartblocksMenu";
 import { render as renderStore } from "./SmartblocksStore";
 import lego from "./img/lego3blocks.png";
-import { getCustomWorkflows, sbBomb } from "./smartblocks";
+import {
+  CommandHandler,
+  getCustomWorkflows,
+  handlerByCommand,
+  sbBomb,
+} from "./smartblocks";
 
 addStyle(`.rm-page-ref--tag[data-tag="42SmartBlock"]:before, .rm-page-ref--tag[data-tag="SmartBlock"]:before {
   display:inline-block;
@@ -135,7 +140,16 @@ runExtension("smartblocks", () => {
   const isCustomOnly = tree.some((t) =>
     toFlexRegex("custom only").test(t.text)
   );
-
+  window.roamjs.extension.smartblocks = {};
+  window.roamjs.extension.smartblocks.registerCommand = ({
+    text,
+    handler,
+  }: {
+    text: string;
+    handler: CommandHandler;
+  }) => {
+    handlerByCommand[text] = handler;
+  };
   document.addEventListener("input", (e) => {
     const target = e.target as HTMLElement;
     if (
