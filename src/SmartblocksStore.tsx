@@ -226,22 +226,18 @@ const DrawerContent = ({
         ) : (
           filteredSmartblocks.map((e, i) => {
             const gridColumnStart = (i + 1) % ROW_LENGTH || ROW_LENGTH;
+            const unavailable = installedSmartblocks.has(e.name);
             return (
               <div
                 key={e.uuid}
-                className={"roamjs-smartblocks-store-item"}
+                className={`roamjs-smartblocks-store-item roamjs-${
+                  unavailable ? "unavailable" : "available"
+                }`}
                 style={{
                   gridColumnStart: `${gridColumnStart}`,
                   gridColumnEnd: `${gridColumnStart + 1}`,
-                  ...(installedSmartblocks.has(e.name)
-                    ? {
-                        opacity: 0.8,
-                        backgroundColor: "#80808080",
-                        cursor: "not-allowed",
-                      }
-                    : {}),
                 }}
-                onClick={() => setSelectedSmartBlockId(e.uuid)}
+                onClick={() => !unavailable && setSelectedSmartBlockId(e.uuid)}
               >
                 <Thumbnail src={e.img} />
                 <div
@@ -256,11 +252,7 @@ const DrawerContent = ({
                   <Tooltip content={e.name} minimal targetTagName={"b"}>
                     {e.name}
                   </Tooltip>
-                  {installedSmartblocks.has(e.name) ? (
-                    <i>Installed</i>
-                  ) : (
-                    <Price price={e.price} />
-                  )}
+                  {unavailable ? <i>Installed</i> : <Price price={e.price} />}
                 </div>
               </div>
             );

@@ -56,7 +56,13 @@ addStyle(`.rm-page-ref--tag[data-tag="42SmartBlock"]:before, .rm-page-ref--tag[d
   font-size: 12px;
 }
 
-.roamjs-smartblocks-store-item:hover {
+.roamjs-smartblocks-store-item.roamjs-unavailable {
+  opacity: 0.8;
+  background-color: #80808080;
+  cursor: not-allowed;
+}
+
+.roamjs-smartblocks-store-item.roamjs-available:hover {
   box-shadow: 0px 3px 6px #00000040;
   transform: translate(0,-3px);
 }
