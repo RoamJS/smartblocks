@@ -151,6 +151,22 @@ type CommandOutput = string | string[] | InputTextNode[];
 export type CommandHandler = (
   ...args: string[]
 ) => CommandOutput | Promise<CommandOutput>;
+const smartBlocksContext: { onBlockExit: CommandHandler } = {
+  onBlockExit: () => "",
+};
+
+const javascriptHandler: CommandHandler = (...args) => {
+  const content = args.join(",");
+  const code = content.replace(/^```javascript/, "").replace(/```$/, "");
+  return Promise.resolve(new Function(code)()).then((result) => {
+    if (typeof result === "undefined" || result === null) {
+      return "";
+    } else {
+      return result.toString();
+    }
+  });
+};
+
 const COMMAND_REGEX = /<%([A-Z0-9]*)(?::(.*?))?%>/g;
 const COMMANDS: {
   text: string;
@@ -369,6 +385,34 @@ const COMMANDS: {
       return await renderPrompt({ display, initialValue, options });
     },
   },
+  {
+    text: "JAVASCRIPT",
+    help: "Custom JavaScript code to run\n\n1. JavaScript code",
+    handler: javascriptHandler,
+  },
+  {
+    text: "J",
+    help: "Shortcut for Custom JavaScript code to run\n\n1. JavaScript code",
+    handler: javascriptHandler,
+  },
+  {
+    text: "JAVASCRIPTASYNC",
+    help: "Custom asynchronous JavaScript code to run\n\n1. JavaScipt code",
+    handler: javascriptHandler,
+  },
+  {
+    text: "JA",
+    help: "Shortcut for custom asynchronous JavaScript code to run\n\n1. JavaScipt code",
+    handler: javascriptHandler,
+  },
+  {
+    text: "ONBLOCKEXIT",
+    help: "Asynchronous JavaScript code to <br/>run after a block has been<br/>processed by Roam42<br/>1. JavaScipt code<br/>Return value not processed",
+    handler: (...args) => {
+      smartBlocksContext.onBlockExit = () => javascriptHandler(...args);
+      return "";
+    },
+  },
 ];
 export const handlerByCommand = Object.fromEntries(
   COMMANDS.map((c) => [c.text, c.handler])
@@ -413,6 +457,7 @@ const proccessBlockWithSmartness = async (
       nextBlocks.push(...blocks.slice(1));
       return blocks[0]?.text || "";
     });
+    await smartBlocksContext.onBlockExit();
     return [
       {
         text,
@@ -448,6 +493,16 @@ const processChildren = (nodes: InputTextNode[] = []) =>
     (results) => results.flatMap((r) => r)
   );
 
+const filterUselessBlocks = (blocks: InputTextNode[]): InputTextNode[] =>
+  blocks
+    .map((b) => ({
+      ...b,
+      children: b.children?.length
+        ? filterUselessBlocks(b.children)
+        : b.children,
+    }))
+    .filter((b) => !!b.text || !!b.children?.length);
+
 export const sbBomb = ({
   srcUid,
   target: { uid, start, end },
@@ -458,21 +513,23 @@ export const sbBomb = ({
   const childNodes = PREDEFINED_REGEX.test(srcUid)
     ? predefinedChildrenByUid[srcUid]
     : getTreeByBlockUid(srcUid).children;
-  return processChildren(childNodes).then(([firstChild, ...tree]) => {
-    const startingOrder = getOrderByBlockUid(uid);
-    const parentUid = getParentUidByBlockUid(uid);
-    const originalText = getTextByBlockUid(uid);
-    updateBlock({
-      uid,
-      text: `${originalText.substring(0, start)}${
-        firstChild.text
-      }${originalText.substring(end)}`,
+  return processChildren(childNodes)
+    .then(filterUselessBlocks)
+    .then(([firstChild, ...tree]) => {
+      const startingOrder = getOrderByBlockUid(uid);
+      const parentUid = getParentUidByBlockUid(uid);
+      const originalText = getTextByBlockUid(uid);
+      updateBlock({
+        uid,
+        text: `${originalText.substring(0, start)}${
+          firstChild.text
+        }${originalText.substring(end)}`,
+      });
+      (firstChild?.children || []).forEach((node, order) =>
+        createBlock({ order, parentUid: uid, node })
+      );
+      tree.forEach((node, i) =>
+        createBlock({ parentUid, order: startingOrder + 1 + i, node })
+      );
     });
-    (firstChild?.children || []).forEach((node, order) =>
-      createBlock({ order, parentUid: uid, node })
-    );
-    tree.forEach((node, i) =>
-      createBlock({ parentUid, order: startingOrder + 1 + i, node })
-    );
-  });
 };
