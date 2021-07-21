@@ -12,7 +12,17 @@ const headers = {
 
 export const handler: APIGatewayProxyHandler = async () => {
   return dynamo
-    .scan({ TableName: "RoamJSSmartBlocks" })
+    .query({
+      TableName: "RoamJSSmartBlocks",
+      IndexName: "status-index",
+      ExpressionAttributeNames: {
+        "#s": "status",
+      },
+      ExpressionAttributeValues: {
+        ":s": { S: "LIVE" },
+      },
+      KeyConditionExpression: "#s = :s",
+    })
     .promise()
     .then((r) => ({
       statusCode: 200,
@@ -32,7 +42,7 @@ export const handler: APIGatewayProxyHandler = async () => {
       statusCode: 500,
       body: JSON.stringify({
         success: false,
-        message: e.message
+        message: e.message,
       }),
       headers,
     }));
