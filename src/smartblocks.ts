@@ -103,7 +103,7 @@ const predefinedChildrenByUid = Object.fromEntries(
   predefinedWorkflows.map((pw) => [pw.uid, pw.children])
 );
 
-const HIDE_REGEX = /<%HIDE%>/;
+export const HIDE_REGEX = /<%HIDE%>/;
 const getWorkflows = (tag: string) =>
   getBlockUidsAndTextsReferencingPage(tag).map(({ text, uid }) => ({
     uid,

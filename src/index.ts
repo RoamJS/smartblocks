@@ -11,6 +11,7 @@ import {
   createBlock,
   getPageUidByPageTitle,
   getShallowTreeByParentUid,
+  createHTMLObserver,
 } from "roam-client";
 import {
   createConfigObserver,
@@ -25,6 +26,7 @@ import isBefore from "date-fns/isBefore";
 import differenceInMilliseconds from "date-fns/differenceInMilliseconds";
 import { render } from "./SmartblocksMenu";
 import { render as renderStore } from "./SmartblocksStore";
+import { render as renderPopover } from "./SmartblockPopover";
 import lego from "./img/lego3blocks.png";
 import {
   CommandHandler,
@@ -33,13 +35,11 @@ import {
   sbBomb,
 } from "./smartblocks";
 
-addStyle(`.rm-page-ref--tag[data-tag="42SmartBlock"]:before, .rm-page-ref--tag[data-tag="SmartBlock"]:before {
+addStyle(`.roamjs-smartblocks-popover-target {
   display:inline-block;
   height:14px;
-  width:24px;
-  content: "";
-  background:url(${lego}) no-repeat 0 0;
-  background-size: auto 14px;
+  width:17px;
+  margin-right:7px;
 }
 
 .bp3-portal {
@@ -163,7 +163,7 @@ runExtension("smartblocks", () => {
       delete window.roamjs.extension[text];
     }
   });
-  
+
   document.addEventListener("input", (e) => {
     const target = e.target as HTMLElement;
     if (
@@ -254,6 +254,22 @@ runExtension("smartblocks", () => {
         tree?.find((t) => toFlexRegex("workflows").test(t.text))?.uid ||
         createBlock({ parentUid: pageUid, node: { text: "workflows" } });
       renderStore({ parentUid });
+    },
+  });
+
+  const TAGS = new Set(["SmartBlock", "42SmartBlock"]);
+  createHTMLObserver({
+    className: "rm-page-ref--tag",
+    tag: "SPAN",
+    callback: (s: HTMLSpanElement) => {
+      const dataTag = s.getAttribute("data-tag");
+      if (TAGS.has(dataTag) && !s.hasAttribute("data-roamjs-smartblock-logo")) {
+        s.setAttribute("data-roamjs-smartblock-logo", "true");
+        const span = document.createElement("span");
+        s.insertBefore(span, s.firstChild);
+        s.onmousedown = (e) => e.stopPropagation();
+        renderPopover(span);
+      }
     },
   });
 });

@@ -14,6 +14,7 @@
     "@types/aws-lambda": "^8.10.78",
     "@types/react": "^17.0.11",
     "@types/react-dom": "^17.0.7",
+    "@types/uuid": "^8.3.1",
     "localhost-lambdas": "^0.2.14",
     "roamjs-scripts": "^0.9.12",
     "typescript": "^4.3.2"
@@ -27,6 +28,7 @@
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
     "roam-client": "^1.79.1",
-    "roamjs-components": "^0.18.2"
+    "roamjs-components": "^0.18.2",
+    "uuid": "^8.3.2"
   }
 }

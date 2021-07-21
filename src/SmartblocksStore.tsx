@@ -252,7 +252,11 @@ const DrawerContent = ({
                   <Tooltip content={e.name} minimal targetTagName={"b"}>
                     {e.name}
                   </Tooltip>
-                  {unavailable ? <i>Installed</i> : <Price price={e.price} />}
+                  {unavailable ? (
+                    <i style={{ minWidth: "fit-content" }}>Installed</i>
+                  ) : (
+                    <Price price={e.price} />
+                  )}
                 </div>
               </div>
             );
