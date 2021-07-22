@@ -37,6 +37,9 @@ const DAILY_REF_REGEX = new RegExp(
 );
 const getDateFromText = (s: string) =>
   parseRoamDate(DAILY_REF_REGEX.exec(s)?.[1]);
+const AsyncFunction: FunctionConstructor = new Function(
+  `return Object.getPrototypeOf(async function(){}).constructor`
+)();
 
 export const predefinedWorkflows = (
   [
@@ -169,17 +172,36 @@ const resetContext = (targetUid: string) => {
   smartBlocksContext.targetUid = targetUid;
 };
 
-const javascriptHandler: CommandHandler = (...args) => {
-  const content = args.join(",");
-  const code = content.replace(/^```javascript/, "").replace(/```$/, "");
-  return Promise.resolve(new Function(code)()).then((result) => {
-    if (typeof result === "undefined" || result === null) {
-      return "";
-    } else {
-      return result.toString();
-    }
-  });
-};
+const javascriptHandler =
+  (fcn: FunctionConstructor): CommandHandler =>
+  (...args) => {
+    const content = args.join(",");
+    const code = content
+      .replace(/^\s*```javascript(\n)?/, "")
+      .replace(/(\n)?```\s*$/, "")
+      .replace(/^\s*`/, "")
+      .replace(/`\s*$/, "");
+    return Promise.resolve(new fcn(code)()).then((result) => {
+      if (typeof result === "undefined" || result === null) {
+        return "";
+      } else if (Array.isArray(result)) {
+        return result.map((r) => {
+          if (typeof r === "undefined" || r === null) {
+            return "";
+          } else if (typeof r === "object") {
+            return {
+              text: (r.text || "").toString(),
+              children: [...r.children],
+            };
+          } else {
+            return r.toString();
+          }
+        });
+      } else {
+        return result.toString();
+      }
+    });
+  };
 
 const COMMANDS: {
   text: string;
@@ -390,28 +412,29 @@ const COMMANDS: {
   {
     text: "JAVASCRIPT",
     help: "Custom JavaScript code to run\n\n1. JavaScript code",
-    handler: javascriptHandler,
+    handler: javascriptHandler(Function),
   },
   {
     text: "J",
     help: "Shortcut for Custom JavaScript code to run\n\n1. JavaScript code",
-    handler: javascriptHandler,
+    handler: javascriptHandler(Function),
   },
   {
     text: "JAVASCRIPTASYNC",
     help: "Custom asynchronous JavaScript code to run\n\n1. JavaScipt code",
-    handler: javascriptHandler,
+    handler: javascriptHandler(AsyncFunction),
   },
   {
     text: "JA",
     help: "Shortcut for custom asynchronous JavaScript code to run\n\n1. JavaScipt code",
-    handler: javascriptHandler,
+    handler: javascriptHandler(AsyncFunction),
   },
   {
     text: "ONBLOCKEXIT",
     help: "Asynchronous JavaScript code to \nrun after a block has been\nprocessed by Roam42\n1. JavaScipt code\nReturn value not processed",
     handler: (...args) => {
-      smartBlocksContext.onBlockExit = () => javascriptHandler(...args);
+      smartBlocksContext.onBlockExit = () =>
+        javascriptHandler(AsyncFunction)(...args);
       return "";
     },
   },
@@ -614,7 +637,7 @@ const proccessBlockWithSmartness = async (
               handlerByCommand[cmd]
                 ? handlerByCommand[cmd](...resolvedArgs)
                 : `<%${cmd}${
-                    resolvedArgs.length ? `:${resolvedArgs.join(",")}` : ''
+                    resolvedArgs.length ? `:${resolvedArgs.join(",")}` : ""
                   }%>`
             )
             .then((output) =>
