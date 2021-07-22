@@ -18,17 +18,25 @@ import {
   getBlockUidsReferencingBlock,
   getPageTitleByBlockUid,
   parseRoamDate,
+  getParentUidsOfBlockUid,
+  BLOCK_REF_REGEX,
+  getCurrentUserDisplayName,
 } from "roam-client";
 import { parseDate } from "chrono-node";
 import datefnsFormat from "date-fns/format";
 import subDays from "date-fns/subDays";
 import isBefore from "date-fns/isBefore";
-import addDays from "date-fns/addDays";
 import isAfter from "date-fns/isAfter";
-import { DAILY_NOTE_PAGE_TITLE_REGEX } from "roam-client/lib/date";
+import XRegExp from "xregexp";
 import { renderPrompt } from "./Prompt";
 
 export const PREDEFINED_REGEX = /#\d*-predefined/;
+const PAGE_TITLE_REGEX = /^(?:#?\[\[(.*)\]\]|#([^\s]*))$/;
+const DAILY_REF_REGEX = new RegExp(
+  `#?\\[\\[(${DAILY_NOTE_PAGE_REGEX.source})\\]\\]`
+);
+const getDateFromText = (s: string) =>
+  parseRoamDate(DAILY_REF_REGEX.exec(s)?.[1]);
 
 export const predefinedWorkflows = (
   [
@@ -63,7 +71,7 @@ export const predefinedWorkflows = (
       text: "Block Mentions List",
       children: [
         {
-          text: "<%SET:ref,<%INPUT:Name of page or tag reference to search for?{page}%>%><%SEARCH:<%GET:ref%>%>",
+          text: "<%SET:ref,<%INPUT:Name of page or tag reference to search for?{page}%>%><%BLOCKMENTIONS:<%GET:ref%>%>",
         },
       ],
     },
@@ -117,6 +125,21 @@ export const getCustomWorkflows = () =>
       name: name.replace(HIDE_REGEX, ""),
     }));
 
+const getFormatter =
+  (format: string) =>
+  ({ uid }: { uid: string }) => ({
+    text: format
+      .replace("{uid}", uid)
+      .replace("{page}", getPageTitleByBlockUid(uid))
+      .replace(
+        "{path}",
+        getParentUidsOfBlockUid(uid)
+          .map((t) => `((${t[0]}))`)
+          .reverse()
+          .join(" > ")
+      ),
+  });
+
 const outputTodoBlocks = (
   blocks: { text: string; uid: string }[],
   limit = "20",
@@ -131,28 +154,19 @@ const outputTodoBlocks = (
       )
     )
     .slice(0, Number(limit))
-    .map(({ uid }) => ({
-      text: format
-        .replace("{uid}", uid)
-        .replace("{page}", getPageTitleByBlockUid(uid))
-        .replace(
-          "{path}",
-          window.roamAlphaAPI
-            .q(
-              `[:find ?u :where [?p :block/uid ?u] [?e :block/parents ?p] [?e :block/uid "${uid}"]]`
-            )
-            .map((t) => `((${t[0]}))`)
-            .reverse()
-            .join(" > ")
-        ),
-    }));
+    .map(getFormatter(format));
 
 type CommandOutput = string | string[] | InputTextNode[];
 export type CommandHandler = (
   ...args: string[]
 ) => CommandOutput | Promise<CommandOutput>;
-const smartBlocksContext: { onBlockExit: CommandHandler } = {
+const smartBlocksContext: { onBlockExit: CommandHandler; targetUid: string } = {
   onBlockExit: () => "",
+  targetUid: "",
+};
+const resetContext = (targetUid: string) => {
+  smartBlocksContext.onBlockExit = () => "";
+  smartBlocksContext.targetUid = targetUid;
 };
 
 const javascriptHandler: CommandHandler = (...args) => {
@@ -167,7 +181,6 @@ const javascriptHandler: CommandHandler = (...args) => {
   });
 };
 
-const COMMAND_REGEX = /<%([A-Z0-9]*)(?::(.*?))?%>/g;
 const COMMANDS: {
   text: string;
   help: string;
@@ -275,15 +288,12 @@ const COMMANDS: {
     handler: (...args) => {
       const blocks = getBlockUidsAndTextsReferencingPage("TODO");
       const yesterday = subDays(new Date(), 1);
-      const dailyRegex = new RegExp(
-        `\\[\\[(${DAILY_NOTE_PAGE_REGEX.source})\\]\\]`
-      );
       const todos = blocks
-        .filter(({ text }) => dailyRegex.test(text))
+        .filter(({ text }) => DAILY_REF_REGEX.test(text))
         .map(({ text, uid }) => ({
           text,
           uid,
-          date: parseRoamDate(dailyRegex.exec(text)[1]),
+          date: parseRoamDate(DAILY_REF_REGEX.exec(text)[1]),
         }))
         .filter(({ date }) => isBefore(date, yesterday))
         .sort(({ date: a }, { date: b }) => a.valueOf() - b.valueOf());
@@ -296,16 +306,15 @@ const COMMANDS: {
     handler: (...args) => {
       const blocks = getBlockUidsAndTextsReferencingPage("TODO");
       const yesterday = subDays(new Date(), 1);
-      const dailyRegex = new RegExp(
-        `\\[\\[(${DAILY_NOTE_PAGE_REGEX.source})\\]\\]`
-      );
       const todos = blocks
         .map(({ text, uid }) => ({
           text,
           uid,
-          date: dailyRegex.exec(text)?.[1] || getPageTitleByBlockUid(uid),
+          date: DAILY_REF_REGEX.exec(text)?.[1] || getPageTitleByBlockUid(uid),
         }))
-        .filter(({ date }) => DAILY_NOTE_PAGE_TITLE_REGEX.test(date))
+        .filter(({ date }) =>
+          new RegExp(`^${DAILY_NOTE_PAGE_REGEX.source}$`).test(date)
+        )
         .map(({ text, uid, date }) => ({
           text,
           uid,
@@ -322,15 +331,12 @@ const COMMANDS: {
     handler: (...args) => {
       const blocks = getBlockUidsAndTextsReferencingPage("TODO");
       const today = new Date();
-      const dailyRegex = new RegExp(
-        `\\[\\[(${DAILY_NOTE_PAGE_REGEX.source})\\]\\]`
-      );
       const todos = blocks
-        .filter(({ text }) => dailyRegex.test(text))
+        .filter(({ text }) => DAILY_REF_REGEX.test(text))
         .map(({ text, uid }) => ({
           text,
           uid,
-          date: parseRoamDate(dailyRegex.exec(text)[1]),
+          date: parseRoamDate(DAILY_REF_REGEX.exec(text)[1]),
         }))
         .filter(({ date }) => isAfter(date, today))
         .sort(({ date: a }, { date: b }) => a.valueOf() - b.valueOf());
@@ -343,16 +349,15 @@ const COMMANDS: {
     handler: (...args) => {
       const blocks = getBlockUidsAndTextsReferencingPage("TODO");
       const today = new Date();
-      const dailyRegex = new RegExp(
-        `\\[\\[(${DAILY_NOTE_PAGE_REGEX.source})\\]\\]`
-      );
       const todos = blocks
         .map(({ text, uid }) => ({
           text,
           uid,
-          date: dailyRegex.exec(text)?.[1] || getPageTitleByBlockUid(uid),
+          date: DAILY_REF_REGEX.exec(text)?.[1] || getPageTitleByBlockUid(uid),
         }))
-        .filter(({ date }) => DAILY_NOTE_PAGE_TITLE_REGEX.test(date))
+        .filter(({ date }) =>
+          new RegExp(`^${DAILY_NOTE_PAGE_REGEX.source}$`).test(date)
+        )
         .map(({ text, uid, date }) => ({
           text,
           uid,
@@ -368,11 +373,8 @@ const COMMANDS: {
     help: "Returns a list of block refs of TODOs with no date\n\n1. Max # blocks\n2. Format of output.\n3. optional filter values",
     handler: (...args) => {
       const blocks = getBlockUidsAndTextsReferencingPage("TODO");
-      const dailyRegex = new RegExp(
-        `\\[\\[(${DAILY_NOTE_PAGE_REGEX.source})\\]\\]`
-      );
       const todos = blocks
-        .filter(({ text }) => !dailyRegex.test(text))
+        .filter(({ text }) => !DAILY_REF_REGEX.test(text))
         .sort(({ text: a }, { text: b }) => a.localeCompare(b));
       return outputTodoBlocks(todos, ...args);
     },
@@ -407,16 +409,171 @@ const COMMANDS: {
   },
   {
     text: "ONBLOCKEXIT",
-    help: "Asynchronous JavaScript code to <br/>run after a block has been<br/>processed by Roam42<br/>1. JavaScipt code<br/>Return value not processed",
+    help: "Asynchronous JavaScript code to \nrun after a block has been\nprocessed by Roam42\n1. JavaScipt code\nReturn value not processed",
     handler: (...args) => {
       smartBlocksContext.onBlockExit = () => javascriptHandler(...args);
       return "";
+    },
+  },
+  {
+    text: "BREADCRUMBS",
+    help: "Returns a list of parent block refs to a given block ref\n\n1: Block reference\n2: Separator used between blok references",
+    handler: (uidArg = "", ...delim) => {
+      const separator = delim.join(",") || " > ";
+      const uid = uidArg.replace(/^(\+|-)/, "");
+      return [
+        ...(uidArg.startsWith("-")
+          ? []
+          : [`[[${getPageTitleByBlockUid(uid)}]]`]),
+        ...(uidArg.startsWith("+")
+          ? []
+          : getParentUidsOfBlockUid(uid)
+              .reverse()
+              .slice(1)
+              .map((u) => `((${u}))`)),
+      ].join(separator);
+    },
+  },
+  {
+    text: "CURRENTBLOCKREF",
+    help: "Sets a variable to the block UID for the current block\n\n1. Variable name",
+    handler: () => {
+      return "";
+    },
+  },
+  {
+    text: "CONCAT",
+    help: "Combines a comma separated list of strings into one string\n\n1: comma separated list",
+    handler: (...args) => {
+      return args.map((s) => s.replace(/\\,/g, ",")).join("");
+    },
+  },
+  {
+    text: "CURRENTPAGENAME",
+    help: "Returns the current page name the smart block is running in.",
+    handler: (mode) => {
+      const title = getPageTitleByBlockUid(smartBlocksContext.targetUid);
+      return mode === "base" ? title.split("/").slice(-1)[0] : title;
+    },
+  },
+  {
+    text: "RESOLVEBLOCKREF",
+    help: "Convert block ref to text\n\n1. Block reference",
+    handler: (uid = "") =>
+      PAGE_TITLE_REGEX.exec(uid)?.[1] ||
+      getTextByBlockUid(uid.replace(BLOCK_REF_REGEX, "$1")),
+  },
+  {
+    text: "CURRENTUSER",
+    help: "Return the display name of the current user",
+    handler: () =>
+      getCurrentUserDisplayName() || "No Diplay Name for Current User",
+  },
+  {
+    text: "BLOCKMENTIONS",
+    help: "Returns list of blocks mentioned\n\n1: Max blocks to return\n2: Page or Tag Name\n3:Format of output.\n4: (opt) filtering",
+    handler: (
+      limitArg = "20",
+      titleArg = "",
+      format = "(({uid}))",
+      ...search: string[]
+    ) => {
+      const limit = Number(limitArg);
+      const title = extractTag(titleArg);
+      const results = getBlockUidsAndTextsReferencingPage(title).filter(
+        ({ text }) =>
+          search.every((s) =>
+            s.startsWith("-") ? !text.includes(s.substring(1)) : text
+          )
+      );
+      if (limit === -1) return `${results.length}`;
+      return results
+        .sort((a, b) => a.text.localeCompare(b.text))
+        .slice(0, limit)
+        .map(getFormatter(format));
+    },
+  },
+  {
+    text: "BLOCKMENTIONSDATED",
+    help: "Returns list of blocks mentioned based on date range\n1: Max blocks to return\n2: Page or Tag Name\n3: Start Date\n4. End Date\n5: Sort (ASC,DESC,NONE)\n6:Format of Output\n7: (opt) filtering ",
+    handler: (
+      limitArg = "20",
+      titleArg = "",
+      startArg = "",
+      endArg = "",
+      sort = "ASC",
+      format = "(({uid}))",
+      ...search: string[]
+    ) => {
+      const undated = startArg === "-1" && endArg === "-1";
+      const start = !undated && startArg ? parseDate(startArg) : new Date(0);
+      const end =
+        !undated && endArg ? parseDate(endArg) : new Date(9999, 11, 31);
+      const limit = Number(limitArg);
+      const title = extractTag(titleArg);
+      const results = getBlockUidsAndTextsReferencingPage(title)
+        .filter(({ text }) => {
+          const ref = DAILY_REF_REGEX.exec(text)?.[1];
+          if (ref) {
+            const d = parseRoamDate(ref);
+            return undated! && !isBefore(d, start) && !isAfter(d, end);
+          } else {
+            return undated;
+          }
+        })
+        .filter(({ text }) =>
+          search.every((s) =>
+            s.startsWith("-") ? !text.includes(s.substring(1)) : text
+          )
+        );
+      if (limit === -1) return `${results.length}`;
+      return results
+        .sort(
+          sort === "NONE"
+            ? (a, b) => a.text.localeCompare(b.text)
+            : sort === "DESC"
+            ? (a, b) =>
+                getDateFromText(b.text).valueOf() -
+                getDateFromText(a.text).valueOf()
+            : (a, b) =>
+                getDateFromText(a.text).valueOf() -
+                getDateFromText(b.text).valueOf()
+        )
+        .slice(0, limit)
+        .map(getFormatter(format));
     },
   },
 ];
 export const handlerByCommand = Object.fromEntries(
   COMMANDS.map((c) => [c.text, c.handler])
 );
+
+const breakTextToParts = (text: string) => {
+  try {
+    return XRegExp.matchRecursive(text, "<%", "%>", "g", {
+      valueNames: ["text", null, "command", null],
+      escapeChar: "\\",
+    });
+  } catch (e) {
+    // use regular regex if XRegExp throws
+    // https://github.com/slevithan/xregexp/issues/96
+    let index = 0;
+    const parts = [];
+    const COMMAND_REGEX = /<%([A-Z0-9]*(?::.*?)?)%>/g;
+    while (index < text.length) {
+      const match = COMMAND_REGEX.exec(text);
+      const endIndex = match ? match.index : text.length;
+      parts.push({ value: text.substring(index, endIndex), name: "text" });
+      if (match) {
+        parts.push({ value: match[1], name: "command" });
+        index = match.index + match[0].length;
+      } else {
+        index = endIndex;
+      }
+    }
+    return parts.filter(({ value }) => !!value);
+  }
+};
 
 // ridiculous method names in this file are a tribute to the original author of SmartBlocks, RoamHacker 🙌
 const proccessBlockWithSmartness = async (
@@ -426,37 +583,63 @@ const proccessBlockWithSmartness = async (
     const nextBlocks: InputTextNode[] = [];
     const currentChildren: InputTextNode[] = [];
     const promises: (() => Promise<InputTextNode[]>)[] = [];
-    n.text.replace(COMMAND_REGEX, (orig, cmd, args) => {
-      const promise = () => {
-        const output = handlerByCommand[cmd]
-          ? handlerByCommand[cmd](...(args ? args.split(",") : []))
-          : orig;
-        return typeof output === "string"
-          ? Promise.resolve([{ text: output }])
-          : Array.isArray(output)
-          ? Promise.resolve(
-              output.map((o: string | InputTextNode) =>
-                typeof o === "string" ? { text: o } : o
+    const parts = breakTextToParts(n.text);
+    parts
+      .filter((p) => p.name === "command")
+      .forEach((c) => {
+        const split = c.value.indexOf(":");
+        const cmd = split < 0 ? c.value : c.value.substring(0, split);
+        const args =
+          split < 0 ? [] : c.value.substring(split + 1).split(/(?<!\\),/);
+        const promise = () => {
+          const promiseArgs = args
+            .map((r) =>
+              proccessBlockWithSmartness({ text: r }).then(
+                ([{ text, children }, ...rest]) => {
+                  nextBlocks.push(...rest);
+                  currentChildren.push(...(children || []));
+                  return text;
+                }
               )
             )
-          : output.then((text) =>
-              typeof text === "string"
-                ? [{ text }]
-                : text.map((o: string | InputTextNode) =>
+            .reduce(
+              (prev, cur) =>
+                prev.then((argArray) =>
+                  cur.then((arg) => argArray.push(arg)).then(() => argArray)
+                ),
+              Promise.resolve<string[]>([])
+            );
+          return promiseArgs
+            .then((resolvedArgs) =>
+              handlerByCommand[cmd]
+                ? handlerByCommand[cmd](...resolvedArgs)
+                : `<%${cmd}${
+                    resolvedArgs.length ? `:${resolvedArgs.join(",")}` : ''
+                  }%>`
+            )
+            .then((output) =>
+              typeof output === "string"
+                ? [{ text: output }]
+                : output.map((o: string | InputTextNode) =>
                     typeof o === "string" ? { text: o } : o
                   )
             );
-      };
-      promises.push(promise);
-      return orig;
-    });
+        };
+        promises.push(promise);
+      });
     const data = await processPromises(promises);
-    const text = n.text.replace(COMMAND_REGEX, () => {
-      const blocks = data.shift();
-      currentChildren.push(...(blocks[0]?.children || []));
-      nextBlocks.push(...blocks.slice(1));
-      return blocks[0]?.text || "";
-    });
+
+    const text = parts
+      .map(({ name, value }) => {
+        if (name === "text") {
+          return value;
+        }
+        const blocks = data.shift();
+        currentChildren.push(...(blocks[0]?.children || []));
+        nextBlocks.push(...blocks.slice(1));
+        return blocks[0]?.text || "";
+      })
+      .join("");
     await smartBlocksContext.onBlockExit();
     return [
       {
@@ -510,6 +693,7 @@ export const sbBomb = ({
   srcUid: string;
   target: { uid: string; start: number; end: number };
 }): Promise<void> => {
+  resetContext(uid);
   const childNodes = PREDEFINED_REGEX.test(srcUid)
     ? predefinedChildrenByUid[srcUid]
     : getTreeByBlockUid(srcUid).children;
