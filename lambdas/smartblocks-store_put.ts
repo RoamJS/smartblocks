@@ -30,7 +30,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     uuid: string;
   };
   const price = 0;
-  const requiresReview = /<%((J(A(VASCRIPT(ASYNC)?)?)?)|(ONBLOCKEXIT)):/.test(
+  const requiresReview = /<%((J(A(VASCRIPT(ASYNC)?)?)?)|(ONBLOCKEXIT)|(IF(TRUE)?)):/.test(
     workflow
   );
   const token = event.headers.Authorization || event.headers.authorization || '';

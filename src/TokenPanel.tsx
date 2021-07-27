@@ -11,8 +11,10 @@ import React, { useState } from "react";
 import {
   createBlock,
   getFirstChildTextByBlockUid,
+  getFirstChildUidByBlockUid,
   getGraph,
   getShallowTreeByParentUid,
+  updateBlock,
 } from "roam-client";
 import { toFlexRegex } from "roamjs-components";
 
@@ -71,10 +73,15 @@ const TokenPanel = ({
                   { headers: { Authorization: oldToken } }
                 )
                 .then((r) => {
-                  createBlock({
-                    node: { text: r.data.token },
-                    parentUid: tokenUid,
-                  });
+                  const oldUid = getFirstChildUidByBlockUid(tokenUid);
+                  if (oldUid) {
+                    updateBlock({ uid: oldUid, text: r.data.token });
+                  } else {
+                    createBlock({
+                      node: { text: r.data.token },
+                      parentUid: tokenUid,
+                    });
+                  }
                   setToken(r.data.token);
                 })
                 .catch((e) => setError(e.response?.data || e.message))

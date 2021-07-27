@@ -163,13 +163,21 @@ type CommandOutput = string | string[] | InputTextNode[];
 export type CommandHandler = (
   ...args: string[]
 ) => CommandOutput | Promise<CommandOutput>;
-const smartBlocksContext: { onBlockExit: CommandHandler; targetUid: string } = {
+const smartBlocksContext: {
+  onBlockExit: CommandHandler;
+  targetUid: string;
+  ifCommand?: boolean;
+  exitBlock: boolean;
+} = {
   onBlockExit: () => "",
   targetUid: "",
+  exitBlock: false,
 };
 const resetContext = (targetUid: string) => {
   smartBlocksContext.onBlockExit = () => "";
   smartBlocksContext.targetUid = targetUid;
+  smartBlocksContext.ifCommand = undefined;
+  smartBlocksContext.exitBlock = false;
 };
 
 const javascriptHandler =
@@ -566,6 +574,119 @@ const COMMANDS: {
         .map(getFormatter(format));
     },
   },
+  {
+    text: "IF",
+    help: "Evaluates a condition for true. Use with THEN & ELSE.\n\n1: Logic to be evaluated\n2: (Optional) Value if true\n3: (Optional) Value if false",
+    handler: (condition = "false", then, els) => {
+      try {
+        const evaluated = eval(condition);
+        if (evaluated) {
+          if (then) {
+            return then;
+          } else {
+            smartBlocksContext.ifCommand = true;
+            return "";
+          }
+        } else {
+          if (els) {
+            return els;
+          } else {
+            smartBlocksContext.ifCommand = false;
+            return "";
+          }
+        }
+      } catch (e) {
+        return `Failed to evaluate IF condition: ${e.message}`;
+      }
+    },
+  },
+  {
+    text: "THEN",
+    help: "Used with IF when IF is true\n\n1: Text to be inserted",
+    handler: (value) => {
+      if (smartBlocksContext.ifCommand) {
+        smartBlocksContext.ifCommand = undefined;
+        return value;
+      }
+      return "";
+    },
+  },
+  {
+    text: "ELSE",
+    help: "Used with IF when IF is false\n\n1: Text to be inserted",
+    handler: (value) => {
+      if (smartBlocksContext.ifCommand === false) {
+        smartBlocksContext.ifCommand = undefined;
+        return value;
+      }
+      return "";
+    },
+  },
+  {
+    text: "IFTRUE",
+    help: "Test if parameter is true. If true, the block is output.\n\n1: Logic to be evaluated",
+    handler: (condition) => {
+      try {
+        if (!eval(condition)) {
+          smartBlocksContext.exitBlock = true;
+        }
+        return "";
+      } catch (e) {
+        return `Failed to evaluate IFTRUE condition: ${e.message}`;
+      }
+    },
+  },
+  {
+    text: "IFDATEOFYEAR",
+    help: "Compares today's date\n\n1: Comma separated list of dates (mm/dd)\nExample: 01/01,04/01,09/01",
+    handler: (...dates) => {
+      const today = new Date();
+      const match = dates
+        .map((d) => d.trim())
+        .some((d) => {
+          const parts = d.split("/");
+          const monthPart = Number(parts[0]);
+          const dayPart = Number(parts[1]);
+          return (
+            today.getMonth() + 1 === monthPart && today.getDate() === dayPart
+          );
+        });
+      if (!match) {
+        smartBlocksContext.exitBlock = true;
+      }
+      return "";
+    },
+  },
+  {
+    text: "IFDAYOFMONTH",
+    help: "Compares today's date\n\n1: Comma separated list of days\n Example: 5,10,15",
+    handler: (...dates) => {
+      const today = new Date();
+      const match = dates
+        .map((s) => s.trim())
+        .map((s) => Number(s))
+        .includes(today.getDate());
+      if (!match) {
+        smartBlocksContext.exitBlock = true;
+      }
+      return "";
+    },
+  },
+  {
+    text: "IFDAYOFWEEK",
+    help: "Compares today's date\n\n1: Comma separated list of days of week. 1 is Monday, 7 is Sunday\nExample: 1,3",
+    handler: (...dates) => {
+      const today = new Date();
+      const match = dates
+        .map((s) => s.trim())
+        .map((s) => (s === "7" ? 0 : Number(s)))
+        .includes(today.getDay());
+      if (!match) {
+        smartBlocksContext.exitBlock = true;
+      }
+      return "";
+    },
+  },
 ];
 export const handlerByCommand = Object.fromEntries(
   COMMANDS.map((c) => [c.text, c.handler])
@@ -631,7 +752,9 @@ const proccessBlockWithSmartness = async (
             );
           return promiseArgs
             .then((resolvedArgs) =>
-              handlerByCommand[cmd]
+              smartBlocksContext.exitBlock
+                ? ""
+                : !!handlerByCommand[cmd]
                 ? handlerByCommand[cmd](...resolvedArgs)
                 : `<%${cmd}${
                     resolvedArgs.length ? `:${resolvedArgs.join(",")}` : ""
@@ -648,6 +771,14 @@ const proccessBlockWithSmartness = async (
         promises.push(promise);
       });
     const data = await processPromises(promises);
+    if (smartBlocksContext.exitBlock) {
+      smartBlocksContext.exitBlock = false;
+      return [
+        {
+          text: "",
+        },
+      ];
+    }
 
     const text = parts
       .map(({ name, value }) => {
