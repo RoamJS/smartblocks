@@ -8,7 +8,7 @@ const dynamo = new AWS.DynamoDB({
 });
 const headers = {
   "Access-Control-Allow-Origin": "https://roamresearch.com",
-  "Access-Control-Allow-Methods": "GET",
+  "Access-Control-Allow-Methods": "PUT",
 };
 
 export const handler: APIGatewayProxyHandler = async (event) => {
@@ -30,31 +30,89 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     uuid: string;
   };
   const price = 0;
-  const requiresReview = /<%((J(A(VASCRIPT(ASYNC)?)?)?)|(ONBLOCKEXIT)):/.test(workflow);
+  const requiresReview = /<%((J(A(VASCRIPT(ASYNC)?)?)?)|(ONBLOCKEXIT)):/.test(
+    workflow
+  );
+  const token = event.headers.Authorization || event.headers.authorization || '';
   return dynamo
-    .putItem({
+    .query({
       TableName: "RoamJSSmartBlocks",
-      Item: {
-        uuid: { S: uuid },
-        price: { N: `${price}` },
-        name: { S: name },
-        tags: { SS: tags?.length ? tags : ["Smartblock"] },
-        img: { S: img.replace(/^!\[.*?\]\(/, "").replace(/\)$/, "") },
-        author: { S: author },
-        description: { S: description },
-        workflow: { S: workflow },
-        status: { S: requiresReview ? "UNDER REVIEW" : "LIVE" },
+      IndexName: "name-index",
+      ExpressionAttributeNames: {
+        "#n": "name",
       },
+      ExpressionAttributeValues: {
+        ":n": { S: name },
+      },
+      KeyConditionExpression: "#n = :n",
     })
     .promise()
-    .then(() => ({
-      statusCode: 200,
-      body: JSON.stringify({
-        uuid,
-        requiresReview,
-      }),
-      headers,
-    }))
+    .then((r) => {
+      const existingWorkflow = r.Items.find((i) => i.status.S !== "USER");
+      if (existingWorkflow && existingWorkflow?.uuid?.S !== uuid) {
+        return {
+          statusCode: 400,
+          body: `Workflow with name ${name} already exists in the store`,
+          headers,
+        };
+      }
+      const putItem = () =>
+        dynamo
+          .putItem({
+            TableName: "RoamJSSmartBlocks",
+            Item: {
+              uuid: { S: uuid },
+              price: { N: `${price}` },
+              name: { S: name },
+              tags: { SS: tags?.length ? tags : ["Smartblock"] },
+              img: { S: img.replace(/^!\[.*?\]\(/, "").replace(/\)$/, "") },
+              author: { S: author },
+              description: { S: description },
+              workflow: { S: workflow },
+              status: { S: requiresReview ? "UNDER REVIEW" : "LIVE" },
+            },
+          })
+          .promise()
+          .then(() => ({
+            statusCode: 200,
+            body: JSON.stringify({
+              uuid,
+              requiresReview,
+            }),
+            headers,
+          }));
+      if (existingWorkflow) {
+        return dynamo
+          .getItem({
+            TableName: "RoamJSSmartBlocks",
+            Key: { uuid: { S: existingWorkflow.author.S } },
+          })
+          .promise()
+          .then((r) =>
+            r.Item?.token?.S && r.Item?.token?.S === token
+              ? putItem()
+              : {
+                  statusCode: 401,
+                  body: `Token unauthorized for updating workflow ${existingWorkflow.name.S}`,
+                }
+          );
+      } else {
+        return dynamo
+          .getItem({
+            TableName: "RoamJSSmartBlocks",
+            Key: { uuid: { S: author } },
+          })
+          .promise()
+          .then((r) =>
+            r.Item?.token && r.Item?.token === token
+              ? putItem()
+              : {
+                  statusCode: 401,
+                  body: `Token unauthorized for creating workflows from graph ${author}`,
+                }
+          );
+      }
+    })
     .catch((e) => ({
       statusCode: 500,
       body: e.message,

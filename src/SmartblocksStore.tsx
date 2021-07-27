@@ -6,17 +6,14 @@ import {
   InputGroup,
   Position,
   Spinner,
+  SpinnerSize,
   Tooltip,
 } from "@blueprintjs/core";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createOverlayRender } from "roamjs-components";
 import axios from "axios";
-import {
-  createBlock,
-  extractTag,
-  getRoamUrl,
-  InputTextNode,
-} from "roam-client";
+import { createBlock, getRoamUrl, InputTextNode } from "roam-client";
+import Markdown from "markdown-to-jsx";
 import { getCustomWorkflows } from "./smartblocks";
 
 type Props = {
@@ -31,7 +28,6 @@ type Smartblocks = {
   img: string;
   author: string;
   description: string;
-  workflow: string;
 };
 
 const Price = ({ price }: { price: number }) => (
@@ -127,6 +123,7 @@ const DrawerContent = ({
     );
   }, [smartblocks, search]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [selectedSmartBlockId, setSelectedSmartBlockId] = useState("");
   const selectedSmartBlock = useMemo(
     () => smartblocks.find(({ uuid }) => uuid === selectedSmartBlockId),
@@ -156,10 +153,10 @@ const DrawerContent = ({
           position: "relative",
         }}
       >
-        <div style={{ height: "100%", width: "60%" }}>
+        <div style={{ height: "100%", width: "40%" }}>
           <Thumbnail src={selectedSmartBlock.img} />
         </div>
-        <div style={{ height: "100%", width: "40%", marginLeft: 16 }}>
+        <div style={{ height: "100%", width: "60%", marginLeft: 16 }}>
           <div>
             {installedSmartblocks.has(selectedSmartBlock.name) ? (
               <i>Already Installed</i>
@@ -169,29 +166,54 @@ const DrawerContent = ({
           </div>
           <h6>{selectedSmartBlock.author}</h6>
           <h1>{selectedSmartBlock.name}</h1>
-          <div>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
             <Button
               style={{ margin: "16px 0" }}
               text={"Install"}
               disabled={installedSmartblocks.has(selectedSmartBlock.name)}
               onClick={() => {
-                const children = JSON.parse(
-                  selectedSmartBlock.workflow
-                ) as InputTextNode[];
-                const uid = createBlock({
-                  node: {
-                    text: `#SmartBlock ${selectedSmartBlock.name}`,
-                    children,
-                  },
-                  parentUid,
-                });
-                onClose();
-                setTimeout(() => window.location.assign(getRoamUrl(uid)), 1);
+                setLoading(true);
+                setError("");
+                axios
+                  .get(
+                    `${process.env.API_URL}/smartblocks-store?uuid=${selectedSmartBlockId}`
+                  )
+                  .then((r) => {
+                    const children = JSON.parse(
+                      r.data.workflow
+                    ) as InputTextNode[];
+                    const uid = createBlock({
+                      node: {
+                        text: `#SmartBlock ${selectedSmartBlock.name}`,
+                        children,
+                      },
+                      parentUid,
+                    });
+                    onClose();
+                    setTimeout(
+                      () => window.location.assign(getRoamUrl(uid)),
+                      1
+                    );
+                  })
+                  .catch((e) => {
+                    setLoading(false);
+                    setError(e.response?.data || e.message);
+                  });
               }}
             />
+            {loading && <Spinner size={SpinnerSize.SMALL} />}
           </div>
+          <div style={{ color: "darkred" }}>{error}</div>
           <h6>About</h6>
-          <p>{selectedSmartBlock.description}</p>
+          <Markdown>
+            {selectedSmartBlock.description || "No Description"}
+          </Markdown>
           <h6>Tags</h6>
           <ul>
             {selectedSmartBlock.tags.map((t) => (

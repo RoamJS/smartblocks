@@ -7,22 +7,29 @@ import {
   SpinnerSize,
 } from "@blueprintjs/core";
 import axios from "axios";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import ReactDOM from "react-dom";
 import {
   createBlock,
   getBlockUidFromTarget,
   getBlockUidsReferencingBlock,
+  getFirstChildTextByBlockUid,
   getFirstChildUidByBlockUid,
   getGraph,
   getPageUidByPageTitle,
   getShallowTreeByParentUid,
+  getTextByBlockUid,
   getTreeByBlockUid,
+  getTreeByPageName,
   InputTextNode,
   TreeNode,
   updateBlock,
 } from "roam-client";
-import { renderWarningToast, toFlexRegex } from "roamjs-components";
+import {
+  getSettingValueFromTree,
+  renderWarningToast,
+  toFlexRegex,
+} from "roamjs-components";
 import lego from "./img/lego3blocks.png";
 import { HIDE_REGEX } from "./smartblocks";
 
@@ -38,12 +45,48 @@ const Content = ({
   blockUid: string;
   onClose: () => void;
 }) => {
+  const pageUid = useMemo(
+    () => getPageUidByPageTitle("roam/js/smartblocks"),
+    []
+  );
+  const parentUid = useMemo(
+    () =>
+      getShallowTreeByParentUid(pageUid).find((t) =>
+        toFlexRegex("publish").test(t.text)
+      )?.uid ||
+      createBlock({
+        node: { text: "publish" },
+        parentUid: pageUid,
+        order: 3,
+      }),
+    [pageUid]
+  );
+  const publishTree = useMemo(
+    () => getShallowTreeByParentUid(parentUid),
+    [parentUid]
+  );
+  const tokenUid = useMemo(
+    () => publishTree.find((t) => toFlexRegex("token").test(t.text))?.uid || "",
+    [publishTree]
+  );
+  const token = useMemo(
+    () => (tokenUid && getFirstChildTextByBlockUid(tokenUid)) || "",
+    [tokenUid]
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  useEffect(() => {
+    if (!token) {
+      setError(
+        "Token necessary for publishing Smartblocks Workflows. Please head to the [[roam/js/smartblocks]] page to generate one."
+      );
+    }
+  }, [token]);
   return (
     <div style={{ padding: 32 }}>
-      <div style={{ width: 180, display: "flex", alignItems: "center" }}>
+      <div style={{ display: "flex", alignItems: "center", width: 180 }}>
         <Button
+          disabled={!token}
           text={"Publish Workflow"}
           intent={Intent.PRIMARY}
           style={{ marginRight: 16, width: 140 }}
@@ -66,65 +109,55 @@ const Content = ({
                 )
               );
               axios
-                .put(`${process.env.API_URL}/smartblocks-store`, {
-                  uuid: uuid[0],
-                  name: text
-                    .replace(/#(42)?SmartBlock/, "")
-                    .replace(HIDE_REGEX, "")
-                    .trim(),
-                  tags,
-                  img: image[0],
-                  author: getGraph(),
-                  description: description[0],
-                  workflow: JSON.stringify(children.map(toInputTextNode)),
-                })
+                .put(
+                  `${process.env.API_URL}/smartblocks-store`,
+                  {
+                    uuid: uuid[0],
+                    name: text
+                      .replace(/#(42)?SmartBlock/, "")
+                      .replace(HIDE_REGEX, "")
+                      .trim(),
+                    tags,
+                    img: image[0],
+                    author: getGraph(),
+                    description: (description[0] || "").replace(/__/g, "_"),
+                    workflow: JSON.stringify(children.map(toInputTextNode)),
+                  },
+                  { headers: { Authorization: token } }
+                )
                 .then((r) => {
-                  const pageUid = getPageUidByPageTitle("roam/js/smartblocks");
-                  const parentUid =
-                    getShallowTreeByParentUid(pageUid).find((t) =>
-                      toFlexRegex("publish").test(t.text)
-                    )?.uid ||
-                    createBlock({
-                      node: { text: "publish" },
-                      parentUid: pageUid,
-                      order: 3,
-                    });
                   const ref = `((${blockUid}))`;
+                  const refUid =
+                    publishTree.find((t) => t.text.trim() === ref)?.uid ||
+                    createBlock({ node: { text: ref }, parentUid, order: 1 });
                   setTimeout(() => {
-                    const refUid =
-                      getShallowTreeByParentUid(parentUid).find(
-                        (t) => t.text.trim() === ref
+                    const uuidUid =
+                      getShallowTreeByParentUid(refUid).find((t) =>
+                        toFlexRegex("uuid").test(t.text)
                       )?.uid ||
-                      createBlock({ node: { text: ref }, parentUid, order: 1 });
+                      createBlock({
+                        node: { text: "uuid" },
+                        parentUid: refUid,
+                      });
                     setTimeout(() => {
-                      const uuidUid =
-                        getShallowTreeByParentUid(refUid).find((t) =>
-                          toFlexRegex("uuid").test(t.text)
-                        )?.uid ||
+                      const valueUid = getFirstChildUidByBlockUid(uuidUid);
+                      if (valueUid) {
+                        updateBlock({ text: r.data.uuid, uid: valueUid });
+                      } else {
                         createBlock({
-                          node: { text: "uuid" },
-                          parentUid: refUid,
+                          node: { text: r.data.uuid },
+                          parentUid: uuidUid,
                         });
-                      setTimeout(() => {
-                        const valueUid = getFirstChildUidByBlockUid(uuidUid);
-                        if (valueUid) {
-                          updateBlock({ text: r.data.uuid, uid: valueUid });
-                        } else {
-                          createBlock({
-                            node: { text: r.data.uuid },
-                            parentUid: uuidUid,
-                          });
-                        }
-                        onClose();
-                        renderWarningToast({
-                          id: "roamjs-smartblock-publish-success",
-                          content: `Successfully published workflow to the SmartBlocks Store!${
-                            r.data.requiresReview
-                              ? "\n\nBecause your workflow contains custom JavaScript, it will first undergo review by RoamJS before going live."
-                              : ""
-                          }`,
-                        });
-                      }, 1);
+                      }
+                      onClose();
+                      renderWarningToast({
+                        id: "roamjs-smartblock-publish-success",
+                        content: `Successfully published workflow to the SmartBlocks Store!${
+                          r.data.requiresReview
+                            ? "\n\nBecause your workflow contains custom JavaScript, it will first undergo review by RoamJS before going live."
+                            : ""
+                        }`,
+                      });
                     }, 1);
                   }, 1);
                 })
@@ -136,6 +169,8 @@ const Content = ({
           }}
         />
         <span>{loading && <Spinner size={SpinnerSize.SMALL} />}</span>
+      </div>
+      <div style={{ width: 180, lineHeight: "0.75em" }}>
         <span style={{ color: "darkred", fontSize: 8 }}>{error}</span>
       </div>
     </div>

@@ -616,19 +616,16 @@ const proccessBlockWithSmartness = async (
           split < 0 ? [] : c.value.substring(split + 1).split(/(?<!\\),/);
         const promise = () => {
           const promiseArgs = args
-            .map((r) =>
-              proccessBlockWithSmartness({ text: r }).then(
-                ([{ text, children }, ...rest]) => {
-                  nextBlocks.push(...rest);
-                  currentChildren.push(...(children || []));
-                  return text;
-                }
-              )
-            )
+            .map((r) => () => proccessBlockWithSmartness({ text: r }))
             .reduce(
               (prev, cur) =>
                 prev.then((argArray) =>
-                  cur.then((arg) => argArray.push(arg)).then(() => argArray)
+                  cur().then(([{ text, children }, ...rest]) => {
+                    nextBlocks.push(...rest);
+                    currentChildren.push(...(children || []));
+                    argArray.push(text);
+                    return argArray;
+                  })
                 ),
               Promise.resolve<string[]>([])
             );

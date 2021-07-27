@@ -27,13 +27,13 @@ import differenceInMilliseconds from "date-fns/differenceInMilliseconds";
 import { render } from "./SmartblocksMenu";
 import { render as renderStore } from "./SmartblocksStore";
 import { render as renderPopover } from "./SmartblockPopover";
-import lego from "./img/lego3blocks.png";
 import {
   CommandHandler,
   getCustomWorkflows,
   handlerByCommand,
   sbBomb,
 } from "./smartblocks";
+import TokenPanel from "./TokenPanel";
 
 addStyle(`.roamjs-smartblocks-popover-target {
   display:inline-block;
@@ -126,6 +126,20 @@ runExtension("smartblocks", () => {
             },
           ],
           toggleable: true,
+        },
+        {
+          id: "publish",
+          fields: [
+            {
+              type: "custom",
+              title: "token",
+              description:
+                "The token required to publish workflows to the Smartblocks Store",
+              options: {
+                component: TokenPanel,
+              },
+            },
+          ],
         },
       ],
     },
@@ -267,7 +281,7 @@ runExtension("smartblocks", () => {
         s.setAttribute("data-roamjs-smartblock-logo", "true");
         const span = document.createElement("span");
         s.insertBefore(span, s.firstChild);
-        s.onmousedown = (e) => e.stopPropagation();
+        span.onmousedown = (e) => e.stopPropagation();
         renderPopover(span);
       }
     },
