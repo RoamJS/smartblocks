@@ -736,6 +736,9 @@ const proccessBlockWithSmartness = async (
         const args =
           split < 0 ? [] : c.value.substring(split + 1).split(/(?<!\\),/);
         const promise = () => {
+          if (smartBlocksContext.exitBlock) {
+            return Promise.resolve([{ text: "" }]);
+          }
           const promiseArgs = args
             .map((r) => () => proccessBlockWithSmartness({ text: r }))
             .reduce(
@@ -752,9 +755,7 @@ const proccessBlockWithSmartness = async (
             );
           return promiseArgs
             .then((resolvedArgs) =>
-              smartBlocksContext.exitBlock
-                ? ""
-                : !!handlerByCommand[cmd]
+              !!handlerByCommand[cmd]
                 ? handlerByCommand[cmd](...resolvedArgs)
                 : `<%${cmd}${
                     resolvedArgs.length ? `:${resolvedArgs.join(",")}` : ""
