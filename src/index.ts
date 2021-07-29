@@ -12,6 +12,9 @@ import {
   getPageUidByPageTitle,
   getShallowTreeByParentUid,
   createHTMLObserver,
+  getBlockUidFromTarget,
+  getTextByBlockUid,
+  updateBlock,
 } from "roam-client";
 import {
   createConfigObserver,
@@ -34,6 +37,7 @@ import {
   sbBomb,
 } from "./smartblocks";
 import TokenPanel from "./TokenPanel";
+import lego from "./img/lego3blocks.png";
 
 addStyle(`.roamjs-smartblocks-popover-target {
   display:inline-block;
@@ -283,6 +287,99 @@ runExtension("smartblocks", () => {
         s.insertBefore(span, s.firstChild);
         span.onmousedown = (e) => e.stopPropagation();
         renderPopover(span);
+      }
+    },
+  });
+
+  createHTMLObserver({
+    className: "bp3-button",
+    tag: "BUTTON",
+    callback: (b: HTMLButtonElement) => {
+      const parentUid = getBlockUidFromTarget(b);
+      if (parentUid && !b.hasAttribute("data-roamjs-smartblock-button")) {
+        b.setAttribute("data-roamjs-smartblock-button", "true");
+        const regex = new RegExp(
+          `{{${b.textContent}:(?:42)?SmartBlock:(.*?)}}`
+        );
+        const text = getTextByBlockUid(parentUid);
+        const match = regex.exec(text);
+        if (match) {
+          const { [1]: buttonText = "", index, [0]: full } = match;
+          const [workflowName, args = ""] = buttonText.split(":");
+          b.addEventListener("click", () => {
+            const srcUid = getCustomWorkflows().find(
+              ({ name }) => name === workflowName
+            )?.uid;
+            if (!srcUid) {
+              createBlock({
+                node: {
+                  text: "Could not find custom workflow with the name:",
+                  children: [{ text: workflowName }],
+                },
+                parentUid,
+              });
+            } else {
+              const variables = Object.fromEntries(
+                args
+                  .split(",")
+                  .map((v) => v.split("="))
+                  .map(([k, v = ""]) => [k, v])
+              );
+
+              const keepButton =
+                variables["RemoveButton"] === "false" ||
+                variables["42RemoveButton"] === "false";
+
+              const loadingText = "Loading...";
+              if (keepButton) {
+                const targetUid = createBlock({
+                  node: { text: loadingText },
+                  parentUid,
+                });
+                setTimeout(
+                  () =>
+                    sbBomb({
+                      srcUid,
+                      target: {
+                        uid: targetUid,
+                        start: 0,
+                        end: loadingText.length,
+                      },
+                      variables,
+                    }),
+                  1
+                );
+              } else {
+                updateBlock({
+                  uid: parentUid,
+                  text: `${text.substring(
+                    0,
+                    index
+                  )}${loadingText}${text.substring(index + full.length)}`,
+                });
+                setTimeout(
+                  () =>
+                    sbBomb({
+                      srcUid,
+                      target: {
+                        uid: parentUid,
+                        start: index,
+                        end: index + loadingText.length,
+                      },
+                      variables,
+                    }),
+                  1
+                );
+              }
+            }
+          });
+          const img = new Image();
+          img.src = lego;
+          img.width = 17;
+          img.height = 14;
+          img.style.marginRight = "7px";
+          b.insertBefore(img, b.firstChild);
+        }
       }
     },
   });

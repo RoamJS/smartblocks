@@ -841,9 +841,11 @@ const filterUselessBlocks = (blocks: InputTextNode[]): InputTextNode[] =>
 export const sbBomb = ({
   srcUid,
   target: { uid, start, end },
+  variables,
 }: {
   srcUid: string;
   target: { uid: string; start: number; end: number };
+  variables?: Record<string, string>;
 }): Promise<void> => {
   resetContext(uid);
   const childNodes = PREDEFINED_REGEX.test(srcUid)

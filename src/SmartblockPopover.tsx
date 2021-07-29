@@ -18,15 +18,12 @@ import {
   getGraph,
   getPageUidByPageTitle,
   getShallowTreeByParentUid,
-  getTextByBlockUid,
   getTreeByBlockUid,
-  getTreeByPageName,
   InputTextNode,
   TreeNode,
   updateBlock,
 } from "roam-client";
 import {
-  getSettingValueFromTree,
   renderWarningToast,
   toFlexRegex,
 } from "roamjs-components";
