@@ -74,7 +74,7 @@ export const predefinedWorkflows = (
       text: "Block Mentions List",
       children: [
         {
-          text: "<%SET:ref,<%INPUT:Name of page or tag reference to search for?{page}%>%><%BLOCKMENTIONS:<%GET:ref%>%>",
+          text: "<%SET:ref,<%INPUT:Name of page or tag reference to search for?{page}%>%><%BLOCKMENTIONS:20,<%GET:ref%>%>",
         },
       ],
     },
@@ -168,16 +168,19 @@ const smartBlocksContext: {
   targetUid: string;
   ifCommand?: boolean;
   exitBlock: boolean;
+  variables: Record<string, string>;
 } = {
   onBlockExit: () => "",
   targetUid: "",
   exitBlock: false,
+  variables: {},
 };
-const resetContext = (targetUid: string) => {
+const resetContext = (targetUid: string, variables: Record<string, string>) => {
   smartBlocksContext.onBlockExit = () => "";
   smartBlocksContext.targetUid = targetUid;
   smartBlocksContext.ifCommand = undefined;
   smartBlocksContext.exitBlock = false;
+  smartBlocksContext.variables = variables;
 };
 
 const javascriptHandler =
@@ -687,6 +690,31 @@ const COMMANDS: {
       return "";
     },
   },
+  {
+    text: "GET",
+    help: "Returns a variable\n\n1. Variable name",
+    handler: (name = "") => {
+      return (
+        smartBlocksContext.variables[name] || `--> Variable ${name} not SET <--`
+      );
+    },
+  },
+  {
+    text: "SET",
+    help: "Create a variable in memory\n\n1. Variable name\n2: Value of variable",
+    handler: (name = '', value = '') => {
+      smartBlocksContext.variables[name] = value;
+      return "";
+    },
+  },
+  {
+    text: "CLEARVARS",
+    help: "Clears all variables from memory",
+    handler: () => {
+      smartBlocksContext.variables = {};
+      return "";
+    },
+  },
 ];
 export const handlerByCommand = Object.fromEntries(
   COMMANDS.map((c) => [c.text, c.handler])
@@ -841,13 +869,13 @@ const filterUselessBlocks = (blocks: InputTextNode[]): InputTextNode[] =>
 export const sbBomb = ({
   srcUid,
   target: { uid, start, end },
-  variables,
+  variables = {},
 }: {
   srcUid: string;
   target: { uid: string; start: number; end: number };
   variables?: Record<string, string>;
 }): Promise<void> => {
-  resetContext(uid);
+  resetContext(uid, variables);
   const childNodes = PREDEFINED_REGEX.test(srcUid)
     ? predefinedChildrenByUid[srcUid]
     : getTreeByBlockUid(srcUid).children;
@@ -860,7 +888,7 @@ export const sbBomb = ({
       updateBlock({
         uid,
         text: `${originalText.substring(0, start)}${
-          firstChild.text
+          firstChild?.text || ''
         }${originalText.substring(end)}`,
       });
       (firstChild?.children || []).forEach((node, order) =>
