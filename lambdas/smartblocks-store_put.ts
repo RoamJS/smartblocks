@@ -6,6 +6,7 @@ const dynamo = new AWS.DynamoDB({
   apiVersion: "2012-08-10",
   region: "us-east-1",
 });
+const ses = new AWS.SES({ apiVersion: "2010-12-01", region: "us-east-1" });
 const headers = {
   "Access-Control-Allow-Origin": "https://roamresearch.com",
   "Access-Control-Allow-Methods": "PUT",
@@ -30,10 +31,10 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     uuid: string;
   };
   const price = 0;
-  const requiresReview = /<%((J(A(VASCRIPT(ASYNC)?)?)?)|(ONBLOCKEXIT)|(IF(TRUE)?)):/.test(
-    workflow
-  );
-  const token = event.headers.Authorization || event.headers.authorization || '';
+  const requiresReview =
+    /<%((J(A(VASCRIPT(ASYNC)?)?)?)|(ONBLOCKEXIT)|(IF(TRUE)?)):/.test(workflow);
+  const token =
+    event.headers.Authorization || event.headers.authorization || "";
   return dynamo
     .query({
       TableName: "RoamJSSmartBlocks",
@@ -73,6 +74,31 @@ export const handler: APIGatewayProxyHandler = async (event) => {
             },
           })
           .promise()
+          .then(() =>
+            ses
+              .sendEmail({
+                Destination: {
+                  ToAddresses: ["support@roamjs.com"],
+                },
+                Message: {
+                  Body: {
+                    Html: {
+                      Charset: "UTF-8",
+                      Data: `<p>Name: ${name}</p>
+<p>Description: ${description}</p>
+<p>Requires Review: ${`${requiresReview}`.toUpperCase()}</p>
+<p>Price: ${price || "FREE"}</p>`,
+                    },
+                  },
+                  Subject: {
+                    Charset: "UTF-8",
+                    Data: `New SmartBlock ${name} Published!`,
+                  },
+                },
+                Source: "support@roamjs.com",
+              })
+              .promise()
+          )
           .then(() => ({
             statusCode: 200,
             body: JSON.stringify({
