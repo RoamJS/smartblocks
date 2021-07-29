@@ -15,10 +15,12 @@ import {
   getBlockUidFromTarget,
   getTextByBlockUid,
   updateBlock,
+  parseRoamDateUid,
 } from "roam-client";
 import {
   createConfigObserver,
   getSettingValueFromTree,
+  setInputSetting,
   toFlexRegex,
 } from "roamjs-components";
 import addDays from "date-fns/addDays";
@@ -214,6 +216,11 @@ runExtension("smartblocks", () => {
         key: "time",
         defaultValue: "00:00",
       });
+      const latest = getSettingValueFromTree({
+        tree: dailyConfig.children,
+        key: "latest",
+        defaultValue: "01-01-1970",
+      });
       const [hours, minutes] = time.split(":").map((s) => Number(s));
       const today = new Date();
       const triggerTime = addMinutes(
@@ -224,10 +231,8 @@ runExtension("smartblocks", () => {
         const ms = differenceInMilliseconds(triggerTime, today);
         setTimeout(runDaily, ms + 1000);
       } else {
-        const todayUid = toRoamDateUid(today);
-        const childrenLength = getChildrenLengthByPageUid(todayUid);
-        if (childrenLength === 0) {
-          createPage({ title: toRoamDate(today) });
+        const latestDate = parseRoamDateUid(latest);
+        if (isBefore(startOfDay(latestDate), startOfDay(today))) {
           const dailyWorkflowName = getSettingValueFromTree({
             tree: dailyConfig.children,
             key: "workflow name",
@@ -236,7 +241,9 @@ runExtension("smartblocks", () => {
           const srcUid = getCustomWorkflows().find(
             ({ name }) => name === dailyWorkflowName
           )?.uid;
+          const todayUid = toRoamDateUid(today);
           if (srcUid) {
+            createPage({ title: toRoamDate(today) });
             const text = "Loading...";
             const targetUid = createBlock({
               node: { text },
@@ -258,6 +265,12 @@ runExtension("smartblocks", () => {
               parentUid: todayUid,
             });
           }
+          setInputSetting({
+            blockUid: dailyConfig.uid,
+            value: todayUid,
+            key: "latest",
+            index: 2,
+          });
         }
         const ms = differenceInMilliseconds(addDays(triggerTime, 1), today);
         setTimeout(runDaily, ms + 1000);
