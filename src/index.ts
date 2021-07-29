@@ -60,13 +60,12 @@ addStyle(`.roamjs-smartblocks-popover-target {
   font-size: 12px;
 }
 
-.roamjs-smartblocks-store-item.roamjs-unavailable {
-  opacity: 0.8;
-  background-color: #80808080;
-  cursor: not-allowed;
+.roamjs-smartblocks-store-item.roamjs-installed {
+  cursor: auto;
 }
 
-.roamjs-smartblocks-store-item.roamjs-available:hover {
+.roamjs-smartblocks-store-item.roamjs-marketplace:hover,
+.roamjs-smartblocks-store-item.roamjs-published:hover {
   box-shadow: 0px 3px 6px #00000040;
   transform: translate(0,-3px);
 }
@@ -75,6 +74,10 @@ addStyle(`.roamjs-smartblocks-popover-target {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+}
+
+.roamjs-smartblocks-store-tabs .bp3-tab-list {
+  justify-content: space-around;
 }`);
 
 const getLegacy42Setting = (name: string) => {
@@ -299,7 +302,8 @@ runExtension("smartblocks", () => {
       if (parentUid && !b.hasAttribute("data-roamjs-smartblock-button")) {
         b.setAttribute("data-roamjs-smartblock-button", "true");
         const regex = new RegExp(
-          `{{${b.textContent}:(?:42)?SmartBlock:(.*?)}}`
+          `{{${b.textContent}:SmartBlock:(.*?)}}`
+          //`{{${b.textContent}:(?:42)?SmartBlock:(.*?)}}`
         );
         const text = getTextByBlockUid(parentUid);
         const match = regex.exec(text);

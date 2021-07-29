@@ -7,14 +7,17 @@ import {
   Position,
   Spinner,
   SpinnerSize,
+  Tab,
+  Tabs,
   Tooltip,
 } from "@blueprintjs/core";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createOverlayRender } from "roamjs-components";
 import axios from "axios";
-import { createBlock, getRoamUrl, InputTextNode } from "roam-client";
+import { createBlock, getGraph, getRoamUrl, InputTextNode } from "roam-client";
 import Markdown from "markdown-to-jsx";
 import { getCustomWorkflows } from "./smartblocks";
+import lego from "./img/lego3blocks.png";
 
 type Props = {
   parentUid: string;
@@ -25,9 +28,9 @@ type Smartblocks = {
   name: string;
   tags: string[];
   price: number;
-  img: string;
+  img?: string;
   author: string;
-  description: string;
+  description?: string;
 };
 
 const Price = ({ price }: { price: number }) => (
@@ -45,7 +48,7 @@ const Price = ({ price }: { price: number }) => (
   </b>
 );
 
-const Thumbnail = ({ src }: { src: string }): React.ReactElement => {
+const Thumbnail = ({ src = lego }: { src?: string }): React.ReactElement => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [height, setHeight] = useState(80);
   const [width, setWidth] = useState(80);
@@ -101,6 +104,8 @@ const Thumbnail = ({ src }: { src: string }): React.ReactElement => {
 };
 
 const ROW_LENGTH = 4;
+const DRAWER_TABS = ["Marketplace", "Installed", "Published"] as const;
+type DrawerTab = typeof DRAWER_TABS[number];
 
 const DrawerContent = ({
   parentUid,
@@ -111,17 +116,26 @@ const DrawerContent = ({
     () => new Set(getCustomWorkflows().map(({ name }) => name)),
     []
   );
+  const [tabId, setTabId] = useState<DrawerTab>("Marketplace");
   const [search, setSearch] = useState("");
   const filteredSmartblocks = useMemo(() => {
     const regex = new RegExp(search, "i");
-    return smartblocks.filter(
-      (f) =>
-        regex.test(f.name) ||
-        regex.test(f.description) ||
-        f.tags.some((s) => regex.test(s)) ||
-        regex.test(f.author)
-    );
-  }, [smartblocks, search]);
+    return smartblocks
+      .filter(
+        tabId === "Marketplace"
+          ? (s) => !installedSmartblocks.has(s.name)
+          : tabId === "Installed"
+          ? (s) => installedSmartblocks.has(s.name) && s.author !== getGraph()
+          : (s) => s.author === getGraph()
+      )
+      .filter(
+        (f) =>
+          regex.test(f.name) ||
+          regex.test(f.description) ||
+          f.tags.some((s) => regex.test(s)) ||
+          regex.test(f.author)
+      );
+  }, [smartblocks, search, tabId, installedSmartblocks]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selectedSmartBlockId, setSelectedSmartBlockId] = useState("");
@@ -231,6 +245,18 @@ const DrawerContent = ({
     </div>
   ) : (
     <>
+      <div>
+        <Tabs
+          id={"smartblocks-store"}
+          selectedTabId={tabId}
+          onChange={(e) => setTabId(e as DrawerTab)}
+          className={"roamjs-smartblocks-store-tabs"}
+        >
+          {DRAWER_TABS.map((id) => (
+            <Tab key={id} title={id} id={id} />
+          ))}
+        </Tabs>
+      </div>
       <div
         className={Classes.DRAWER_BODY}
         style={{
@@ -248,18 +274,17 @@ const DrawerContent = ({
         ) : (
           filteredSmartblocks.map((e, i) => {
             const gridColumnStart = (i + 1) % ROW_LENGTH || ROW_LENGTH;
-            const unavailable = installedSmartblocks.has(e.name);
             return (
               <div
                 key={e.uuid}
-                className={`roamjs-smartblocks-store-item roamjs-${
-                  unavailable ? "unavailable" : "available"
-                }`}
+                className={`roamjs-smartblocks-store-item roamjs-${tabId.toLowerCase()}`}
                 style={{
                   gridColumnStart: `${gridColumnStart}`,
                   gridColumnEnd: `${gridColumnStart + 1}`,
                 }}
-                onClick={() => !unavailable && setSelectedSmartBlockId(e.uuid)}
+                onClick={() =>
+                  tabId !== "Installed" && setSelectedSmartBlockId(e.uuid)
+                }
               >
                 <Thumbnail src={e.img} />
                 <div
@@ -274,11 +299,7 @@ const DrawerContent = ({
                   <Tooltip content={e.name} minimal targetTagName={"b"}>
                     {e.name}
                   </Tooltip>
-                  {unavailable ? (
-                    <i style={{ minWidth: "fit-content" }}>Installed</i>
-                  ) : (
-                    <Price price={e.price} />
-                  )}
+                  {tabId !== "Installed" && <Price price={e.price} />}
                 </div>
               </div>
             );
