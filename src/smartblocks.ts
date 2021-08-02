@@ -451,10 +451,12 @@ const COMMANDS: {
   },
   {
     text: "BREADCRUMBS",
-    help: "Returns a list of parent block refs to a given block ref\n\n1: Block reference\n2: Separator used between blok references",
+    help: "Returns a list of parent block refs to a given block ref\n\n1: Block reference\n2: Separator used between block references",
     handler: (uidArg = "", ...delim) => {
       const separator = delim.join(",") || " > ";
-      const uid = uidArg.replace(/^(\+|-)/, "");
+      const uid = uidArg
+        .replace(/^(\+|-)?\(\(/, "")
+        .replace(/\)\)$/, "");
       return [
         ...(uidArg.startsWith("-")
           ? []
@@ -702,7 +704,7 @@ const COMMANDS: {
   {
     text: "SET",
     help: "Create a variable in memory\n\n1. Variable name\n2: Value of variable",
-    handler: (name = '', value = '') => {
+    handler: (name = "", value = "") => {
       smartBlocksContext.variables[name] = value;
       return "";
     },
@@ -888,7 +890,7 @@ export const sbBomb = ({
       updateBlock({
         uid,
         text: `${originalText.substring(0, start)}${
-          firstChild?.text || ''
+          firstChild?.text || ""
         }${originalText.substring(end)}`,
       });
       (firstChild?.children || []).forEach((node, order) =>
