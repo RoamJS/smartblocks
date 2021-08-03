@@ -282,7 +282,7 @@ const COMMANDS: {
       const parentUid = getPageUidByPageTitle(possibleTitle) || titleOrUid;
       const uids = getBlockUidsWithParentUid(parentUid);
       const uid = uids[Math.floor(Math.random() * uids.length)];
-      return `((${uid}))`;
+      return uids.length ? `((${uid}))` : 'No blocks on page!';
     },
   },
   {
