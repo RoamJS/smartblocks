@@ -282,7 +282,7 @@ const COMMANDS: {
       const parentUid = getPageUidByPageTitle(possibleTitle) || titleOrUid;
       const uids = getBlockUidsWithParentUid(parentUid);
       const uid = uids[Math.floor(Math.random() * uids.length)];
-      return uids.length ? `((${uid}))` : 'No blocks on page!';
+      return uids.length ? `((${uid}))` : "No blocks on page!";
     },
   },
   {
@@ -454,9 +454,7 @@ const COMMANDS: {
     help: "Returns a list of parent block refs to a given block ref\n\n1: Block reference\n2: Separator used between block references",
     handler: (uidArg = "", ...delim) => {
       const separator = delim.join(",") || " > ";
-      const uid = uidArg
-        .replace(/^(\+|-)?\(\(/, "")
-        .replace(/\)\)$/, "");
+      const uid = uidArg.replace(/^(\+|-)?\(\(/, "").replace(/\)\)$/, "");
       return [
         ...(uidArg.startsWith("-")
           ? []
@@ -481,7 +479,7 @@ const COMMANDS: {
     text: "CONCAT",
     help: "Combines a comma separated list of strings into one string\n\n1: comma separated list",
     handler: (...args) => {
-      return args.map((s) => s.replace(/\\,/g, ",")).join("");
+      return args.join("");
     },
   },
   {
@@ -764,7 +762,12 @@ const proccessBlockWithSmartness = async (
         const split = c.value.indexOf(":");
         const cmd = split < 0 ? c.value : c.value.substring(0, split);
         const args =
-          split < 0 ? [] : c.value.substring(split + 1).split(/(?<!\\),/);
+          split < 0
+            ? []
+            : c.value
+                .substring(split + 1)
+                .split(/(?<!\\),/)
+                .map((s) => s.replace(/\\,/g, ","));
         const promise = () => {
           if (smartBlocksContext.exitBlock) {
             return Promise.resolve([{ text: "" }]);
