@@ -120,6 +120,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
               : {
                   statusCode: 401,
                   body: `Token unauthorized for updating workflow ${existingWorkflow.name.S}`,
+                  headers,
                 }
           );
       } else {
@@ -135,6 +136,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
               : {
                   statusCode: 401,
                   body: `Token unauthorized for creating workflows from graph ${author}`,
+                  headers,
                 }
           );
       }

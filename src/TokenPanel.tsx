@@ -1,6 +1,5 @@
 import {
   Button,
-  Icon,
   InputGroup,
   Intent,
   Spinner,
@@ -13,10 +12,8 @@ import {
   getFirstChildTextByBlockUid,
   getFirstChildUidByBlockUid,
   getGraph,
-  getShallowTreeByParentUid,
   updateBlock,
 } from "roam-client";
-import { toFlexRegex } from "roamjs-components";
 
 const TokenPanel = ({
   uid,

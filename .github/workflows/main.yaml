@@ -8,6 +8,7 @@ on:
 
 env:
   API_URL: https://lambda.roamjs.com
+  STRIPE_PUBLIC_KEY: ${{ secrets.STRIPE_PUBLIC_KEY }}
 
 jobs:
   deploy:

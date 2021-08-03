@@ -73,10 +73,6 @@ module "roamjs_lambda" {
     {
       path = "smartblocks-token",
       method = "post"
-    },
-    {
-      path = "smartblocks-token",
-      method = "get"
     }
   ]
   aws_access_token = var.aws_access_token
