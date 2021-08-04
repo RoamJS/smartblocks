@@ -230,7 +230,10 @@ const COMMANDS: {
       }
       const date = parseDate(nlp);
       if (format) {
-        return datefnsFormat(date, format);
+        return datefnsFormat(date, format, {
+          useAdditionalDayOfYearTokens: true,
+          useAdditionalWeekYearTokens: true,
+        });
       }
       return `[[${toRoamDate(date)}]]`;
     },
