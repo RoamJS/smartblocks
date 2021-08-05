@@ -1060,7 +1060,7 @@ export const sbBomb = ({
       if (smartBlocksContext.focusOnBlock) {
         setTimeout(() => {
           window.location.assign(getRoamUrl(smartBlocksContext.focusOnBlock));
-        }, 750);
+        }, 1000);
       } else if (typeof mutableCursor === "boolean") {
         if (mutableCursor) {
           if (smartBlocksContext.cursorPosition) {
@@ -1106,7 +1106,12 @@ export const sbBomb = ({
             }
           }
         } else {
-          setTimeout(() => document.body.focus(), 1);
+          setTimeout(
+            () =>
+              document.activeElement.tagName === "TEXTAREA" &&
+              (document.activeElement as HTMLTextAreaElement).blur(),
+            1
+          );
         }
       }
     });
