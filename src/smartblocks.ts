@@ -21,6 +21,8 @@ import {
   getParentUidsOfBlockUid,
   BLOCK_REF_REGEX,
   getCurrentUserDisplayName,
+  openBlock,
+  getRoamUrl,
 } from "roam-client";
 import { parseDate } from "chrono-node";
 import datefnsFormat from "date-fns/format";
@@ -169,11 +171,20 @@ const smartBlocksContext: {
   ifCommand?: boolean;
   exitBlock: boolean;
   variables: Record<string, string>;
+  cursorPosition?: { uid: string; selection: number };
+  currentUid?: string;
+  currentLength: 0;
+  indent: Set<string>;
+  unindent: Set<string>;
+  focusOnBlock?: string;
 } = {
   onBlockExit: () => "",
   targetUid: "",
   exitBlock: false,
   variables: {},
+  currentLength: 0,
+  indent: new Set(),
+  unindent: new Set(),
 };
 const resetContext = (targetUid: string, variables: Record<string, string>) => {
   smartBlocksContext.onBlockExit = () => "";
@@ -181,6 +192,12 @@ const resetContext = (targetUid: string, variables: Record<string, string>) => {
   smartBlocksContext.ifCommand = undefined;
   smartBlocksContext.exitBlock = false;
   smartBlocksContext.variables = variables;
+  smartBlocksContext.cursorPosition = undefined;
+  smartBlocksContext.currentUid = undefined;
+  smartBlocksContext.focusOnBlock = undefined;
+  smartBlocksContext.currentLength = 0;
+  smartBlocksContext.indent = new Set();
+  smartBlocksContext.unindent = new Set();
 };
 
 const javascriptHandler =
@@ -718,6 +735,51 @@ const COMMANDS: {
       return "";
     },
   },
+  {
+    text: "CURSOR",
+    help: "Defines where cursor should be located after the workflow completes.",
+    handler: () => {
+      smartBlocksContext.cursorPosition = {
+        uid: smartBlocksContext.currentUid,
+        selection: smartBlocksContext.currentLength,
+      };
+      return "";
+    },
+  },
+  {
+    text: "CURRENTBLOCKREF",
+    help: "Sets a variable to the block UID for the current block\n\n1. Variable name",
+    handler: (name = "") => {
+      smartBlocksContext.variables[
+        name
+      ] = `((${smartBlocksContext.currentUid}))`;
+      return "";
+    },
+  },
+  {
+    text: "INDENT",
+    help: "Indents the current block if indentation can be done at current block. ",
+    handler: () => {
+      smartBlocksContext.indent.add(smartBlocksContext.currentUid);
+      return "";
+    },
+  },
+  {
+    text: "UNINDENT",
+    help: "Unidents at the current block if it can be done at current block. ",
+    handler: () => {
+      smartBlocksContext.unindent.add(smartBlocksContext.currentUid);
+      return "";
+    },
+  },
+  {
+    text: "FOCUSONBLOCK",
+    help: "<b>FOCUSONBLOCK</b><br/>Will focus on the<br/>current block after the<br/>workflow finshes. ",
+    handler: () => {
+      smartBlocksContext.focusOnBlock = smartBlocksContext.currentUid;
+      return "";
+    },
+  },
 ];
 export const handlerByCommand = Object.fromEntries(
   COMMANDS.map((c) => [c.text, c.handler])
@@ -750,6 +812,113 @@ const breakTextToParts = (text: string) => {
   }
 };
 
+const proccessBlockText = async (s: string): Promise<InputTextNode[]> => {
+  try {
+    const nextBlocks: InputTextNode[] = [];
+    const currentChildren: InputTextNode[] = [];
+    const promises = processBlockTextToPromises(s, nextBlocks, currentChildren);
+    const text = await processPromisesToBlockText(
+      promises,
+      nextBlocks,
+      currentChildren
+    );
+    return [
+      {
+        text,
+        children: currentChildren,
+      },
+      ...nextBlocks,
+    ];
+  } catch (e) {
+    console.error(e);
+    return [
+      {
+        children: [],
+        text: `Block threw an error while running: ${s}`,
+      },
+    ];
+  }
+};
+
+const processBlockTextToPromises = (
+  s: string,
+  nextBlocks: InputTextNode[],
+  currentChildren: InputTextNode[]
+) =>
+  breakTextToParts(s).map((c) => () => {
+    if (smartBlocksContext.exitBlock) {
+      return Promise.resolve<InputTextNode[]>([{ text: "" }]);
+    }
+    if (c.name === "text") {
+      return Promise.resolve<InputTextNode[]>([{ text: c.value }]);
+    }
+    const split = c.value.indexOf(":");
+    const cmd = split < 0 ? c.value : c.value.substring(0, split);
+    const args =
+      split < 0
+        ? []
+        : c.value
+            .substring(split + 1)
+            .split(/(?<!\\),/)
+            .map((s) => s.replace(/\\,/g, ","));
+    const promiseArgs = args
+      .map((r) => () => proccessBlockText(r))
+      .reduce(
+        (prev, cur) =>
+          prev.then((argArray) =>
+            cur().then(([{ text, children }, ...rest]) => {
+              nextBlocks.push(...rest);
+              currentChildren.push(...(children || []));
+              argArray.push(text);
+              return argArray;
+            })
+          ),
+        Promise.resolve<string[]>([])
+      );
+    return promiseArgs
+      .then((resolvedArgs) =>
+        !!handlerByCommand[cmd]
+          ? handlerByCommand[cmd](...resolvedArgs)
+          : `<%${cmd}${
+              resolvedArgs.length ? `:${resolvedArgs.join(",")}` : ""
+            }%>`
+      )
+      .then((output) =>
+        typeof output === "string"
+          ? [{ text: output }]
+          : output.map((o: string | InputTextNode) =>
+              typeof o === "string" ? { text: o } : o
+            )
+      );
+  });
+
+const processPromisesToBlockText = async (
+  promises: (() => Promise<InputTextNode[]>)[],
+  nextBlocks: InputTextNode[],
+  currentChildren: InputTextNode[]
+) => {
+  const data = await processPromises(
+    promises.map(
+      (p) => (prev) =>
+        p().then((c) => {
+          prev.push(c);
+        })
+    )
+  );
+  if (smartBlocksContext.exitBlock) {
+    smartBlocksContext.exitBlock = false;
+    return "";
+  }
+
+  return data
+    .map((blocks) => {
+      currentChildren.push(...(blocks[0]?.children || []));
+      nextBlocks.push(...blocks.slice(1));
+      return blocks[0]?.text || "";
+    })
+    .join("");
+};
+
 // ridiculous method names in this file are a tribute to the original author of SmartBlocks, RoamHacker 🙌
 const proccessBlockWithSmartness = async (
   n: InputTextNode
@@ -757,82 +926,31 @@ const proccessBlockWithSmartness = async (
   try {
     const nextBlocks: InputTextNode[] = [];
     const currentChildren: InputTextNode[] = [];
-    const promises: (() => Promise<InputTextNode[]>)[] = [];
-    const parts = breakTextToParts(n.text);
-    parts
-      .filter((p) => p.name === "command")
-      .forEach((c) => {
-        const split = c.value.indexOf(":");
-        const cmd = split < 0 ? c.value : c.value.substring(0, split);
-        const args =
-          split < 0
-            ? []
-            : c.value
-                .substring(split + 1)
-                .split(/(?<!\\),/)
-                .map((s) => s.replace(/\\,/g, ","));
-        const promise = () => {
-          if (smartBlocksContext.exitBlock) {
-            return Promise.resolve([{ text: "" }]);
-          }
-          const promiseArgs = args
-            .map((r) => () => proccessBlockWithSmartness({ text: r }))
-            .reduce(
-              (prev, cur) =>
-                prev.then((argArray) =>
-                  cur().then(([{ text, children }, ...rest]) => {
-                    nextBlocks.push(...rest);
-                    currentChildren.push(...(children || []));
-                    argArray.push(text);
-                    return argArray;
-                  })
-                ),
-              Promise.resolve<string[]>([])
-            );
-          return promiseArgs
-            .then((resolvedArgs) =>
-              !!handlerByCommand[cmd]
-                ? handlerByCommand[cmd](...resolvedArgs)
-                : `<%${cmd}${
-                    resolvedArgs.length ? `:${resolvedArgs.join(",")}` : ""
-                  }%>`
-            )
-            .then((output) =>
-              typeof output === "string"
-                ? [{ text: output }]
-                : output.map((o: string | InputTextNode) =>
-                    typeof o === "string" ? { text: o } : o
-                  )
-            );
-        };
-        promises.push(promise);
-      });
-    const data = await processPromises(promises);
-    if (smartBlocksContext.exitBlock) {
-      smartBlocksContext.exitBlock = false;
-      return [
-        {
-          text: "",
-        },
-      ];
-    }
-
-    const text = parts
-      .map(({ name, value }) => {
-        if (name === "text") {
-          return value;
-        }
-        const blocks = data.shift();
-        currentChildren.push(...(blocks[0]?.children || []));
-        nextBlocks.push(...blocks.slice(1));
-        return blocks[0]?.text || "";
-      })
-      .join("");
+    const promises = processBlockTextToPromises(
+      n.text,
+      nextBlocks,
+      currentChildren
+    ).map(
+      (p) => () =>
+        p().then((t) => {
+          smartBlocksContext.currentLength += t[0]?.text?.length || 0;
+          return t;
+        })
+    );
+    const text = await processPromisesToBlockText(
+      promises,
+      nextBlocks,
+      currentChildren
+    );
     await smartBlocksContext.onBlockExit();
+    const processedChildren = await processChildren({
+      nodes: n.children,
+      nextBlocks,
+    });
     return [
       {
         text,
-        children: [...currentChildren, ...(await processChildren(n.children))],
+        children: [...currentChildren, ...processedChildren],
       },
       ...nextBlocks,
     ];
@@ -847,22 +965,54 @@ const proccessBlockWithSmartness = async (
   }
 };
 
-const processPromises = (nodes: (() => Promise<InputTextNode[]>)[] = []) =>
+const processPromises = (
+  nodes: ((prev: InputTextNode[][]) => Promise<void>)[] = []
+) =>
   nodes.reduce(
-    (prev, cur) =>
-      prev.then((r) =>
-        cur().then((c) => {
-          r.push(c);
-          return r;
-        })
-      ),
+    (prev, cur) => prev.then((r) => cur(r).then(() => r)),
     Promise.resolve([] as InputTextNode[][])
   );
 
-const processChildren = (nodes: InputTextNode[] = []) =>
-  processPromises(nodes.map((n) => () => proccessBlockWithSmartness(n))).then(
-    (results) => results.flatMap((r) => r)
-  );
+const processChildren = ({
+  nodes = [],
+  introUid,
+  nextBlocks,
+}: {
+  nodes: InputTextNode[];
+  introUid?: string;
+  nextBlocks?: InputTextNode[];
+}) =>
+  processPromises(
+    nodes.map((n, i) => (prev) => {
+      const uid =
+        (i === 0 && introUid) || window.roamAlphaAPI.util.generateUID();
+      smartBlocksContext.currentUid = uid;
+      smartBlocksContext.currentLength = 0;
+      return proccessBlockWithSmartness(n)
+        .then((b) => {
+          if (b.length) {
+            b[0].uid = uid;
+          }
+          return b;
+        })
+        .then((c) => {
+          const indent = smartBlocksContext.indent.has(uid);
+          const unindent = smartBlocksContext.unindent.has(uid);
+          if (unindent && !indent && nextBlocks) {
+            nextBlocks.push(...c);
+          } else if (!prev.length || !indent || unindent) {
+            prev.push(c);
+          } else if (indent) {
+            prev
+              .slice(-1)[0]
+              .slice(-1)[0]
+              .children.push(...c);
+          }
+          smartBlocksContext.indent.delete(uid);
+          smartBlocksContext.unindent.delete(uid);
+        });
+    })
+  ).then((results) => results.flatMap((r) => r));
 
 const filterUselessBlocks = (blocks: InputTextNode[]): InputTextNode[] =>
   blocks
@@ -878,16 +1028,18 @@ export const sbBomb = ({
   srcUid,
   target: { uid, start, end },
   variables = {},
+  mutableCursor,
 }: {
   srcUid: string;
   target: { uid: string; start: number; end: number };
   variables?: Record<string, string>;
+  mutableCursor?: boolean;
 }): Promise<void> => {
   resetContext(uid, variables);
   const childNodes = PREDEFINED_REGEX.test(srcUid)
     ? predefinedChildrenByUid[srcUid]
     : getTreeByBlockUid(srcUid).children;
-  return processChildren(childNodes)
+  return processChildren({ nodes: childNodes, introUid: uid })
     .then(filterUselessBlocks)
     .then(([firstChild, ...tree]) => {
       const startingOrder = getOrderByBlockUid(uid);
@@ -905,5 +1057,57 @@ export const sbBomb = ({
       tree.forEach((node, i) =>
         createBlock({ parentUid, order: startingOrder + 1 + i, node })
       );
+      if (smartBlocksContext.focusOnBlock) {
+        setTimeout(() => {
+          window.location.assign(getRoamUrl(smartBlocksContext.focusOnBlock));
+        }, 750);
+      } else if (typeof mutableCursor === "boolean") {
+        if (mutableCursor) {
+          if (smartBlocksContext.cursorPosition) {
+            if (
+              smartBlocksContext.cursorPosition.uid === uid &&
+              document.activeElement.tagName === "TEXTAREA" &&
+              document.activeElement.id.endsWith(uid)
+            ) {
+              const selection =
+                smartBlocksContext.cursorPosition.selection + start;
+              setTimeout(
+                () =>
+                  (
+                    document.activeElement as HTMLTextAreaElement
+                  ).setSelectionRange(selection, selection),
+                1
+              );
+            } else {
+              new MutationObserver((mrs, obs) => {
+                const el = mrs
+                  .flatMap((m) => Array.from(m.addedNodes))
+                  .filter((d) => d.nodeName === "DIV")
+                  .flatMap((m: HTMLDivElement) =>
+                    Array.from(
+                      m.querySelectorAll<HTMLDivElement>("div.roam-block")
+                    )
+                  )
+                  .find((d) =>
+                    d.id.endsWith(smartBlocksContext.cursorPosition.uid)
+                  );
+                if (el) {
+                  setTimeout(
+                    () =>
+                      openBlock(
+                        el.id,
+                        smartBlocksContext.cursorPosition.selection
+                      ),
+                    1
+                  );
+                  obs.disconnect();
+                }
+              }).observe(document.body, { childList: true, subtree: true });
+            }
+          }
+        } else {
+          setTimeout(() => document.body.focus(), 1);
+        }
+      }
     });
 };

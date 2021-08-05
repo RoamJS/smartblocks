@@ -209,11 +209,12 @@ runExtension("smartblocks", () => {
             {
               type: "custom",
               title: "stripe",
-              description: "Create a connected Stripe account to be able to sell workflows in the Store",
+              description:
+                "Create a connected Stripe account to be able to sell workflows in the Store",
               options: {
                 component: StripePanel,
-              }
-            }
+              },
+            },
           ],
         },
       ],
@@ -414,6 +415,11 @@ runExtension("smartblocks", () => {
                 variables["42RemoveButton"] === "false";
 
               const loadingText = "Loading...";
+              const props = {
+                srcUid,
+                variables,
+                mutableCursor: !workflowName.includes("<%NOCURSOR%>"),
+              };
               if (keepButton) {
                 const targetUid = createBlock({
                   node: { text: loadingText },
@@ -422,13 +428,12 @@ runExtension("smartblocks", () => {
                 setTimeout(
                   () =>
                     sbBomb({
-                      srcUid,
+                      ...props,
                       target: {
                         uid: targetUid,
                         start: 0,
                         end: loadingText.length,
                       },
-                      variables,
                     }),
                   1
                 );
@@ -443,13 +448,12 @@ runExtension("smartblocks", () => {
                 setTimeout(
                   () =>
                     sbBomb({
-                      srcUid,
+                      ...props,
                       target: {
                         uid: parentUid,
                         start: index,
                         end: index + loadingText.length,
                       },
-                      variables,
                     }),
                   1
                 );

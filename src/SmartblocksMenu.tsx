@@ -9,9 +9,7 @@ import React, {
 import ReactDOM from "react-dom";
 import {
   createBlock,
-  createTagRegex,
   deleteBlock,
-  getBlockUidsAndTextsReferencingPage,
   getUids,
 } from "roam-client";
 import { getCoords } from "./dom";
@@ -58,9 +56,10 @@ const SmartblocksMenu = ({
   const [activeIndex, setActiveIndex] = useState(0);
   const onSelect = useCallback(
     (index) => {
-      const srcUid = menuRef.current.children[index]
-        .querySelector(".bp3-menu-item")
-        .getAttribute("data-uid");
+      const item =
+        menuRef.current.children[index].querySelector(".bp3-menu-item");
+      const srcName = item.getAttribute("data-name");
+      const srcUid = item.getAttribute("data-uid");
       const start = textarea.selectionStart - triggerLength;
       const end = textarea.selectionStart;
       onClose();
@@ -76,6 +75,7 @@ const SmartblocksMenu = ({
             start,
             end,
           },
+          mutableCursor: !srcName.includes("<%NOCURSOR%>"),
         }).then(() => deleteBlock(loadingUid));
       }, 10);
     },
@@ -144,6 +144,7 @@ const SmartblocksMenu = ({
                 <MenuItem
                   key={wf.uid}
                   data-uid={wf.uid}
+                  data-name={wf.name}
                   text={
                     <>
                       <img
