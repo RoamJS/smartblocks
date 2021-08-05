@@ -358,13 +358,16 @@ runExtension("smartblocks", () => {
     },
   });
 
-  const TAGS = new Set(["SmartBlock", "42SmartBlock"]);
   createHTMLObserver({
     className: "rm-page-ref--tag",
     tag: "SPAN",
     callback: (s: HTMLSpanElement) => {
       const dataTag = s.getAttribute("data-tag");
-      if (TAGS.has(dataTag) && !s.hasAttribute("data-roamjs-smartblock-logo")) {
+      if (
+        (dataTag === "SmartBlock" ||
+          (dataTag === "42SmartBlock" && !window.roam42)) &&
+        !s.hasAttribute("data-roamjs-smartblock-logo")
+      ) {
         s.setAttribute("data-roamjs-smartblock-logo", "true");
         const span = document.createElement("span");
         s.insertBefore(span, s.firstChild);

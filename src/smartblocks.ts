@@ -23,6 +23,7 @@ import {
   getCurrentUserDisplayName,
   openBlock,
   getRoamUrl,
+  getBlockUidAndTextIncludingText,
 } from "roam-client";
 import { parseDate } from "chrono-node";
 import datefnsFormat from "date-fns/format";
@@ -31,6 +32,7 @@ import isBefore from "date-fns/isBefore";
 import isAfter from "date-fns/isAfter";
 import XRegExp from "xregexp";
 import { renderPrompt } from "./Prompt";
+import { renderToast } from "roamjs-components";
 
 export const PREDEFINED_REGEX = /#\d*-predefined/;
 const PAGE_TITLE_REGEX = /^(?:#?\[\[(.*)\]\]|#([^\s]*))$/;
@@ -170,6 +172,7 @@ const smartBlocksContext: {
   targetUid: string;
   ifCommand?: boolean;
   exitBlock: boolean;
+  exitWorkflow: boolean;
   variables: Record<string, string>;
   cursorPosition?: { uid: string; selection: number };
   currentUid?: string;
@@ -181,6 +184,7 @@ const smartBlocksContext: {
   onBlockExit: () => "",
   targetUid: "",
   exitBlock: false,
+  exitWorkflow: false,
   variables: {},
   currentLength: 0,
   indent: new Set(),
@@ -191,6 +195,7 @@ const resetContext = (targetUid: string, variables: Record<string, string>) => {
   smartBlocksContext.targetUid = targetUid;
   smartBlocksContext.ifCommand = undefined;
   smartBlocksContext.exitBlock = false;
+  smartBlocksContext.exitWorkflow = false;
   smartBlocksContext.variables = variables;
   smartBlocksContext.cursorPosition = undefined;
   smartBlocksContext.currentUid = undefined;
@@ -537,7 +542,7 @@ const COMMANDS: {
       const results = getBlockUidsAndTextsReferencingPage(title).filter(
         ({ text }) =>
           search.every((s) =>
-            s.startsWith("-") ? !text.includes(s.substring(1)) : text
+            s.startsWith("-") ? !text.includes(s.substring(1)) : text.includes(s)
           )
       );
       if (limit === -1) return `${results.length}`;
@@ -577,7 +582,7 @@ const COMMANDS: {
         })
         .filter(({ text }) =>
           search.every((s) =>
-            s.startsWith("-") ? !text.includes(s.substring(1)) : text
+            s.startsWith("-") ? !text.includes(s.substring(1)) : text.includes(s)
           )
         );
       if (limit === -1) return `${results.length}`;
@@ -774,10 +779,61 @@ const COMMANDS: {
   },
   {
     text: "FOCUSONBLOCK",
-    help: "<b>FOCUSONBLOCK</b><br/>Will focus on the<br/>current block after the<br/>workflow finshes. ",
+    help: "Will focus on the current block after the workflow finshes. ",
     handler: () => {
       smartBlocksContext.focusOnBlock = smartBlocksContext.currentUid;
       return "";
+    },
+  },
+  {
+    text: "EXIT",
+    help: "Stops the workflow from going further after completing the current block",
+    handler: () => {
+      smartBlocksContext.exitWorkflow = true;
+      return "";
+    },
+  },
+  {
+    text: "NOTIFICATION",
+    help: "Displays notification window\n\n1: Seconds\n2: Message",
+    handler: (timeoutArg, content) => {
+      const timeout = (Math.max(Number(timeoutArg), 0) || 1) * 1000;
+      renderToast({ id: "smartblocks-notification", timeout, content });
+      return "";
+    },
+  },
+  {
+    text: "NOBLOCKOUTPUT",
+    help: "No content output from a block",
+    handler: () => {
+      smartBlocksContext.exitBlock = true;
+      return "";
+    },
+  },
+  {
+    text: "SEARCH",
+    help: "Search all blocks for string of text\n\n1: Max blocks to return<br/>2: String for search (case-sensitive)<br/>3: (opt) filtering ",
+    handler: (
+      limitArg = "20",
+      format = "(({uid}))",
+      ...search: string[]
+    ) => {
+      if (!search.length) {
+        return '';
+      }
+      const limit = Number(limitArg);
+      const [first, ...rest] = search.map(extractTag);
+      const results = getBlockUidAndTextIncludingText(first).filter(
+        ({ text }) =>
+          rest.every((s) =>
+            s.startsWith("-") ? !text.includes(s.substring(1)) : text.includes(s)
+          )
+      );
+      if (limit === -1) return `${results.length}`;
+      return results
+        .sort((a, b) => a.text.localeCompare(b.text))
+        .slice(0, limit)
+        .map(getFormatter(format));
     },
   },
 ];
@@ -846,7 +902,7 @@ const processBlockTextToPromises = (
   currentChildren: InputTextNode[]
 ) =>
   breakTextToParts(s).map((c) => () => {
-    if (smartBlocksContext.exitBlock) {
+    if (smartBlocksContext.exitBlock || smartBlocksContext.exitWorkflow) {
       return Promise.resolve<InputTextNode[]>([{ text: "" }]);
     }
     if (c.name === "text") {
@@ -905,10 +961,6 @@ const processPromisesToBlockText = async (
         })
     )
   );
-  if (smartBlocksContext.exitBlock) {
-    smartBlocksContext.exitBlock = false;
-    return "";
-  }
 
   return data
     .map((blocks) => {
@@ -942,6 +994,10 @@ const proccessBlockWithSmartness = async (
       nextBlocks,
       currentChildren
     );
+    if (smartBlocksContext.exitBlock) {
+      smartBlocksContext.exitBlock = false;
+      return [];
+    }
     await smartBlocksContext.onBlockExit();
     const processedChildren = await processChildren({
       nodes: n.children,
@@ -984,6 +1040,9 @@ const processChildren = ({
 }) =>
   processPromises(
     nodes.map((n, i) => (prev) => {
+      if (smartBlocksContext.exitWorkflow) {
+        return Promise.resolve();
+      }
       const uid =
         (i === 0 && introUid) || window.roamAlphaAPI.util.generateUID();
       smartBlocksContext.currentUid = uid;
@@ -1014,16 +1073,6 @@ const processChildren = ({
     })
   ).then((results) => results.flatMap((r) => r));
 
-const filterUselessBlocks = (blocks: InputTextNode[]): InputTextNode[] =>
-  blocks
-    .map((b) => ({
-      ...b,
-      children: b.children?.length
-        ? filterUselessBlocks(b.children)
-        : b.children,
-    }))
-    .filter((b) => !!b.text || !!b.children?.length);
-
 export const sbBomb = ({
   srcUid,
   target: { uid, start, end },
@@ -1040,7 +1089,6 @@ export const sbBomb = ({
     ? predefinedChildrenByUid[srcUid]
     : getTreeByBlockUid(srcUid).children;
   return processChildren({ nodes: childNodes, introUid: uid })
-    .then(filterUselessBlocks)
     .then(([firstChild, ...tree]) => {
       const startingOrder = getOrderByBlockUid(uid);
       const parentUid = getParentUidByBlockUid(uid);
