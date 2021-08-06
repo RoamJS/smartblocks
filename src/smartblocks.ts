@@ -742,6 +742,13 @@ const COMMANDS: {
     },
   },
   {
+    text: "HAS",
+    help: "Checks if a variable is defined within the SmartBlock workflow\n\n1. Variable name",
+    handler: (name = '') => {
+      return `${(typeof smartBlocksContext.variables[name] === 'undefined')}`;
+    }
+  },
+  {
     text: "CLEARVARS",
     help: "Clears all variables from memory",
     handler: () => {
