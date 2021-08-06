@@ -214,7 +214,12 @@ const javascriptHandler =
       .replace(/(\n)?```\s*$/, "")
       .replace(/^\s*`/, "")
       .replace(/`\s*$/, "");
-    return Promise.resolve(new fcn(code)()).then((result) => {
+    const variables = Object.keys(smartBlocksContext.variables);
+    return Promise.resolve(
+      new fcn(...variables, code)(
+        ...variables.map((v) => smartBlocksContext.variables[v])
+      )
+    ).then((result) => {
       if (typeof result === "undefined" || result === null) {
         return "";
       } else if (Array.isArray(result)) {
@@ -875,57 +880,61 @@ const processBlockTextToPromises = (
   s: string,
   nextBlocks: InputTextNode[],
   currentChildren: InputTextNode[]
-) =>
-  XRegExp.matchRecursive(s, "<%", "%>", "g", {
+) => {
+  const matches = XRegExp.matchRecursive(s, "<%", "%>", "g", {
     valueNames: ["text", null, "command", null],
     escapeChar: "\\",
     unbalanced: "skip",
-  }).map((c) => () => {
-    if (smartBlocksContext.exitBlock || smartBlocksContext.exitWorkflow) {
-      return Promise.resolve<InputTextNode[]>([{ text: "" }]);
-    }
-    if (c.name === "text") {
-      return Promise.resolve<InputTextNode[]>([{ text: c.value }]);
-    }
-    const split = c.value.indexOf(":");
-    const cmd = split < 0 ? c.value : c.value.substring(0, split);
-    const args =
-      split < 0
-        ? []
-        : c.value
-            .substring(split + 1)
-            .split(/(?<!\\),/)
-            .map((s) => s.replace(/\\,/g, ","));
-    const promiseArgs = args
-      .map((r) => () => proccessBlockText(r))
-      .reduce(
-        (prev, cur) =>
-          prev.then((argArray) =>
-            cur().then(([{ text, children }, ...rest]) => {
-              nextBlocks.push(...rest);
-              currentChildren.push(...(children || []));
-              argArray.push(text);
-              return argArray;
-            })
-          ),
-        Promise.resolve<string[]>([])
-      );
-    return promiseArgs
-      .then((resolvedArgs) =>
-        !!handlerByCommand[cmd]
-          ? handlerByCommand[cmd](...resolvedArgs)
-          : `<%${cmd}${
-              resolvedArgs.length ? `:${resolvedArgs.join(",")}` : ""
-            }%>`
-      )
-      .then((output) =>
-        typeof output === "string"
-          ? [{ text: output }]
-          : output.map((o: string | InputTextNode) =>
-              typeof o === "string" ? { text: o } : o
-            )
-      );
   });
+  return (matches.length ? matches : [{ name: "text", value: s }] as XRegExp.MatchRecursiveValueNameMatch[]).map(
+    (c) => () => {
+      if (smartBlocksContext.exitBlock || smartBlocksContext.exitWorkflow) {
+        return Promise.resolve<InputTextNode[]>([{ text: "" }]);
+      }
+      if (c.name === "text") {
+        return Promise.resolve<InputTextNode[]>([{ text: c.value }]);
+      }
+      const split = c.value.indexOf(":");
+      const cmd = split < 0 ? c.value : c.value.substring(0, split);
+      const args =
+        split < 0
+          ? []
+          : c.value
+              .substring(split + 1)
+              .split(/(?<!\\),/)
+              .map((s) => s.replace(/\\,/g, ","));
+      const promiseArgs = args
+        .map((r) => () => proccessBlockText(r))
+        .reduce(
+          (prev, cur) =>
+            prev.then((argArray) =>
+              cur().then(([{ text, children }, ...rest]) => {
+                nextBlocks.push(...rest);
+                currentChildren.push(...(children || []));
+                argArray.push(text);
+                return argArray;
+              })
+            ),
+          Promise.resolve<string[]>([])
+        );
+      return promiseArgs
+        .then((resolvedArgs) =>
+          !!handlerByCommand[cmd]
+            ? handlerByCommand[cmd](...resolvedArgs)
+            : `<%${cmd}${
+                resolvedArgs.length ? `:${resolvedArgs.join(",")}` : ""
+              }%>`
+        )
+        .then((output) =>
+          typeof output === "string"
+            ? [{ text: output }]
+            : output.map((o: string | InputTextNode) =>
+                typeof o === "string" ? { text: o } : o
+              )
+        );
+    }
+  );
+};
 
 const processPromisesToBlockText = async (
   promises: (() => Promise<InputTextNode[]>)[],
