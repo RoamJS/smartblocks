@@ -843,33 +843,6 @@ export const handlerByCommand = Object.fromEntries(
   COMMANDS.map((c) => [c.text, c.handler])
 );
 
-const breakTextToParts = (text: string) => {
-  try {
-    return XRegExp.matchRecursive(text, "<%", "%>", "g", {
-      valueNames: ["text", null, "command", null],
-      escapeChar: "\\",
-    });
-  } catch (e) {
-    // use regular regex if XRegExp throws
-    // https://github.com/slevithan/xregexp/issues/96
-    let index = 0;
-    const parts = [];
-    const COMMAND_REGEX = /<%([A-Z0-9]*(?::.*?)?)%>/g;
-    while (index < text.length) {
-      const match = COMMAND_REGEX.exec(text);
-      const endIndex = match ? match.index : text.length;
-      parts.push({ value: text.substring(index, endIndex), name: "text" });
-      if (match) {
-        parts.push({ value: match[1], name: "command" });
-        index = match.index + match[0].length;
-      } else {
-        index = endIndex;
-      }
-    }
-    return parts.filter(({ value }) => !!value);
-  }
-};
-
 const proccessBlockText = async (s: string): Promise<InputTextNode[]> => {
   try {
     const nextBlocks: InputTextNode[] = [];
@@ -903,7 +876,11 @@ const processBlockTextToPromises = (
   nextBlocks: InputTextNode[],
   currentChildren: InputTextNode[]
 ) =>
-  breakTextToParts(s).map((c) => () => {
+  XRegExp.matchRecursive(s, "<%", "%>", "g", {
+    valueNames: ["text", null, "command", null],
+    escapeChar: "\\",
+    unbalanced: "skip",
+  }).map((c) => () => {
     if (smartBlocksContext.exitBlock || smartBlocksContext.exitWorkflow) {
       return Promise.resolve<InputTextNode[]>([{ text: "" }]);
     }
@@ -1159,7 +1136,10 @@ export const sbBomb = ({
               // weird edge case with input and cursor as first block
               const activeEl = mrs
                 .flatMap((m) => Array.from(m.addedNodes))
-                .find((d) => d === document.activeElement && d.nodeName === 'TEXTAREA') as HTMLTextAreaElement;
+                .find(
+                  (d) =>
+                    d === document.activeElement && d.nodeName === "TEXTAREA"
+                ) as HTMLTextAreaElement;
               if (activeEl) {
                 setTimeout(
                   () =>

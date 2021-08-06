@@ -34,6 +34,6 @@
     "roamjs-components": "^0.19.1",
     "stripe": "^8.167.0",
     "uuid": "^8.3.2",
-    "xregexp": "^5.0.2"
+    "xregexp": "^5.1.0"
   }
 }
