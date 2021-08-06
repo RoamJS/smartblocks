@@ -218,6 +218,7 @@ runExtension("smartblocks", () => {
           ],
         },
       ],
+      versioning: true,
     },
   });
 
