@@ -8,6 +8,7 @@ import React, {
 } from "react";
 import { extractTag } from "roam-client";
 import {
+  BlockInput,
   createOverlayRender,
   MenuItemSelect,
   PageInput,
@@ -28,13 +29,11 @@ const Prompt = ({
   resolve,
 }: { onClose: () => void } & Props) => {
   const formattedDisplay = useMemo(
-    () => display.replace("{page}", "").trim(),
+    () => display.replace("{page}", "").replace("{block}", "").trim(),
     [display]
   );
-  const isPageInput = useMemo(
-    () => display.trim() !== formattedDisplay,
-    [display, formattedDisplay]
-  );
+  const isPageInput = useMemo(() => /{page}/.test(display), [display]);
+  const isBlockInput = useMemo(() => /{block}/.test(display), [display]);
   const formattedOptions = useMemo(
     () => (isPageInput ? options.map(extractTag) : options),
     [options, isPageInput]
@@ -87,6 +86,12 @@ const Prompt = ({
             />
           ) : isPageInput ? (
             <PageInput
+              value={value}
+              setValue={setValue}
+              onConfirm={() => resolveAndClose(value)}
+            />
+          ) : isBlockInput ? (
+            <BlockInput
               value={value}
               setValue={setValue}
               onConfirm={() => resolveAndClose(value)}
