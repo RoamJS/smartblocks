@@ -501,7 +501,7 @@ const COMMANDS: {
   {
     text: "CURRENTBLOCKREF",
     help: "Sets a variable to the block UID for the current block\n\n1. Variable name",
-    handler: (name = '') => {
+    handler: (name = "") => {
       if (name) {
         smartBlocksContext.variables[name] = smartBlocksContext.currentUid;
       }
@@ -747,9 +747,9 @@ const COMMANDS: {
   {
     text: "HAS",
     help: "Checks if a variable is defined within the SmartBlock workflow\n\n1. Variable name",
-    handler: (name = '') => {
-      return `${(typeof smartBlocksContext.variables[name] === 'undefined')}`;
-    }
+    handler: (name = "") => {
+      return `${typeof smartBlocksContext.variables[name] === "undefined"}`;
+    },
   },
   {
     text: "CLEARVARS",
@@ -853,6 +853,32 @@ const COMMANDS: {
         .map(getFormatter(format));
     },
   },
+  {
+    text: "SUM",
+    help: "Add all of the parameters together\n1: An addend to sum.",
+    handler: (...args) =>
+      args.reduce((a, b) => a + (Number(b) || 0), 0).toString(),
+  },
+  {
+    text: "DIFFERENCE",
+    help: "Find the difference between two parameters\n1: The minuend. 2: The subtrahend.",
+    handler: (minuend = "0", subtrahend = "0") =>
+      ((Number(minuend) || 0) - (Number(subtrahend) || 0)).toString(),
+  },
+  {
+    text: "PRODUCT",
+    help: "Mutliplies all of the parameters together\n1: An factor to multiply.",
+    handler: (...args) =>
+      args.reduce((a, b) => a * (Number(b) || 0), 1).toString(),
+  },
+  {
+    text: "DIVISION",
+    help: "Find the quotient between two parameters\n1: The dividend. 2: The divisor.",
+    handler: (dividend = "0", divisor = "1") =>
+      Number(divisor) === 0
+        ? "Infinity"
+        : ((Number(dividend) || 0) / (Number(divisor) || 1)).toString(),
+  },
 ];
 export const handlerByCommand = Object.fromEntries(
   COMMANDS.map((c) => [c.text, c.handler])
@@ -896,54 +922,56 @@ const processBlockTextToPromises = (
     escapeChar: "\\",
     unbalanced: "skip",
   });
-  return (matches.length ? matches : [{ name: "text", value: s }] as XRegExp.MatchRecursiveValueNameMatch[]).map(
-    (c) => () => {
-      if (smartBlocksContext.exitBlock || smartBlocksContext.exitWorkflow) {
-        return Promise.resolve<InputTextNode[]>([{ text: "" }]);
-      }
-      if (c.name === "text") {
-        return Promise.resolve<InputTextNode[]>([{ text: c.value }]);
-      }
-      const split = c.value.indexOf(":");
-      const cmd = split < 0 ? c.value : c.value.substring(0, split);
-      const args =
-        split < 0
-          ? []
-          : c.value
-              .substring(split + 1)
-              .split(/(?<!\\),/)
-              .map((s) => s.replace(/\\,/g, ","));
-      const promiseArgs = args
-        .map((r) => () => proccessBlockText(r))
-        .reduce(
-          (prev, cur) =>
-            prev.then((argArray) =>
-              cur().then(([{ text, children }, ...rest]) => {
-                nextBlocks.push(...rest);
-                currentChildren.push(...(children || []));
-                argArray.push(text);
-                return argArray;
-              })
-            ),
-          Promise.resolve<string[]>([])
-        );
-      return promiseArgs
-        .then((resolvedArgs) =>
-          !!handlerByCommand[cmd]
-            ? handlerByCommand[cmd](...resolvedArgs)
-            : `<%${cmd}${
-                resolvedArgs.length ? `:${resolvedArgs.join(",")}` : ""
-              }%>`
-        )
-        .then((output) =>
-          typeof output === "string"
-            ? [{ text: output }]
-            : output.map((o: string | InputTextNode) =>
-                typeof o === "string" ? { text: o } : o
-              )
-        );
+  return (
+    matches.length
+      ? matches
+      : ([{ name: "text", value: s }] as XRegExp.MatchRecursiveValueNameMatch[])
+  ).map((c) => () => {
+    if (smartBlocksContext.exitBlock || smartBlocksContext.exitWorkflow) {
+      return Promise.resolve<InputTextNode[]>([{ text: "" }]);
     }
-  );
+    if (c.name === "text") {
+      return Promise.resolve<InputTextNode[]>([{ text: c.value }]);
+    }
+    const split = c.value.indexOf(":");
+    const cmd = split < 0 ? c.value : c.value.substring(0, split);
+    const args =
+      split < 0
+        ? []
+        : c.value
+            .substring(split + 1)
+            .split(/(?<!\\),/)
+            .map((s) => s.replace(/\\,/g, ","));
+    const promiseArgs = args
+      .map((r) => () => proccessBlockText(r))
+      .reduce(
+        (prev, cur) =>
+          prev.then((argArray) =>
+            cur().then(([{ text, children }, ...rest]) => {
+              nextBlocks.push(...rest);
+              currentChildren.push(...(children || []));
+              argArray.push(text);
+              return argArray;
+            })
+          ),
+        Promise.resolve<string[]>([])
+      );
+    return promiseArgs
+      .then((resolvedArgs) =>
+        !!handlerByCommand[cmd]
+          ? handlerByCommand[cmd](...resolvedArgs)
+          : `<%${cmd}${
+              resolvedArgs.length ? `:${resolvedArgs.join(",")}` : ""
+            }%>`
+      )
+      .then((output) =>
+        typeof output === "string"
+          ? [{ text: output }]
+          : output.map((o: string | InputTextNode) =>
+              typeof o === "string" ? { text: o } : o
+            )
+      );
+  });
 };
 
 const processPromisesToBlockText = async (
