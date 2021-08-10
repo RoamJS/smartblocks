@@ -101,6 +101,11 @@ resource "aws_dynamodb_table" "store" {
     type = "S"
   }
 
+  attribute {
+    name = "author"
+    type = "S"
+  }
+
   global_secondary_index {
     hash_key           = "status"
     name               = "status-index"
