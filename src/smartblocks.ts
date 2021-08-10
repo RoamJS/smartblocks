@@ -501,8 +501,11 @@ const COMMANDS: {
   {
     text: "CURRENTBLOCKREF",
     help: "Sets a variable to the block UID for the current block\n\n1. Variable name",
-    handler: () => {
-      return "";
+    handler: (name = '') => {
+      if (name) {
+        smartBlocksContext.variables[name] = smartBlocksContext.currentUid;
+      }
+      return smartBlocksContext.currentUid;
     },
   },
   {
