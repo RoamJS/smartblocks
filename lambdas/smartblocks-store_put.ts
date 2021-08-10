@@ -131,13 +131,37 @@ export const handler: APIGatewayProxyHandler = async (event) => {
           })
           .promise()
           .then((r) =>
-            r.Item?.token && r.Item?.token === token
-              ? putItem()
-              : {
+            !r.Item?.token.S || r.Item?.token?.S !== token
+              ? {
                   statusCode: 401,
                   body: `Token unauthorized for creating workflows from graph ${author}`,
                   headers,
                 }
+              : dynamo
+                  .query({
+                    TableName: "RoamJSSmartBlocks",
+                    IndexName: "status-author-index",
+                    ExpressionAttributeNames: {
+                      "#s": "status",
+                      "#a": "author",
+                    },
+                    ExpressionAttributeValues: {
+                      ":s": { S: "LIVE" },
+                      ":a": { S: author },
+                    },
+                    KeyConditionExpression: "#a = :a AND #s = :s",
+                  })
+                  .promise()
+                  .then((qr) => {
+                    const limit = Number(r.Item?.limit) || 5;
+                    return qr.Count >= limit
+                      ? {
+                          statusCode: 401,
+                          body: `Not allowed to publish more than ${limit} workflows. Reach out to support@roamjs.com about increasing your limit.`,
+                          headers,
+                        }
+                      : putItem();
+                  })
           );
       }
     })

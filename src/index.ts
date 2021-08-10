@@ -173,6 +173,12 @@ runExtension("smartblocks", () => {
               description:
                 "If checked, will exclude all the predefined workflows from Smart Blocks Menu",
             },
+            {
+              title: "hide button icon",
+              type: "flag",
+              description:
+                "If checked, there will no longer appear a SmartBlocks logo on SmartBlocks buttons",
+            },
           ],
         },
         {
@@ -236,6 +242,9 @@ runExtension("smartblocks", () => {
   const triggerRegex = new RegExp(`${trigger}$`);
   const isCustomOnly = tree.some((t) =>
     toFlexRegex("custom only").test(t.text)
+  );
+  const hideButtonIcon = tree.some((t) =>
+    toFlexRegex("hide button icon").test(t.text)
   );
 
   window.roamjs.extension.smartblocks = {};
@@ -464,12 +473,14 @@ runExtension("smartblocks", () => {
               }
             }
           });
-          const img = new Image();
-          img.src = lego;
-          img.width = 17;
-          img.height = 14;
-          img.style.marginRight = "7px";
-          b.insertBefore(img, b.firstChild);
+          if (!hideButtonIcon) {
+            const img = new Image();
+            img.src = lego;
+            img.width = 17;
+            img.height = 14;
+            img.style.marginRight = "7px";
+            b.insertBefore(img, b.firstChild);
+          }
         }
       }
     },
