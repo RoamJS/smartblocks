@@ -167,7 +167,8 @@ type CommandOutput = string | string[] | InputTextNode[];
 export type CommandHandler = (
   ...args: string[]
 ) => CommandOutput | Promise<CommandOutput>;
-const smartBlocksContext: {
+
+export type SmartBlocksContext = {
   onBlockExit: CommandHandler;
   targetUid: string;
   ifCommand?: boolean;
@@ -180,7 +181,9 @@ const smartBlocksContext: {
   indent: Set<string>;
   unindent: Set<string>;
   focusOnBlock?: string;
-} = {
+};
+
+export const smartBlocksContext: SmartBlocksContext = {
   onBlockExit: () => "",
   targetUid: "",
   exitBlock: false,

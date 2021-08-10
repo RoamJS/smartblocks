@@ -37,6 +37,8 @@ import {
   getCustomWorkflows,
   handlerByCommand,
   sbBomb,
+  SmartBlocksContext,
+  smartBlocksContext,
 } from "./smartblocks";
 import TokenPanel from "./TokenPanel";
 import lego from "./img/lego3blocks.png";
@@ -253,9 +255,11 @@ runExtension("smartblocks", () => {
     handler,
   }: {
     text: string;
-    handler: CommandHandler;
+    handler: (
+      c: Pick<SmartBlocksContext, "targetUid" | "variables">
+    ) => CommandHandler;
   }) => {
-    handlerByCommand[text] = handler;
+    handlerByCommand[text] = handler(smartBlocksContext);
   };
   Object.keys(window.roamjs.extension).forEach((text) => {
     if (window.roamjs.extension[text].registerSmartBlocksCommand) {
