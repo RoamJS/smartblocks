@@ -24,7 +24,7 @@ import {
   updateBlock,
 } from "roam-client";
 import {
-  renderWarningToast,
+  renderToast,
   toFlexRegex,
 } from "roamjs-components";
 import lego from "./img/lego3blocks.png";
@@ -97,6 +97,7 @@ const Content = ({
                 image = [],
                 tags = [],
                 uuid = [],
+                price = [],
               } = Object.fromEntries(
                 getBlockUidsReferencingBlock(blockUid).flatMap((uid) =>
                   getTreeByBlockUid(uid).children.map((t) => [
@@ -119,6 +120,7 @@ const Content = ({
                     author: getGraph(),
                     description: (description[0] || "").replace(/__/g, "_"),
                     workflow: JSON.stringify(children.map(toInputTextNode)),
+                    price: Number(price[0] || "0") || 0,
                   },
                   { headers: { Authorization: token } }
                 )
@@ -147,13 +149,16 @@ const Content = ({
                         });
                       }
                       onClose();
-                      renderWarningToast({
+                      renderToast({
                         id: "roamjs-smartblock-publish-success",
                         content: `Successfully published workflow to the SmartBlocks Store!${
                           r.data.requiresReview
                             ? "\n\nBecause your workflow contains custom JavaScript, it will first undergo review by RoamJS before going live."
                             : ""
                         }`,
+                        intent: r.data.requiresReview
+                          ? Intent.WARNING
+                          : Intent.SUCCESS,
                       });
                     }, 1);
                   }, 1);

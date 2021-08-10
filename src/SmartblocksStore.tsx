@@ -4,6 +4,8 @@ import {
   Drawer,
   H6,
   InputGroup,
+  Intent,
+  Label,
   Position,
   Spinner,
   SpinnerSize,
@@ -11,13 +13,35 @@ import {
   Tabs,
   Tooltip,
 } from "@blueprintjs/core";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { createOverlayRender } from "roamjs-components";
 import axios from "axios";
-import { createBlock, getGraph, getRoamUrl, InputTextNode } from "roam-client";
+import {
+  createBlock,
+  getCurrentUserDisplayName,
+  getCurrentUserEmail,
+  getGraph,
+  getRoamUrl,
+  InputTextNode,
+} from "roam-client";
 import Markdown from "markdown-to-jsx";
+import {
+  Elements,
+  CardElement,
+  useElements,
+  useStripe,
+} from "@stripe/react-stripe-js";
+import { loadStripe } from "@stripe/stripe-js";
 import { getCustomWorkflows } from "./smartblocks";
 import lego from "./img/lego3blocks.png";
+
+const stripePromise = loadStripe(process.env.STRIPE_PUBLIC_KEY);
 
 type Props = {
   parentUid: string;
@@ -103,6 +127,88 @@ const Thumbnail = ({ src = lego }: { src?: string }): React.ReactElement => {
   );
 };
 
+const StripeCheckout = ({
+  secret,
+  setLoading,
+  setError,
+  onSuccess,
+  loading,
+}: {
+  secret: string;
+  setLoading: (f: boolean) => void;
+  setError: (m: string) => void;
+  onSuccess: (id: string) => void;
+  loading: boolean;
+}) => {
+  const stripe = useStripe();
+  const elements = useElements();
+  const handleSubmit = useCallback(() => {
+    setLoading(true);
+    const name = getCurrentUserDisplayName();
+    stripe
+      .confirmCardPayment(secret, {
+        payment_method: {
+          card: elements.getElement(CardElement),
+          billing_details: {
+            ...(name ? { name } : {}),
+            email: getCurrentUserEmail(),
+          },
+        },
+      })
+      .then((s) => {
+        if (s.error) {
+          throw new Error(s.error.message);
+        } else {
+          onSuccess(s.paymentIntent.id);
+        }
+      })
+      .catch((e) => {
+        setLoading(false);
+        setError(e.message);
+      });
+  }, [stripe, setLoading, secret]);
+  return (
+    <div
+      style={{
+        flexGrow: 1,
+        background: "#eeeeee",
+        padding: 4,
+        borderRadius: 4,
+      }}
+    >
+      <Label>
+        Card Details
+        <CardElement
+          options={{
+            style: {
+              base: {
+                color: "#32325d",
+                fontFamily: '"Helvetica Neue", Helvetica, sans-serif',
+                fontSmoothing: "antialiased",
+                fontSize: "16px",
+                "::placeholder": {
+                  color: "#aab7c4",
+                },
+              },
+              invalid: {
+                color: "#fa755a",
+                iconColor: "#fa755a",
+              },
+            },
+          }}
+        />
+      </Label>
+      <Button
+        style={{ margin: "16px 0" }}
+        text={"Buy SmartBlock"}
+        disabled={loading}
+        intent={Intent.PRIMARY}
+        onClick={handleSubmit}
+      />
+    </div>
+  );
+};
+
 const ROW_LENGTH = 4;
 const DRAWER_TABS = ["Marketplace", "Installed", "Published"] as const;
 type DrawerTab = typeof DRAWER_TABS[number];
@@ -143,6 +249,7 @@ const DrawerContent = ({
     () => smartblocks.find(({ uuid }) => uuid === selectedSmartBlockId),
     [selectedSmartBlockId, smartblocks]
   );
+  const [paymentSecret, setPaymentSecret] = useState("");
   useEffect(() => {
     axios
       .get<{ smartblocks: Smartblocks[] }>(
@@ -157,6 +264,21 @@ const DrawerContent = ({
       )
       .finally(() => setLoading(false));
   }, [setSmartblocks, setLoading]);
+  const installWorkflow = useCallback(
+    (workflow: string) => {
+      const children = JSON.parse(workflow) as InputTextNode[];
+      const uid = createBlock({
+        node: {
+          text: `#SmartBlock ${selectedSmartBlock.name}`,
+          children,
+        },
+        parentUid,
+      });
+      onClose();
+      setTimeout(() => window.location.assign(getRoamUrl(uid)), 1);
+    },
+    [selectedSmartBlock, onClose]
+  );
   return selectedSmartBlockId ? (
     <div className={Classes.DRAWER_BODY} style={{ position: "relative" }}>
       <div
@@ -187,41 +309,63 @@ const DrawerContent = ({
               alignItems: "center",
             }}
           >
-            <Button
-              style={{ margin: "16px 0" }}
-              text={"Install"}
-              disabled={installedSmartblocks.has(selectedSmartBlock.name)}
-              onClick={() => {
-                setLoading(true);
-                setError("");
-                axios
-                  .get(
-                    `${process.env.API_URL}/smartblocks-store?uuid=${selectedSmartBlockId}`
-                  )
-                  .then((r) => {
-                    const children = JSON.parse(
-                      r.data.workflow
-                    ) as InputTextNode[];
-                    const uid = createBlock({
-                      node: {
-                        text: `#SmartBlock ${selectedSmartBlock.name}`,
-                        children,
-                      },
-                      parentUid,
+            {paymentSecret ? (
+              <Elements stripe={stripePromise}>
+                <StripeCheckout
+                  secret={paymentSecret}
+                  onSuccess={(id: string) =>
+                    axios
+                      .get(
+                        `${process.env.API_URL}/smartblocks-store?uuid=${selectedSmartBlockId}`,
+                        {
+                          headers: { Authorization: id },
+                        }
+                      )
+                      .then((r) => {
+                        installWorkflow(r.data.workflow);
+                      })
+                      .catch((e) => {
+                        setLoading(false);
+                        setError(e.response?.data || e.message);
+                      })
+                  }
+                  setError={setError}
+                  setLoading={setLoading}
+                  loading={loading}
+                />
+              </Elements>
+            ) : (
+              <Button
+                style={{ margin: "16px 0" }}
+                text={"Install"}
+                disabled={installedSmartblocks.has(selectedSmartBlock.name)}
+                onClick={() => {
+                  setLoading(true);
+                  setError("");
+                  axios
+                    .get(
+                      `${process.env.API_URL}/smartblocks-store?uuid=${selectedSmartBlockId}`
+                    )
+                    .then((r) => {
+                      if (r.data.secret) {
+                        setPaymentSecret(r.data.secret);
+                        setLoading(false);
+                      } else if (r.data.workflow) {
+                        installWorkflow(r.data.workflow);
+                      } else {
+                        throw new Error("Returned empty response");
+                      }
+                    })
+                    .catch((e) => {
+                      setLoading(false);
+                      setError(e.response?.data || e.message);
                     });
-                    onClose();
-                    setTimeout(
-                      () => window.location.assign(getRoamUrl(uid)),
-                      1
-                    );
-                  })
-                  .catch((e) => {
-                    setLoading(false);
-                    setError(e.response?.data || e.message);
-                  });
-              }}
-            />
-            {loading && <Spinner size={SpinnerSize.SMALL} />}
+                }}
+              />
+            )}
+            <div style={{ minWidth: 24 }}>
+              {loading && <Spinner size={SpinnerSize.SMALL} />}
+            </div>
           </div>
           <div style={{ color: "darkred" }}>{error}</div>
           <h6>About</h6>
@@ -238,7 +382,10 @@ const DrawerContent = ({
       </div>
       <Button
         icon={"arrow-left"}
-        onClick={() => setSelectedSmartBlockId("")}
+        onClick={() => {
+          setSelectedSmartBlockId("");
+          setPaymentSecret("");
+        }}
         minimal
         style={{ position: "absolute", top: 8, right: 8 }}
       />

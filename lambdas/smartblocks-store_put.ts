@@ -21,16 +21,18 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     description = "",
     workflow,
     uuid = v4(),
+    price: priceArg = "0",
   } = JSON.parse(event.body) as {
-    img: string;
+    img?: string;
     name: string;
-    tags: string[];
+    tags?: string[];
     author: string;
-    description: string;
+    description?: string;
     workflow: string;
-    uuid: string;
+    uuid?: string;
+    price?: string;
   };
-  const price = 0;
+  const price = (Number(priceArg) || 0)*100;
   const requiresReview =
     /<%((J(A(VASCRIPT(ASYNC)?)?)?)|(ONBLOCKEXIT)|(IF(TRUE)?)):/.test(workflow);
   const token =
@@ -135,6 +137,12 @@ export const handler: APIGatewayProxyHandler = async (event) => {
               ? {
                   statusCode: 401,
                   body: `Token unauthorized for creating workflows from graph ${author}`,
+                  headers,
+                }
+              : price > 0 && !r.Item?.stripe?.S
+              ? {
+                  statusCode: 401,
+                  body: `Account must be connected to stripe in order to price over 0. Visit [[roam/js/smartblocks]] to connect.`,
                   headers,
                 }
               : dynamo

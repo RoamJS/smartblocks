@@ -23,6 +23,8 @@
   "dependencies": {
     "@blueprintjs/core": "^3.45.0",
     "@blueprintjs/select": "^3.16.4",
+    "@stripe/react-stripe-js": "^1.4.1",
+    "@stripe/stripe-js": "^1.16.0",
     "aws-sdk": "^2.946.0",
     "axios": "^0.21.1",
     "chrono-node": "^2.3.0",
