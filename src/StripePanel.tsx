@@ -47,6 +47,7 @@ const StripePanel = ({ parentUid }: { uid?: string; parentUid: string }) => {
         .catch((e) => {
           if (e.response?.status !== 400) {
             intervalListener = window.setTimeout(connectInterval, 1000);
+          } else {
             setLoading(false);
           }
         });

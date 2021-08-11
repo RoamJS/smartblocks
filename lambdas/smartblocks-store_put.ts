@@ -174,7 +174,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
                   })
                   .promise()
                   .then((qr) => {
-                    const limit = Number(r.Item?.limit) || 5;
+                    const limit = Number(r.Item?.limit?.N) || 5;
                     return qr.Count >= limit
                       ? {
                           statusCode: 401,
