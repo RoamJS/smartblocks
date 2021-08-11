@@ -274,8 +274,10 @@ const DrawerContent = ({
         },
         parentUid,
       });
-      onClose();
-      setTimeout(() => window.location.assign(getRoamUrl(uid)), 1);
+      setTimeout(() => {
+        window.location.assign(getRoamUrl(uid));
+        onClose();
+      }, 1000);
     },
     [selectedSmartBlock, onClose]
   );
@@ -417,7 +419,9 @@ const DrawerContent = ({
         {loading ? (
           <Spinner />
         ) : !filteredSmartblocks.length ? (
-          <H6>No SmartBlocks Found.</H6>
+          <div style={{ padding: 16 }}>
+            <H6>No SmartBlocks Found.</H6>
+          </div>
         ) : (
           filteredSmartblocks.map((e, i) => {
             const gridColumnStart = (i + 1) % ROW_LENGTH || ROW_LENGTH;
