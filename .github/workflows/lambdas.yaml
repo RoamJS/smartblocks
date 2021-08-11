@@ -4,7 +4,7 @@ on:
     branches: main
     paths:
       - "lambdas/*"
-      - ".github/workflows/lambda.yaml"
+      - ".github/workflows/lambdas.yaml"
 
 env:
   AWS_ACCESS_KEY_ID: ${{ secrets.DEPLOY_AWS_ACCESS_KEY }}
