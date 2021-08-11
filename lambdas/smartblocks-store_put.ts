@@ -33,6 +33,19 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     price?: string;
   };
   const price = (Number(priceArg) || 0)*100;
+  if (price < 0) {
+    return {
+      statusCode: 400,
+      body: `Price must be greater than or equal to 0.`,
+      headers,
+    }
+  } else if (price > 100) {
+    return {
+      statusCode: 400,
+      body: `Prices greater than 0 must be greater than $1.`,
+      headers,
+    }
+  }
   const requiresReview =
     /<%((J(A(VASCRIPT(ASYNC)?)?)?)|(ONBLOCKEXIT)|(IF(TRUE)?)):/.test(workflow);
   const token =

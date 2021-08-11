@@ -139,6 +139,36 @@ resource "aws_dynamodb_table" "store" {
   }
 }
 
+data "aws_iam_role" "lambda_execution" {
+  name = "roam-js-extensions-lambda-execution"
+}
+
+data "aws_iam_policy_document" "data_policy" {
+  statement {
+    actions = [
+      "s3:GetObject",
+      "s3:PutObject",
+    ]
+
+    resources = [
+      "arn:aws:s3:::roamjs-smartblocks/*",
+    ]
+
+    principals {
+      type        = "AWS"
+      identifiers = [data.aws_iam_role.lambda_execution.arn]
+    }
+  }
+}
+
+resource "aws_s3_bucket" "main" {
+  bucket = "roamjs-smartblocks"
+  policy = data.aws_iam_policy_document.bucket_policy.json
+  tags = {
+    Application = "Roam JS Extensions"
+  }
+}
+
 resource "github_actions_secret" "stripe_public" {
   repository       = "roamjs-smartblocks"
   secret_name      = "STRIPE_PUBLIC_KEY"
