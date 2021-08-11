@@ -172,8 +172,8 @@ const Content = ({
         />
         <span>{loading && <Spinner size={SpinnerSize.SMALL} />}</span>
       </div>
-      <div style={{ width: 180, lineHeight: "0.75em" }}>
-        <span style={{ color: "darkred", fontSize: 8 }}>{error}</span>
+      <div style={{ width: 180, lineHeight: "0.75em", marginTop: 4 }}>
+        <span style={{ color: "darkred", fontSize: 12 }}>{error}</span>
       </div>
     </div>
   );
