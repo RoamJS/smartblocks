@@ -143,7 +143,7 @@ data "aws_iam_role" "lambda_execution" {
   name = "roam-js-extensions-lambda-execution"
 }
 
-data "aws_iam_policy_document" "data_policy" {
+data "aws_iam_policy_document" "bucket_policy" {
   statement {
     actions = [
       "s3:GetObject",

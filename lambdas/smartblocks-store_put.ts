@@ -39,7 +39,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       body: `Price must be greater than or equal to 0.`,
       headers,
     }
-  } else if (price > 100) {
+  } else if (price < 100) {
     return {
       statusCode: 400,
       body: `Prices greater than 0 must be greater than $1.`,
