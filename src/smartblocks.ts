@@ -1032,8 +1032,12 @@ const proccessBlockWithSmartness = async (
       nodes: n.children,
       nextBlocks,
     });
+    const { textAlign, viewType, heading } = n;
     return [
       {
+        textAlign,
+        viewType,
+        heading,
         text,
         children: [...currentChildren, ...processedChildren],
       },
@@ -1128,6 +1132,7 @@ export const sbBomb = ({
     const parentUid = getParentUidByBlockUid(uid);
     const originalText = getTextByBlockUid(uid);
     updateBlock({
+      ...firstChild,
       uid,
       text: `${originalText.substring(0, start)}${
         firstChild?.text || ""

@@ -22,7 +22,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       statusCode: 400,
       body: "`author` is a required parameter.",
       headers,
-    }
+    };
   }
   const token =
     event.headers.Authorization || event.headers.authorization || "";
@@ -99,6 +99,26 @@ export const handler: APIGatewayProxyHandler = async (event) => {
                   headers,
                 };
               })
+          : {
+              statusCode: 400,
+              body: `No Stripe Account in progress`,
+              headers,
+            }
+        : operation === "RETRY"
+        ? r.Item.stripe?.S
+          ? stripe.accountLinks
+              .create({
+                account: r.Item.stripe.S,
+                refresh_url: `${process.env.ROAMJS_HOST}/oauth?close=true`,
+                return_url: `${process.env.ROAMJS_HOST}/oauth?close=true`,
+                type: "account_onboarding",
+              })
+
+              .then((l) => ({
+                statusCode: 200,
+                body: JSON.stringify({ url: l.url }),
+                headers,
+              }))
           : {
               statusCode: 400,
               body: `No Stripe Account in progress`,

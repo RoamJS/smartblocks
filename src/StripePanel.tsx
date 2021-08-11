@@ -1,4 +1,4 @@
-import { Spinner, SpinnerSize } from "@blueprintjs/core";
+import { Button, Intent, Spinner, SpinnerSize } from "@blueprintjs/core";
 import axios from "axios";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -12,6 +12,7 @@ const width = 600;
 const height = 525;
 const StripePanel = ({ parentUid }: { uid?: string; parentUid: string }) => {
   const [connected, setConnected] = useState(false);
+  const [showRetry, setShowRetry] = useState(false);
   const tokenUid = useMemo(
     () =>
       getShallowTreeByParentUid(parentUid).find((t) =>
@@ -38,9 +39,11 @@ const StripePanel = ({ parentUid }: { uid?: string; parentUid: string }) => {
         .then((r) => {
           if (r.data.done) {
             setConnected(true);
+            setShowRetry(false);
             setLoading(false);
             window.clearTimeout(intervalListener);
           } else {
+            setShowRetry(true);
             intervalListener = window.setTimeout(connectInterval, 1000);
           }
         })
@@ -50,11 +53,12 @@ const StripePanel = ({ parentUid }: { uid?: string; parentUid: string }) => {
           } else {
             setLoading(false);
           }
+          setShowRetry(false);
         });
     };
     setLoading(true);
     connectInterval();
-  }, [setConnected, setLoading, opts]);
+  }, [setConnected, setLoading, opts, setShowRetry]);
   const stripeConnectOnClick = useCallback(
     (e: React.MouseEvent) => {
       e.preventDefault();
@@ -85,6 +89,29 @@ const StripePanel = ({ parentUid }: { uid?: string; parentUid: string }) => {
     },
     [setLoading, setError, loading, pollStripeAccount, opts]
   );
+  const stripeRetryOnClick = useCallback(
+    () =>
+      axios
+        .post(
+          `${process.env.API_URL}/smartblocks-token`,
+          { operation: "RETRY", author: getGraph() },
+          opts
+        )
+        .then((r) => {
+          const left = window.screenX + (window.innerWidth - width) / 2;
+          const top = window.screenY + (window.innerHeight - height) / 2;
+          window.open(
+            r.data.url,
+            `roamjs:smartblocks:connect`,
+            `left=${left},top=${top},width=${width},height=${height},status=1`
+          );
+        })
+        .catch((e) => {
+          setError(e.response?.data || e.message);
+          setShowRetry(false);
+        }),
+    [setError, opts, setShowRetry]
+  );
   useEffect(() => {
     if (!connected && token) {
       pollStripeAccount();
@@ -103,13 +130,28 @@ const StripePanel = ({ parentUid }: { uid?: string; parentUid: string }) => {
         {!token ? (
           <span>Must first generate a token to connect with Stripe</span>
         ) : !connected ? (
-          <a
-            href="#"
-            className={`stripe-connect${loading ? " disabled" : ""}`}
-            onClick={stripeConnectOnClick}
-          >
-            <span>Connect with</span>
-          </a>
+          <>
+            <a
+              href="#"
+              className={`stripe-connect${loading ? " disabled" : ""}`}
+              onClick={stripeConnectOnClick}
+            >
+              <span>Connect with</span>
+            </a>
+            {showRetry && (
+              <div style={{ marginTop: 8 }}>
+                <p>
+                  If you accidentally close out of the Stripe window, feel free
+                  to try again here:
+                </p>
+                <Button
+                  intent={Intent.WARNING}
+                  text={"Retry"}
+                  onClick={stripeRetryOnClick}
+                />
+              </div>
+            )}
+          </>
         ) : (
           <span>Connected with Stripe</span>
         )}
