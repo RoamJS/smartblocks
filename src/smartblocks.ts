@@ -882,6 +882,21 @@ const COMMANDS: {
         ? "Infinity"
         : ((Number(dividend) || 0) / (Number(divisor) || 1)).toString(),
   },
+  {
+    text: "CLIPBOARDCOPY",
+    help: "Writes text to the clipboard\n\n1: text",
+    handler: (text = "") => {
+      navigator.clipboard.writeText(text);
+      return "";
+    },
+  },
+  {
+    text: "CLIPBOARDPASTETEXT",
+    help: "Pastes from the clipboard",
+    handler: () => {
+      return navigator.clipboard.readText();
+    },
+  },
 ];
 export const handlerByCommand = Object.fromEntries(
   COMMANDS.map((c) => [c.text, c.handler])
