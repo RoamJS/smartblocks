@@ -177,7 +177,7 @@ export type SmartBlocksContext = {
   variables: Record<string, string>;
   cursorPosition?: { uid: string; selection: number };
   currentUid?: string;
-  currentLength: 0;
+  currentLength: number;
   indent: Set<string>;
   unindent: Set<string>;
   focusOnBlock?: string;
@@ -870,7 +870,7 @@ const COMMANDS: {
   },
   {
     text: "PRODUCT",
-    help: "Mutliplies all of the parameters together\n1: An factor to multiply.",
+    help: "Multiplies all of the parameters together\n1: An factor to multiply.",
     handler: (...args) =>
       args.reduce((a, b) => a * (Number(b) || 0), 1).toString(),
   },
@@ -1096,7 +1096,7 @@ const processChildren = ({
       const uid =
         (i === 0 && introUid) || window.roamAlphaAPI.util.generateUID();
       smartBlocksContext.currentUid = uid;
-      smartBlocksContext.currentLength = 0;
+      smartBlocksContext.currentLength = introLength || 0;
       return proccessBlockWithSmartness(n)
         .then((b) => {
           if (b.length) {
@@ -1138,105 +1138,122 @@ export const sbBomb = ({
   const childNodes = PREDEFINED_REGEX.test(srcUid)
     ? predefinedChildrenByUid[srcUid]
     : getTreeByBlockUid(srcUid).children;
-  return processChildren({
-    nodes: childNodes,
-    introUid: uid,
-    introLength: start,
-  }).then(([firstChild, ...tree]) => {
-    const startingOrder = getOrderByBlockUid(uid);
-    const parentUid = getParentUidByBlockUid(uid);
-    const originalText = getTextByBlockUid(uid);
-    updateBlock({
-      ...firstChild,
-      uid,
-      text: `${originalText.substring(0, start)}${
-        firstChild?.text || ""
-      }${originalText.substring(end)}`,
-    });
-    (firstChild?.children || []).forEach((node, order) =>
-      createBlock({ order, parentUid: uid, node })
-    );
-    tree.forEach((node, i) =>
-      createBlock({ parentUid, order: startingOrder + 1 + i, node })
-    );
-    if (smartBlocksContext.focusOnBlock) {
-      setTimeout(() => {
-        window.location.assign(getRoamUrl(smartBlocksContext.focusOnBlock));
-      }, 1000);
-    } else if (typeof mutableCursor === "boolean") {
-      if (mutableCursor) {
-        if (smartBlocksContext.cursorPosition) {
-          if (
-            smartBlocksContext.cursorPosition.uid === uid &&
-            document.activeElement.tagName === "TEXTAREA" &&
-            document.activeElement.id.endsWith(uid)
-          ) {
-            const { selection } = smartBlocksContext.cursorPosition;
-            setTimeout(
-              () =>
-                (
-                  document.activeElement as HTMLTextAreaElement
-                ).setSelectionRange(selection, selection),
-              1
-            );
-          } else {
-            const observer = new MutationObserver((mrs, obs) => {
-              const el = mrs
-                .flatMap((m) => Array.from(m.addedNodes))
-                .filter((d) => d.nodeName === "DIV")
-                .flatMap((m: HTMLDivElement) =>
-                  Array.from(
-                    m.querySelectorAll<HTMLDivElement>("div.roam-block")
-                  )
-                )
-                .find((d) =>
-                  d.id.endsWith(smartBlocksContext.cursorPosition.uid)
-                );
-              if (el) {
-                setTimeout(
-                  () =>
-                    openBlock(
-                      el.id,
-                      smartBlocksContext.cursorPosition.selection
-                    ),
-                  1
-                );
-                obs.disconnect();
-              }
-              // weird edge case with input and cursor as first block
-              const activeEl = mrs
-                .flatMap((m) => Array.from(m.addedNodes))
-                .find(
-                  (d) =>
-                    d === document.activeElement && d.nodeName === "TEXTAREA"
-                ) as HTMLTextAreaElement;
-              if (activeEl) {
-                setTimeout(
-                  () =>
-                    activeEl.setSelectionRange(
-                      smartBlocksContext.cursorPosition.selection,
-                      smartBlocksContext.cursorPosition.selection
-                    ),
-                  1
-                );
-                obs.disconnect();
-              }
-            });
-            observer.observe(document.body, {
-              childList: true,
-              subtree: true,
-            });
-            setTimeout(() => observer.disconnect(), 60000);
-          }
-        }
-      } else {
-        setTimeout(
-          () =>
-            document.activeElement.tagName === "TEXTAREA" &&
-            (document.activeElement as HTMLTextAreaElement).blur(),
-          1
-        );
-      }
-    }
+  const originalText = getTextByBlockUid(uid);
+  updateBlock({
+    uid,
+    text: `${originalText.substring(0, start)}${originalText.substring(end)}`,
   });
+  return new Promise((resolve) =>
+    setTimeout(
+      () =>
+        processChildren({
+          nodes: childNodes,
+          introUid: uid,
+          introLength: start,
+        })
+          .then(([firstChild, ...tree]) => {
+            if (firstChild) {
+              const startingOrder = getOrderByBlockUid(uid);
+              const parentUid = getParentUidByBlockUid(uid);
+              updateBlock({
+                ...firstChild,
+                uid,
+                text: `${originalText.substring(0, start)}${
+                  firstChild.text || ""
+                }${originalText.substring(end)}`,
+              });
+              firstChild.children.forEach((node, order) =>
+                createBlock({ order, parentUid: uid, node })
+              );
+              tree.forEach((node, i) =>
+                createBlock({ parentUid, order: startingOrder + 1 + i, node })
+              );
+            }
+            if (smartBlocksContext.focusOnBlock) {
+              setTimeout(() => {
+                window.location.assign(
+                  getRoamUrl(smartBlocksContext.focusOnBlock)
+                );
+              }, 1000);
+            } else if (typeof mutableCursor === "boolean") {
+              if (mutableCursor) {
+                if (smartBlocksContext.cursorPosition) {
+                  if (
+                    smartBlocksContext.cursorPosition.uid === uid &&
+                    document.activeElement.tagName === "TEXTAREA" &&
+                    document.activeElement.id.endsWith(uid)
+                  ) {
+                    const { selection } = smartBlocksContext.cursorPosition;
+                    setTimeout(
+                      () =>
+                        (
+                          document.activeElement as HTMLTextAreaElement
+                        ).setSelectionRange(selection, selection),
+                      1
+                    );
+                  } else {
+                    const observer = new MutationObserver((mrs, obs) => {
+                      const el = mrs
+                        .flatMap((m) => Array.from(m.addedNodes))
+                        .filter((d) => d.nodeName === "DIV")
+                        .flatMap((m: HTMLDivElement) =>
+                          Array.from(
+                            m.querySelectorAll<HTMLDivElement>("div.roam-block")
+                          )
+                        )
+                        .find((d) =>
+                          d.id.endsWith(smartBlocksContext.cursorPosition.uid)
+                        );
+                      if (el) {
+                        setTimeout(
+                          () =>
+                            openBlock(
+                              el.id,
+                              smartBlocksContext.cursorPosition.selection
+                            ),
+                          1
+                        );
+                        obs.disconnect();
+                      }
+                      // weird edge case with input and cursor as first block
+                      const activeEl = mrs
+                        .flatMap((m) => Array.from(m.addedNodes))
+                        .find(
+                          (d) =>
+                            d === document.activeElement &&
+                            d.nodeName === "TEXTAREA"
+                        ) as HTMLTextAreaElement;
+                      if (activeEl) {
+                        setTimeout(
+                          () =>
+                            activeEl.setSelectionRange(
+                              smartBlocksContext.cursorPosition.selection,
+                              smartBlocksContext.cursorPosition.selection
+                            ),
+                          1
+                        );
+                        obs.disconnect();
+                      }
+                    });
+                    observer.observe(document.body, {
+                      childList: true,
+                      subtree: true,
+                    });
+                    setTimeout(() => observer.disconnect(), 60000);
+                  }
+                }
+              } else {
+                setTimeout(
+                  () =>
+                    document.activeElement.tagName === "TEXTAREA" &&
+                    (document.activeElement as HTMLTextAreaElement).blur(),
+                  1
+                );
+              }
+            }
+          })
+          .finally(resolve),
+      1
+    )
+  );
 };
