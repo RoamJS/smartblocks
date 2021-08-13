@@ -25,14 +25,24 @@ import {
   getRoamUrl,
   getBlockUidAndTextIncludingText,
 } from "roam-client";
-import { parseDate } from "chrono-node";
+import * as chrono from "chrono-node";
 import datefnsFormat from "date-fns/format";
+import addDays from "date-fns/addDays";
+import addWeeks from "date-fns/addWeeks";
 import subDays from "date-fns/subDays";
 import isBefore from "date-fns/isBefore";
 import isAfter from "date-fns/isAfter";
+import startOfWeek from "date-fns/startOfWeek";
+import startOfMonth from "date-fns/startOfMonth";
+import startOfYear from "date-fns/startOfYear";
+import endOfWeek from "date-fns/endOfWeek";
+import endOfMonth from "date-fns/endOfMonth";
+import endOfYear from "date-fns/endOfYear";
 import XRegExp from "xregexp";
 import { renderPrompt } from "./Prompt";
 import { renderToast } from "roamjs-components";
+import { ParsingComponents } from "chrono-node/dist/results";
+import { ORDINAL_WORD_DICTIONARY } from "./dom";
 
 export const PREDEFINED_REGEX = /#\d*-predefined/;
 const PAGE_TITLE_REGEX = /^(?:#?\[\[(.*)\]\]|#([^\s]*))$/;
@@ -41,6 +51,113 @@ const DAILY_REF_REGEX = new RegExp(
 );
 const getDateFromText = (s: string) =>
   parseRoamDate(DAILY_REF_REGEX.exec(s)?.[1]);
+
+const ORDINAL_REGEX = new RegExp(
+  `\\b(?:${Object.keys(ORDINAL_WORD_DICTIONARY)
+    .sort((a, b) => b.length - a.length)
+    .join("|")}|(?:[1-9])?[0-9](?:st|nd|rd|th)?)\\b`,
+  "i"
+);
+const customDateNlp = chrono.casual.clone();
+customDateNlp.parsers.push(
+  {
+    pattern: () => /\b((start|end) )?of\b/i,
+    extract: () => ({}),
+  },
+  {
+    pattern: () => ORDINAL_REGEX,
+    extract: () => ({}),
+  }
+);
+const assignDay = (p: ParsingComponents, d: Date) => {
+  p.assign("year", d.getFullYear());
+  p.assign("month", d.getMonth() + 1);
+  p.assign("day", d.getDate());
+};
+customDateNlp.refiners.unshift({
+  refine: (_, results) => {
+    if (results.length >= 2) {
+      const [modifier, date, ...rest] = results;
+      if (/start of/i.test(modifier.text)) {
+        const dateObj = date.date();
+        if (/week/i.test(date.text)) {
+          const newDateObj = startOfWeek(dateObj);
+          assignDay(date.start, newDateObj);
+        }
+        if (/month/i.test(date.text)) {
+          const newDateObj = startOfMonth(dateObj);
+          assignDay(date.start, newDateObj);
+        }
+        if (/year/i.test(date.text)) {
+          const newDateObj = startOfYear(dateObj);
+          assignDay(date.start, newDateObj);
+        }
+      } else if (/end of/i.test(modifier.text)) {
+        const dateObj = date.date();
+        if (/week/i.test(date.text)) {
+          const newDateObj = endOfWeek(dateObj);
+          assignDay(date.start, newDateObj);
+        }
+        if (/month/i.test(date.text)) {
+          const newDateObj = endOfMonth(dateObj);
+          assignDay(date.start, newDateObj);
+        }
+        if (/year/i.test(date.text)) {
+          const newDateObj = endOfYear(dateObj);
+          assignDay(date.start, newDateObj);
+        }
+      } else if (rest.length >= 2) {
+        const [of, d, ...moreRest] = rest;
+        if (
+          ORDINAL_REGEX.test(modifier.text) &&
+          date.start.isOnlyWeekdayComponent() &&
+          /of/i.test(of.text)
+        ) {
+          const match = ORDINAL_REGEX.exec(modifier.text)[0].toLowerCase();
+          const num =
+            ORDINAL_WORD_DICTIONARY[match] ||
+            Number(match.replace(/(?:st|nd|rd|th)$/i, ""));
+          const dateObj = d.date();
+          if (/month/i.test(d.text)) {
+            const startOfMonthDate = startOfMonth(dateObj);
+            const originalMonth = startOfMonthDate.getMonth();
+            const startOfWeekDate = startOfWeek(startOfMonthDate);
+            const dayOfWeekDate = addDays(
+              startOfWeekDate,
+              date.start.get("weekday")
+            );
+            const newDateObj = addWeeks(
+              dayOfWeekDate,
+              num - (originalMonth === dayOfWeekDate.getMonth() ? 1 : 0)
+            );
+            assignDay(d.start, newDateObj);
+          } else if (/year/i.test(d.text)) {
+            const startOfYearDate = startOfYear(dateObj);
+            const originalYear = startOfYearDate.getFullYear();
+            const startOfWeekDate = startOfWeek(startOfYearDate);
+            const dayOfWeekDate = addDays(
+              startOfWeekDate,
+              date.start.get("weekday")
+            );
+            const newDateObj = addWeeks(
+              dayOfWeekDate,
+              num - (originalYear === dayOfWeekDate.getFullYear() ? 1 : 0)
+            );
+            assignDay(d.start, newDateObj);
+          } else {
+            return results;
+          }
+          return [d, ...moreRest];
+        }
+      } else {
+        return results;
+      }
+      return [date, ...rest];
+    }
+    return results;
+  },
+});
+
 const AsyncFunction: FunctionConstructor = new Function(
   `return Object.getPrototypeOf(async function(){}).constructor`
 )();
@@ -258,7 +375,7 @@ const COMMANDS: {
       if (!nlp) {
         return `[[${toRoamDate(new Date())}]]`;
       }
-      const date = parseDate(nlp);
+      const date = customDateNlp.parseDate(nlp);
       if (format) {
         return datefnsFormat(date, format, {
           useAdditionalDayOfYearTokens: true,
@@ -578,9 +695,12 @@ const COMMANDS: {
       ...search: string[]
     ) => {
       const undated = startArg === "-1" && endArg === "-1";
-      const start = !undated && startArg ? parseDate(startArg) : new Date(0);
+      const start =
+        !undated && startArg ? customDateNlp.parseDate(startArg) : new Date(0);
       const end =
-        !undated && endArg ? parseDate(endArg) : new Date(9999, 11, 31);
+        !undated && endArg
+          ? customDateNlp.parseDate(endArg)
+          : new Date(9999, 11, 31);
       const limit = Number(limitArg);
       const title = extractTag(titleArg);
       const results = getBlockUidsAndTextsReferencingPage(title)
