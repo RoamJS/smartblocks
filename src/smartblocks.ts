@@ -438,12 +438,25 @@ const COMMANDS: {
   {
     text: "RANDOMBLOCKMENTION",
     help: "Returns random block where page ref mentioned\n\n1: Page name or UID",
-    handler: (titleOrUid = "") => {
-      const possibleTitle = extractTag(titleOrUid);
-      const refUid = getPageUidByPageTitle(possibleTitle) || titleOrUid;
-      const uids = getBlockUidsReferencingBlock(refUid);
+    handler: (...args) => {
+      const refUids = args.map((titleOrUid) => {
+        const possibleTitle = extractTag(titleOrUid);
+        return getPageUidByPageTitle(possibleTitle) || titleOrUid;
+      });
+      if (!refUids.length) {
+        return "Please include at least one page name or UID.";
+      }
+      const uids = window.roamAlphaAPI
+        .q(
+          `[:find ?u :where [?r :block/uid ?u] ${refUids
+            .map(
+              (uid, i) => `[?r :block/refs ?b${i}] [?b${i} :block/uid "${uid}"]`
+            )
+            .join(" ")}]`
+        )
+        .map((s) => s[0]);
       const uid = uids[Math.floor(Math.random() * uids.length)];
-      return `((${uid}))`;
+      return uids.length ? `((${uid}))` : 'No uids found with these tags';
     },
   },
   {
