@@ -15,7 +15,6 @@ import {
   getAllPageNames,
   extractTag,
   getPageUidByPageTitle,
-  getBlockUidsReferencingBlock,
   getPageTitleByBlockUid,
   parseRoamDate,
   getParentUidsOfBlockUid,
@@ -38,6 +37,7 @@ import startOfYear from "date-fns/startOfYear";
 import endOfWeek from "date-fns/endOfWeek";
 import endOfMonth from "date-fns/endOfMonth";
 import endOfYear from "date-fns/endOfYear";
+import differenceInDays from "date-fns/differenceInDays";
 import XRegExp from "xregexp";
 import { renderPrompt } from "./Prompt";
 import { renderToast } from "roamjs-components";
@@ -456,7 +456,7 @@ const COMMANDS: {
         )
         .map((s) => s[0]);
       const uid = uids[Math.floor(Math.random() * uids.length)];
-      return uids.length ? `((${uid}))` : 'No uids found with these tags';
+      return uids.length ? `((${uid}))` : "No uids found with these tags";
     },
   },
   {
@@ -999,7 +999,13 @@ const COMMANDS: {
     text: "DIFFERENCE",
     help: "Find the difference between two parameters\n1: The minuend. 2: The subtrahend.",
     handler: (minuend = "0", subtrahend = "0") =>
-      ((Number(minuend) || 0) - (Number(subtrahend) || 0)).toString(),
+      DAILY_NOTE_PAGE_REGEX.test(extractTag(minuend)) &&
+      DAILY_NOTE_PAGE_REGEX.test(extractTag(subtrahend))
+        ? differenceInDays(
+            parseRoamDate(extractTag(minuend)),
+            parseRoamDate(extractTag(subtrahend))
+          ).toString()
+        : ((Number(minuend) || 0) - (Number(subtrahend) || 0)).toString(),
   },
   {
     text: "PRODUCT",
