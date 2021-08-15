@@ -1092,27 +1092,15 @@ const processBlockTextToPromises = (
     }
     const split = c.value.indexOf(":");
     const cmd = split < 0 ? c.value : c.value.substring(0, split);
-    const args =
+    const promiseArgs =
       split < 0
-        ? []
-        : c.value
-            .substring(split + 1)
-            .split(/(?<!\\),/)
-            .map((s) => s.replace(/\\,/g, ","));
-    const promiseArgs = args
-      .map((r) => () => proccessBlockText(r))
-      .reduce(
-        (prev, cur) =>
-          prev.then((argArray) =>
-            cur().then(([{ text, children }, ...rest]) => {
-              nextBlocks.push(...rest);
-              currentChildren.push(...(children || []));
-              argArray.push(text);
-              return argArray;
-            })
-          ),
-        Promise.resolve<string[]>([])
-      );
+        ? Promise.resolve([])
+        : proccessBlockText(c.value.substring(split + 1)).then((s) => {
+            const [{ text, children }, ...rest] = s;
+            nextBlocks.push(...rest);
+            currentChildren.push(...(children || []));
+            return text.split(/(?<!\\),/).map((s) => s.replace(/\\,/g, ","));
+          });
     return promiseArgs
       .then((resolvedArgs) =>
         !!handlerByCommand[cmd]
