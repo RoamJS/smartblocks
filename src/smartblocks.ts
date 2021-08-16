@@ -179,7 +179,7 @@ export const predefinedWorkflows = (
       ].flatMap((e) => [`This ${e}`, `Last ${e}`, `Next ${e}`]),
     ].map((text) => ({
       text,
-      children: [{ text: `<%DATE:${text}%>` }],
+      children: [{ text: `<%DATE:${text}%><%CURSOR%>` }],
     })),
     { text: "Time 24", children: [{ text: "<%TIME%>" }] },
     { text: "Time AM/PM", children: [{ text: "<%TIMEAMPM%>" }] },
