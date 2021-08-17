@@ -7,11 +7,7 @@ import React, {
   useState,
 } from "react";
 import ReactDOM from "react-dom";
-import {
-  createBlock,
-  deleteBlock,
-  getUids,
-} from "roam-client";
+import { createBlock, deleteBlock, getUids } from "roam-client";
 import { getCoords } from "./dom";
 import lego from "./img/lego3blocks.png";
 import gear from "./img/gear.png";
@@ -21,6 +17,7 @@ import {
   PREDEFINED_REGEX,
   sbBomb,
 } from "./smartblocks";
+import fuzzy from "fuzzy";
 
 type Props = {
   textarea: HTMLTextAreaElement;
@@ -39,7 +36,6 @@ const SmartblocksMenu = ({
   const blockUid = useMemo(() => getUids(textarea).blockUid, [textarea]);
   const menuRef = useRef<HTMLUListElement>(null);
   const [filter, setFilter] = useState("");
-  const filterRegex = useMemo(() => new RegExp(`(${filter})`, "i"), [filter]);
   const initialWorkflows = useMemo(() => {
     return getCustomWorkflows()
       .sort(({ name: a }, { name: b }) => a.localeCompare(b))
@@ -48,8 +44,14 @@ const SmartblocksMenu = ({
   const workflows = useMemo(
     () =>
       (filter
-        ? initialWorkflows.filter(({ name }) => filterRegex.test(name))
-        : initialWorkflows
+        ? fuzzy
+            .filter(filter, initialWorkflows, {
+              extract: (s) => s.name,
+              pre: "<b>",
+              post: "</b>",
+            })
+            .map((r) => ({ ...r.original, displayName: r.string }))
+        : initialWorkflows.map((r) => ({ ...r, displayName: r.name }))
       ).slice(0, 10),
     [filter, initialWorkflows]
   );
@@ -137,9 +139,6 @@ const SmartblocksMenu = ({
         >
           {workflows.length ? (
             workflows.map((wf, i) => {
-              const parts = filter
-                ? wf.name.split(new RegExp(`(${filter})`, "i"))
-                : [wf.name];
               return (
                 <MenuItem
                   key={wf.uid}
@@ -153,13 +152,15 @@ const SmartblocksMenu = ({
                         width={15}
                         style={{ marginRight: 4 }}
                       />
-                      {parts.map((part, i) =>
-                        filter && filterRegex.test(part) ? (
-                          <b key={i}>{part}</b>
-                        ) : (
-                          <span key={i}>{part}</span>
-                        )
-                      )}
+                      {wf.displayName
+                        .split(/<b>(.*?)<\/b>/)
+                        .map((part, i) =>
+                          i % 2 === 1 ? (
+                            <b key={i}>{part}</b>
+                          ) : (
+                            <span key={i}>{part}</span>
+                          )
+                        )}
                     </>
                   }
                   active={i === activeIndex}
