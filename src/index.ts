@@ -5,7 +5,6 @@ import {
   getBlockUidsAndTextsReferencingPage,
   addStyle,
   toRoamDateUid,
-  getChildrenLengthByPageUid,
   createPage,
   toRoamDate,
   createBlock,
@@ -271,6 +270,7 @@ runExtension("smartblocks", () => {
   const hideButtonIcon = tree.some((t) =>
     toFlexRegex("hide button icon").test(t.text)
   );
+  const dailyConfig = tree.find((t) => toFlexRegex("daily").test(t.text));
 
   window.roamjs.extension.smartblocks = {};
   window.roamjs.extension.smartblocks.registerCommand = ({
@@ -307,13 +307,13 @@ runExtension("smartblocks", () => {
           textarea,
           triggerLength: triggerRegex.source.replace("\\\\", "\\").length - 1,
           isCustomOnly,
+          dailyConfig
         });
       }
     }
   });
 
   const runDaily = () => {
-    const dailyConfig = tree.find((t) => toFlexRegex("daily").test(t.text));
     if (dailyConfig) {
       const time = getSettingValueFromTree({
         tree: dailyConfig.children,
@@ -431,8 +431,9 @@ runExtension("smartblocks", () => {
           const { [1]: buttonText = "", index, [0]: full } = match;
           const [workflowName, args = ""] = buttonText.split(":");
           b.addEventListener("click", () => {
-            const {uid: srcUid, name: srcName } = getCustomWorkflows().find(
-              ({ name }) => name.replace(/<%[A-Z]+%>/, '').trim() === workflowName
+            const { uid: srcUid, name: srcName } = getCustomWorkflows().find(
+              ({ name }) =>
+                name.replace(/<%[A-Z]+%>/, "").trim() === workflowName
             );
             if (!srcUid) {
               createBlock({

@@ -7,7 +7,16 @@ import React, {
   useState,
 } from "react";
 import ReactDOM from "react-dom";
-import { createBlock, deleteBlock, getUids } from "roam-client";
+import {
+  createBlock,
+  DAILY_NOTE_PAGE_REGEX,
+  deleteBlock,
+  getPageTitleByBlockUid,
+  getPageUidByPageTitle,
+  getUids,
+  toRoamDateUid,
+  TreeNode,
+} from "roam-client";
 import { getCoords } from "./dom";
 import lego from "./img/lego3blocks.png";
 import gear from "./img/gear.png";
@@ -18,11 +27,13 @@ import {
   sbBomb,
 } from "./smartblocks";
 import fuzzy from "fuzzy";
+import { getSettingValueFromTree, setInputSetting } from "roamjs-components";
 
 type Props = {
   textarea: HTMLTextAreaElement;
   triggerLength: number;
   isCustomOnly: boolean;
+  dailyConfig?: TreeNode;
 };
 
 const VALID_FILTER = /^[\w\d\s_-]$/;
@@ -32,6 +43,7 @@ const SmartblocksMenu = ({
   textarea,
   triggerLength,
   isCustomOnly,
+  dailyConfig,
 }: { onClose: () => void } & Props) => {
   const blockUid = useMemo(() => getUids(textarea).blockUid, [textarea]);
   const menuRef = useRef<HTMLUListElement>(null);
@@ -78,7 +90,28 @@ const SmartblocksMenu = ({
             end,
           },
           mutableCursor: !srcName.includes("<%NOCURSOR%>"),
-        }).then(() => deleteBlock(loadingUid));
+        }).then(() => {
+          deleteBlock(loadingUid);
+          if (dailyConfig) {
+            const dailyWorkflowName = getSettingValueFromTree({
+              tree: dailyConfig.children,
+              key: "workflow name",
+              defaultValue: "Daily",
+            });
+            if (dailyWorkflowName === srcName) {
+              const title = getPageTitleByBlockUid(blockUid);
+              if (DAILY_NOTE_PAGE_REGEX.test(title)) {
+                const value = getPageUidByPageTitle(title);
+                setInputSetting({
+                  blockUid: dailyConfig.uid,
+                  value,
+                  key: "latest",
+                  index: 2,
+                });
+              }
+            }
+          }
+        });
       }, 10);
     },
     [menuRef, blockUid, onClose, triggerLength, textarea]
