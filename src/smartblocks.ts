@@ -1083,6 +1083,16 @@ const COMMANDS: {
       }
     },
   },
+  {
+    text: "REPEAT",
+    help: "Repeats the current block a number of specified times\n\n1. Number of times for repeat",
+    handler: (repeatArg = "1", content = "") => {
+      const count = Number(repeatArg) || 1;
+      return Promise.all(
+        Array(count).fill(content).map((c) => proccessBlockText(c))
+      ).then((blocks) => blocks.flatMap((n) => n));
+    },
+  },
 ];
 export const handlerByCommand = Object.fromEntries(
   COMMANDS.map((c) => [c.text, c.handler])
@@ -1093,14 +1103,14 @@ const proccessBlockText = async (s: string): Promise<InputTextNode[]> => {
     const nextBlocks: InputTextNode[] = [];
     const currentChildren: InputTextNode[] = [];
     const promises = processBlockTextToPromises(s, nextBlocks, currentChildren);
-    const text = await processPromisesToBlockText(
+    const props = await processPromisesToBlockProps(
       promises,
       nextBlocks,
       currentChildren
     );
     return [
       {
-        text,
+        ...props,
         children: currentChildren,
       },
       ...nextBlocks,
@@ -1141,36 +1151,43 @@ const processBlockTextToPromises = (
     const cmd = split < 0 ? c.value : c.value.substring(0, split);
     const promiseArgs =
       split < 0
-        ? Promise.resolve([])
+        ? Promise.resolve({ args: [], nodeProps: {} })
         : proccessBlockText(c.value.substring(split + 1)).then((s) => {
-            const [{ text, children }, ...rest] = s;
+            const [{ text, children, uid: _, ...nodeProps }, ...rest] = s;
             nextBlocks.push(...rest);
             currentChildren.push(...(children || []));
-            return text.split(/(?<!\\),/).map((s) => s.replace(/\\,/g, ","));
+            return {
+              args: text.split(/(?<!\\),/).map((s) => s.replace(/\\,/g, ",")),
+              nodeProps,
+            };
           });
     return promiseArgs
-      .then((resolvedArgs) =>
+      .then(({ args, nodeProps }) =>
         !!handlerByCommand[cmd]
-          ? handlerByCommand[cmd](...resolvedArgs)
-          : `<%${cmd}${
-              resolvedArgs.length ? `:${resolvedArgs.join(",")}` : ""
-            }%>`
+          ? Promise.resolve(handlerByCommand[cmd](...args)).then((output) => ({
+              output,
+              nodeProps,
+            }))
+          : {
+              output: `<%${cmd}${args.length ? `:${args.join(",")}` : ""}%>`,
+              nodeProps,
+            }
       )
-      .then((output) =>
+      .then(({ output, nodeProps }) =>
         typeof output === "string"
-          ? [{ text: output }]
+          ? [{ text: output, ...nodeProps }]
           : output.map((o: string | InputTextNode) =>
-              typeof o === "string" ? { text: o } : o
+              typeof o === "string" ? { text: o, ...nodeProps } : o
             )
       );
   });
 };
 
-const processPromisesToBlockText = async (
+const processPromisesToBlockProps = async (
   promises: (() => Promise<InputTextNode[]>)[],
   nextBlocks: InputTextNode[],
   currentChildren: InputTextNode[]
-) => {
+): Promise<Omit<InputTextNode, "uid" | "children">> => {
   const data = await processPromises(
     promises.map(
       (p) => (prev) =>
@@ -1180,13 +1197,15 @@ const processPromisesToBlockText = async (
     )
   );
 
-  return data
-    .map((blocks) => {
-      currentChildren.push(...(blocks[0]?.children || []));
+  return data.reduce(
+    (prev, blocks) => {
+      const { text = "", children = [], uid: _, ...rest } = blocks[0] || {};
+      currentChildren.push(...children);
       nextBlocks.push(...blocks.slice(1));
-      return blocks[0]?.text || "";
-    })
-    .join("");
+      return { text: `${prev.text}${text}`, ...rest };
+    },
+    { text: "" }
+  );
 };
 
 // ridiculous method names in this file are a tribute to the original author of SmartBlocks, RoamHacker 🙌
@@ -1207,7 +1226,7 @@ const proccessBlockWithSmartness = async (
           return t;
         })
     );
-    const text = await processPromisesToBlockText(
+    const props = await processPromisesToBlockProps(
       promises,
       nextBlocks,
       currentChildren
@@ -1227,7 +1246,7 @@ const proccessBlockWithSmartness = async (
         textAlign,
         viewType,
         heading,
-        text,
+        ...props,
         children: [...currentChildren, ...processedChildren],
       },
       ...nextBlocks,
