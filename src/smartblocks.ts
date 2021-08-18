@@ -1088,9 +1088,7 @@ const COMMANDS: {
     help: "Repeats the current block a number of specified times\n\n1. Number of times for repeat",
     handler: (repeatArg = "1", content = "") => {
       const count = Number(repeatArg) || 1;
-      return Promise.all(
-        Array(count).fill(content).map((c) => proccessBlockText(c))
-      ).then((blocks) => blocks.flatMap((n) => n));
+      return Array(count).fill(content);
     },
   },
 ];
