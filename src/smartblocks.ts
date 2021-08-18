@@ -294,7 +294,7 @@ export type SmartBlocksContext = {
   variables: Record<string, string>;
   cursorPosition?: { uid: string; selection: number };
   currentUid?: string;
-  currentLength: number;
+  currentContent: string;
   indent: Set<string>;
   unindent: Set<string>;
   focusOnBlock?: string;
@@ -306,7 +306,7 @@ export const smartBlocksContext: SmartBlocksContext = {
   exitBlock: false,
   exitWorkflow: false,
   variables: {},
-  currentLength: 0,
+  currentContent: '',
   indent: new Set(),
   unindent: new Set(),
 };
@@ -320,7 +320,7 @@ const resetContext = (targetUid: string, variables: Record<string, string>) => {
   smartBlocksContext.cursorPosition = undefined;
   smartBlocksContext.currentUid = undefined;
   smartBlocksContext.focusOnBlock = undefined;
-  smartBlocksContext.currentLength = 0;
+  smartBlocksContext.currentContent = '';
   smartBlocksContext.indent = new Set();
   smartBlocksContext.unindent = new Set();
 };
@@ -655,6 +655,16 @@ const COMMANDS: {
     },
   },
   {
+    text: "CURRENTBLOCKCONTENT",
+    help: "Sets a variable to the block UID for the current block\n\n1. Variable name",
+    handler: (name = "") => {
+      if (name) {
+        smartBlocksContext.variables[name] = smartBlocksContext.currentContent;
+      }
+      return smartBlocksContext.currentContent;
+    },
+  },
+  {
     text: "CONCAT",
     help: "Combines a comma separated list of strings into one string\n\n1: comma separated list",
     handler: (...args) => {
@@ -914,7 +924,7 @@ const COMMANDS: {
     handler: () => {
       smartBlocksContext.cursorPosition = {
         uid: smartBlocksContext.currentUid,
-        selection: smartBlocksContext.currentLength,
+        selection: smartBlocksContext.currentContent.length,
       };
       return "";
     },
@@ -1169,7 +1179,7 @@ const proccessBlockWithSmartness = async (
     ).map(
       (p) => () =>
         p().then((t) => {
-          smartBlocksContext.currentLength += t[0]?.text?.length || 0;
+          smartBlocksContext.currentContent += t[0]?.text || '';
           return t;
         })
     );
@@ -1220,12 +1230,12 @@ const processPromises = (
 const processChildren = ({
   nodes = [],
   introUid,
-  introLength,
+  introContent,
   nextBlocks,
 }: {
   nodes: InputTextNode[];
   introUid?: string;
-  introLength?: number;
+  introContent?: string;
   nextBlocks?: InputTextNode[];
 }) =>
   processPromises(
@@ -1236,7 +1246,7 @@ const processChildren = ({
       const uid =
         (i === 0 && introUid) || window.roamAlphaAPI.util.generateUID();
       smartBlocksContext.currentUid = uid;
-      smartBlocksContext.currentLength = introLength || 0;
+      smartBlocksContext.currentContent = introContent || '';
       return proccessBlockWithSmartness(n)
         .then((b) => {
           if (b.length) {
@@ -1279,9 +1289,11 @@ export const sbBomb = ({
     ? predefinedChildrenByUid[srcUid]
     : getTreeByBlockUid(srcUid).children;
   const originalText = getTextByBlockUid(uid);
+  const prefix = originalText.substring(0, start);
+  const suffix = originalText.substring(end);
   updateBlock({
     uid,
-    text: `${originalText.substring(0, start)}${originalText.substring(end)}`,
+    text: `${prefix}${suffix}`,
   });
   return new Promise((resolve) =>
     setTimeout(
@@ -1289,7 +1301,7 @@ export const sbBomb = ({
         processChildren({
           nodes: childNodes,
           introUid: uid,
-          introLength: start,
+          introContent: prefix,
         })
           .then(([firstChild, ...tree]) => {
             if (firstChild) {
@@ -1298,9 +1310,9 @@ export const sbBomb = ({
               updateBlock({
                 ...firstChild,
                 uid,
-                text: `${originalText.substring(0, start)}${
+                text: `${prefix}${
                   firstChild.text || ""
-                }${originalText.substring(end)}`,
+                }${suffix}`,
               });
               firstChild.children.forEach((node, order) =>
                 createBlock({ order, parentUid: uid, node })
