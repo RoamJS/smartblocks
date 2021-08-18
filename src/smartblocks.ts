@@ -306,7 +306,7 @@ export const smartBlocksContext: SmartBlocksContext = {
   exitBlock: false,
   exitWorkflow: false,
   variables: {},
-  currentContent: '',
+  currentContent: "",
   indent: new Set(),
   unindent: new Set(),
 };
@@ -320,7 +320,7 @@ const resetContext = (targetUid: string, variables: Record<string, string>) => {
   smartBlocksContext.cursorPosition = undefined;
   smartBlocksContext.currentUid = undefined;
   smartBlocksContext.focusOnBlock = undefined;
-  smartBlocksContext.currentContent = '';
+  smartBlocksContext.currentContent = "";
   smartBlocksContext.indent = new Set();
   smartBlocksContext.unindent = new Set();
 };
@@ -486,7 +486,8 @@ const COMMANDS: {
                 (and [?c :block/refs ?d] [?c :block/parents ?r])
               ) 
             [?r :block/refs ?p] [?p :node/title "TODO"] [?d :node/title "${today}"]
-        ]`)
+        ]`
+        )
         .map(([uid, text]) => ({ uid, text }));
       return outputTodoBlocks(todos, ...args);
     },
@@ -1059,6 +1060,29 @@ const COMMANDS: {
       return navigator.clipboard.readText();
     },
   },
+  {
+    text: "SMARTBLOCK",
+    help: "Runs another SmartBlock\n\n1. SmartBlock name",
+    handler: (inputName = "") => {
+      const srcUid = getCustomWorkflows().find(
+        ({ name }) => name.replace(/<%[A-Z]+%>/, "").trim() === inputName
+      )?.uid;
+      if (srcUid) {
+        const nodes = getTreeByBlockUid(srcUid).children;
+        return processChildren({
+          nodes,
+          introUid: smartBlocksContext.currentUid,
+          introContent: smartBlocksContext.currentContent,
+        });
+      } else {
+        renderToast({
+          id: "roamjs-smartblocks-warning",
+          content: `${inputName} is not a valid Roam42 SmartBlock`,
+        });
+        return `---- SmartBlock:  **${inputName}**  does not exist. ----`;
+      }
+    },
+  },
 ];
 export const handlerByCommand = Object.fromEntries(
   COMMANDS.map((c) => [c.text, c.handler])
@@ -1179,7 +1203,7 @@ const proccessBlockWithSmartness = async (
     ).map(
       (p) => () =>
         p().then((t) => {
-          smartBlocksContext.currentContent += t[0]?.text || '';
+          smartBlocksContext.currentContent += t[0]?.text || "";
           return t;
         })
     );
@@ -1246,7 +1270,7 @@ const processChildren = ({
       const uid =
         (i === 0 && introUid) || window.roamAlphaAPI.util.generateUID();
       smartBlocksContext.currentUid = uid;
-      smartBlocksContext.currentContent = introContent || '';
+      smartBlocksContext.currentContent = introContent || "";
       return proccessBlockWithSmartness(n)
         .then((b) => {
           if (b.length) {
@@ -1310,9 +1334,7 @@ export const sbBomb = ({
               updateBlock({
                 ...firstChild,
                 uid,
-                text: `${prefix}${
-                  firstChild.text || ""
-                }${suffix}`,
+                text: `${prefix}${firstChild.text || ""}${suffix}`,
               });
               firstChild.children.forEach((node, order) =>
                 createBlock({ order, parentUid: uid, node })

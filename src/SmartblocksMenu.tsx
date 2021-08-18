@@ -14,7 +14,6 @@ import {
   getPageTitleByBlockUid,
   getPageUidByPageTitle,
   getUids,
-  toRoamDateUid,
   TreeNode,
 } from "roam-client";
 import { getCoords } from "./dom";

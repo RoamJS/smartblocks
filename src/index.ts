@@ -31,6 +31,7 @@ import differenceInMilliseconds from "date-fns/differenceInMilliseconds";
 import { render } from "./SmartblocksMenu";
 import { render as renderStore } from "./SmartblocksStore";
 import { render as renderPopover } from "./SmartblockPopover";
+import { render as renderBulk} from "./BulkTrigger";
 import {
   CommandHandler,
   getCustomWorkflows,
@@ -394,6 +395,13 @@ runExtension("smartblocks", () => {
       renderStore({ parentUid });
     },
   });
+
+  window.roamAlphaAPI.ui.commandPalette.addCommand({
+    label: "Run Multiple SmartBlocks",
+    callback: () => {
+      renderBulk({})
+    }
+  })
 
   createHTMLObserver({
     className: "rm-page-ref--tag",

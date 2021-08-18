@@ -34,7 +34,7 @@
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
     "roam-client": "^1.82.2",
-    "roamjs-components": "^0.21.7",
+    "roamjs-components": "^0.22.0",
     "stripe": "^8.167.0",
     "uuid": "^8.3.2",
     "xregexp": "^5.1.0"
