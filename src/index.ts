@@ -446,6 +446,7 @@ runExtension("smartblocks", () => {
               const variables = Object.fromEntries(
                 args
                   .split(",")
+                  .filter((s) => !!s)
                   .map((v) => v.split("="))
                   .map(([k, v = ""]) => [k, v])
               );

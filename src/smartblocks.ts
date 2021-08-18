@@ -334,7 +334,9 @@ const javascriptHandler =
       .replace(/(\n)?```\s*$/, "")
       .replace(/^\s*`/, "")
       .replace(/`\s*$/, "");
-    const variables = Object.keys(smartBlocksContext.variables);
+    const variables = Object.keys(smartBlocksContext.variables).filter(
+      (s) => !!s
+    );
     return Promise.resolve(
       new fcn(...variables, code)(
         ...variables.map((v) => smartBlocksContext.variables[v])
