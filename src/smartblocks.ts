@@ -474,9 +474,20 @@ const COMMANDS: {
     text: "TODOTODAY",
     help: "Returns a list of block refs of TODOs for today\n\n1. Max # blocks\n2. Format of output.\n3. optional filter values",
     handler: (...args) => {
-      const blocks = getBlockUidsAndTextsReferencingPage("TODO");
       const today = toRoamDate(new Date());
-      const todos = blocks.filter(({ text }) => text.includes(today));
+      const todos = window.roamAlphaAPI
+        .q(
+          `[:find ?u ?s :where 
+            [?r :block/uid ?u] [?r :block/string ?s] 
+              (or-join [?r ?d] 
+                (and [?r :block/refs ?d]) 
+                (and [?r :block/page ?d]) 
+                (and [?r :block/parents ?c] [?c :block/refs ?d]) 
+                (and [?c :block/refs ?d] [?c :block/parents ?r])
+              ) 
+            [?r :block/refs ?p] [?p :node/title "TODO"] [?d :node/title "${today}"]
+        ]`)
+        .map(([uid, text]) => ({ uid, text }));
       return outputTodoBlocks(todos, ...args);
     },
   },
