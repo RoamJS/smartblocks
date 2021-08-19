@@ -1065,7 +1065,7 @@ const COMMANDS: {
     help: "Runs another SmartBlock\n\n1. SmartBlock name",
     handler: (inputName = "") => {
       const srcUid = getCustomWorkflows().find(
-        ({ name }) => name.replace(/<%[A-Z]+%>/, "").trim() === inputName
+        ({ name }) => name.replace(/<%[A-Z]+%>/, "").trim() === inputName.trim()
       )?.uid;
       if (srcUid) {
         const nodes = getTreeByBlockUid(srcUid).children;
@@ -1077,9 +1077,9 @@ const COMMANDS: {
       } else {
         renderToast({
           id: "roamjs-smartblocks-warning",
-          content: `${inputName} is not a valid Roam42 SmartBlock`,
+          content: `${inputName.trim()} is not a valid Roam42 SmartBlock`,
         });
-        return `---- SmartBlock:  **${inputName}**  does not exist. ----`;
+        return `---- SmartBlock:  **${inputName.trim()}**  does not exist. ----`;
       }
     },
   },
