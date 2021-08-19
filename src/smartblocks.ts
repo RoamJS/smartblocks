@@ -899,8 +899,8 @@ const COMMANDS: {
   {
     text: "SET",
     help: "Create a variable in memory\n\n1. Variable name\n2: Value of variable",
-    handler: (name = "", value = "") => {
-      smartBlocksContext.variables[name] = value;
+    handler: (name = "", ...value) => {
+      smartBlocksContext.variables[name] = value.join(',');
       return "";
     },
   },
