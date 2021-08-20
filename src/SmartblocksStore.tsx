@@ -102,7 +102,7 @@ const Thumbnail = ({ src = lego }: { src?: string }): React.ReactElement => {
         }
       }
     };
-  }, [containerRef, setHeight, src]);
+  }, [containerRef, setHeight,setWidth, src]);
   return (
     <div
       style={{

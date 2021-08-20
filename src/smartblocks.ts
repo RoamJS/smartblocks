@@ -23,6 +23,8 @@ import {
   openBlock,
   getRoamUrl,
   getBlockUidAndTextIncludingText,
+  getDisplayNameByUid,
+  getCurrentUserUid,
 } from "roam-client";
 import * as chrono from "chrono-node";
 import datefnsFormat from "date-fns/format";
@@ -691,7 +693,7 @@ const COMMANDS: {
     text: "CURRENTUSER",
     help: "Return the display name of the current user",
     handler: () =>
-      getCurrentUserDisplayName() || "No Diplay Name for Current User",
+      getDisplayNameByUid(getCurrentUserUid()) || getCurrentUserDisplayName() || "No Diplay Name for Current User",
   },
   {
     text: "BLOCKMENTIONS",
