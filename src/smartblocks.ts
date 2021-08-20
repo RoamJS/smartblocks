@@ -30,6 +30,8 @@ import * as chrono from "chrono-node";
 import datefnsFormat from "date-fns/format";
 import addDays from "date-fns/addDays";
 import addWeeks from "date-fns/addWeeks";
+import addMonths from "date-fns/addMonths";
+import addYears from "date-fns/addYears";
 import subDays from "date-fns/subDays";
 import isBefore from "date-fns/isBefore";
 import isAfter from "date-fns/isAfter";
@@ -54,6 +56,19 @@ const DAILY_REF_REGEX = new RegExp(
 const getDateFromText = (s: string) =>
   parseRoamDate(DAILY_REF_REGEX.exec(s)?.[1]);
 
+const getDateBasisDate = () => {
+  if (smartBlocksContext.dateBasisMethod === "DNP") {
+    const title = getPageTitleByBlockUid(smartBlocksContext.targetUid);
+    return DAILY_NOTE_PAGE_REGEX.test(title)
+      ? parseRoamDate(title)
+      : new Date();
+  } else if (smartBlocksContext.dateBasisMethod) {
+    return new Date(smartBlocksContext.dateBasisMethod);
+  } else {
+    return new Date();
+  }
+};
+
 const ORDINAL_REGEX = new RegExp(
   `\\b(?:${Object.keys(ORDINAL_WORD_DICTIONARY)
     .sort((a, b) => b.length - a.length)
@@ -69,8 +84,41 @@ customDateNlp.parsers.push(
   {
     pattern: () => ORDINAL_REGEX,
     extract: () => ({}),
+  },
+  {
+    pattern: () => /D[B,E]O(N)?[M,Y]/i,
+    extract: (_, match) => {
+      const date = getDateBasisDate();
+      const result = (d: Date) => ({
+        day: d.getDate(),
+        month: d.getMonth() + 1,
+        year: d.getFullYear(),
+      });
+
+      switch (match[0]) {
+        case "DBOM":
+          return result(startOfMonth(date));
+        case "DEOM":
+          return result(endOfMonth(date));
+        case "DBOY":
+          return result(startOfYear(date));
+        case "DEOY":
+          return result(endOfYear(date));
+        case "DBONM":
+          return result(addMonths(startOfMonth(date), 1));
+        case "DEONM":
+          return result(addMonths(endOfMonth(date), 1));
+        case "DBONY":
+          return result(addYears(startOfYear(date), 1));
+        case "DEONY":
+          return result(addYears(endOfYear(date), 1));
+        default:
+          return result(date);
+      }
+    },
   }
 );
+
 const assignDay = (p: ParsingComponents, d: Date) => {
   p.assign("year", d.getFullYear());
   p.assign("month", d.getMonth() + 1);
@@ -300,6 +348,7 @@ export type SmartBlocksContext = {
   indent: Set<string>;
   unindent: Set<string>;
   focusOnBlock?: string;
+  dateBasisMethod?: string;
 };
 
 export const smartBlocksContext: SmartBlocksContext = {
@@ -325,6 +374,7 @@ const resetContext = (targetUid: string, variables: Record<string, string>) => {
   smartBlocksContext.currentContent = "";
   smartBlocksContext.indent = new Set();
   smartBlocksContext.unindent = new Set();
+  smartBlocksContext.dateBasisMethod = undefined;
 };
 
 const javascriptHandler =
@@ -379,7 +429,7 @@ const COMMANDS: {
       if (!nlp) {
         return `[[${toRoamDate(new Date())}]]`;
       }
-      const date = customDateNlp.parseDate(nlp);
+      const date = customDateNlp.parseDate(nlp, getDateBasisDate());
       if (format) {
         return datefnsFormat(date, format, {
           useAdditionalDayOfYearTokens: true,
@@ -693,7 +743,9 @@ const COMMANDS: {
     text: "CURRENTUSER",
     help: "Return the display name of the current user",
     handler: () =>
-      getDisplayNameByUid(getCurrentUserUid()) || getCurrentUserDisplayName() || "No Diplay Name for Current User",
+      getDisplayNameByUid(getCurrentUserUid()) ||
+      getCurrentUserDisplayName() ||
+      "No Diplay Name for Current User",
   },
   {
     text: "BLOCKMENTIONS",
@@ -733,12 +785,13 @@ const COMMANDS: {
       format = "(({uid}))",
       ...search: string[]
     ) => {
+      const referenceDate = getDateBasisDate();
       const undated = startArg === "-1" && endArg === "-1";
       const start =
-        !undated && startArg ? customDateNlp.parseDate(startArg) : new Date(0);
+        !undated && startArg ? customDateNlp.parseDate(startArg, referenceDate) : new Date(0);
       const end =
         !undated && endArg
-          ? customDateNlp.parseDate(endArg)
+          ? customDateNlp.parseDate(endArg, referenceDate)
           : new Date(9999, 11, 31);
       const limit = Number(limitArg);
       const title = extractTag(titleArg);
@@ -902,7 +955,7 @@ const COMMANDS: {
     text: "SET",
     help: "Create a variable in memory\n\n1. Variable name\n2: Value of variable",
     handler: (name = "", ...value) => {
-      smartBlocksContext.variables[name] = value.join(',');
+      smartBlocksContext.variables[name] = value.join(",");
       return "";
     },
   },
@@ -1091,6 +1144,16 @@ const COMMANDS: {
     handler: (repeatArg = "1", content = "") => {
       const count = Number(repeatArg) || 1;
       return Array(count).fill(content);
+    },
+  },
+  {
+    text: "DATEBASIS",
+    help: "Time machine mode\n\n1: Date basis for date commands\nDNP for daily page\nNLP for other dates\nDefaults to TODAY at start of each workflow.",
+    handler: (mode = "DNP") => {
+      smartBlocksContext.dateBasisMethod = undefined;
+      smartBlocksContext.dateBasisMethod =
+        mode === "DNP" ? mode : chrono.parseDate(mode).toJSON();
+      return "";
     },
   },
 ];
