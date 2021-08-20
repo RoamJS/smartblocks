@@ -33,7 +33,7 @@
     "randomstring": "^1.2.1",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
-    "roam-client": "^1.82.6",
+    "roam-client": "^1.82.7",
     "roamjs-components": "^0.22.0",
     "stripe": "^8.167.0",
     "uuid": "^8.3.2",
