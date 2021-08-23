@@ -788,7 +788,9 @@ const COMMANDS: {
       const referenceDate = getDateBasisDate();
       const undated = startArg === "-1" && endArg === "-1";
       const start =
-        !undated && startArg ? customDateNlp.parseDate(startArg, referenceDate) : new Date(0);
+        !undated && startArg
+          ? customDateNlp.parseDate(startArg, referenceDate)
+          : new Date(0);
       const end =
         !undated && endArg
           ? customDateNlp.parseDate(endArg, referenceDate)
@@ -1219,8 +1221,19 @@ const processBlockTextToPromises = (
             const [{ text, children, uid: _, ...nodeProps }, ...rest] = s;
             nextBlocks.push(...rest);
             currentChildren.push(...(children || []));
+            const escapeOnlyRegex = /^\\+$/;
             return {
-              args: text.split(/(?<!\\),/).map((s) => s.replace(/\\,/g, ",")),
+              args: text
+                .split(/(\\+)?,/) // safari doesn't support negative look behind *shakes-fist.gif*
+                .map((s, i, a) =>
+                escapeOnlyRegex.test(a[i + 1])
+                    ? `${s}${a[i + 1].slice(1)},${a[i + 2]}`
+                    : escapeOnlyRegex.test(a[i - 1]) || escapeOnlyRegex.test(s)
+                    ? undefined
+                    : s
+                )
+                .filter((s) => !!s)
+                .map((s) => s.replace(/\\,/g, ",")),
               nodeProps,
             };
           });
