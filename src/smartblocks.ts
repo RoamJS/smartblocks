@@ -427,7 +427,7 @@ const COMMANDS: {
     args: true,
     handler: (nlp, format) => {
       if (!nlp) {
-        return `[[${toRoamDate(new Date())}]]`;
+        return `[[${toRoamDate(customDateNlp.parseDate("today"))}]]`;
       }
       const date = customDateNlp.parseDate(nlp, getDateBasisDate());
       if (format) {
@@ -526,7 +526,7 @@ const COMMANDS: {
     text: "TODOTODAY",
     help: "Returns a list of block refs of TODOs for today\n\n1. Max # blocks\n2. Format of output.\n3. optional filter values",
     handler: (...args) => {
-      const today = toRoamDate(new Date());
+      const today = toRoamDate(customDateNlp.parseDate("today"));
       const todos = window.roamAlphaAPI
         .q(
           `[:find ?u ?s :where 
@@ -549,7 +549,7 @@ const COMMANDS: {
     help: "Returns a list of block refs of TODOs that are Overdue\n\n1. Max # blocks\n2. Format of output.\n3. optional filter values",
     handler: (...args) => {
       const blocks = getBlockUidsAndTextsReferencingPage("TODO");
-      const yesterday = subDays(new Date(), 1);
+      const yesterday = subDays(customDateNlp.parseDate("today"), 1);
       const todos = blocks
         .filter(({ text }) => DAILY_REF_REGEX.test(text))
         .map(({ text, uid }) => ({
@@ -567,7 +567,7 @@ const COMMANDS: {
     help: "Returns a list of block refs of TODOs that are Overdue including DNP TODOs\n\n1. Max # blocks\n2. Format of output.\n3. optional filter values",
     handler: (...args) => {
       const blocks = getBlockUidsAndTextsReferencingPage("TODO");
-      const yesterday = subDays(new Date(), 1);
+      const yesterday = subDays(customDateNlp.parseDate("today"), 1);
       const todos = blocks
         .map(({ text, uid }) => ({
           text,
@@ -592,7 +592,7 @@ const COMMANDS: {
     help: "Returns a list of block refs of TODOs that are due in the future\n\n1. Max # blocks\n2. Format of output.\n3. optional filter values",
     handler: (...args) => {
       const blocks = getBlockUidsAndTextsReferencingPage("TODO");
-      const today = new Date();
+      const today = customDateNlp.parseDate("today");
       const todos = blocks
         .filter(({ text }) => DAILY_REF_REGEX.test(text))
         .map(({ text, uid }) => ({
@@ -610,7 +610,7 @@ const COMMANDS: {
     help: "Returns a list of block refs of TODOs that are due in the future including DNP TODOs\n\n1. Max # blocks\n2. Format of output.\n3. optional filter values",
     handler: (...args) => {
       const blocks = getBlockUidsAndTextsReferencingPage("TODO");
-      const today = new Date();
+      const today = customDateNlp.parseDate("today");
       const todos = blocks
         .map(({ text, uid }) => ({
           text,
@@ -897,7 +897,7 @@ const COMMANDS: {
     text: "IFDATEOFYEAR",
     help: "Compares today's date\n\n1: Comma separated list of dates (mm/dd)\nExample: 01/01,04/01,09/01",
     handler: (...dates) => {
-      const today = new Date();
+      const today = customDateNlp.parseDate("today");
       const match = dates
         .map((d) => d.trim())
         .some((d) => {
@@ -918,7 +918,7 @@ const COMMANDS: {
     text: "IFDAYOFMONTH",
     help: "Compares today's date\n\n1: Comma separated list of days\n Example: 5,10,15",
     handler: (...dates) => {
-      const today = new Date();
+      const today = customDateNlp.parseDate("today");
       const match = dates
         .map((s) => s.trim())
         .map((s) => Number(s))
@@ -933,7 +933,7 @@ const COMMANDS: {
     text: "IFDAYOFWEEK",
     help: "Compares today's date\n\n1: Comma separated list of days of week. 1 is Monday, 7 is Sunday\nExample: 1,3",
     handler: (...dates) => {
-      const today = new Date();
+      const today = customDateNlp.parseDate("today");
       const match = dates
         .map((s) => s.trim())
         .map((s) => (s === "7" ? 0 : Number(s)))
