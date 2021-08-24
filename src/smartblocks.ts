@@ -1160,6 +1160,11 @@ const COMMANDS: {
       return "";
     },
   },
+  {
+    text: "TAG",
+    help: "Returns the first argument as a Roam tag, so that your workflow definition doesn't create a reference",
+    handler: (...args: string[]) => `[[${args.join(",")}]]`,
+  },
 ];
 export const handlerByCommand = Object.fromEntries(
   COMMANDS.map((c) => [c.text, c.handler])
