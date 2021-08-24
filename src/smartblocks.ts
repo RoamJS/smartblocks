@@ -286,13 +286,19 @@ const predefinedChildrenByUid = Object.fromEntries(
 );
 
 export const HIDE_REGEX = /<%HIDE%>/;
-const getWorkflows = (tag: string) =>
-  getBlockUidsAndTextsReferencingPage(tag).map(({ text, uid }) => ({
-    uid,
-    name: text.replace(createTagRegex(tag), "").trim(),
-  }));
+
 export const getCustomWorkflows = () =>
-  [...getWorkflows("42SmartBlock"), ...getWorkflows("SmartBlock")]
+  window.roamAlphaAPI
+    .q(
+      `[:find ?s ?u :where [?r :block/uid ?u] [?r :block/string ?s] [?r :block/refs ?p] (or [?p :node/title "SmartBlock"] [?p :node/title "42SmartBlock"])]`
+    )
+    .map(([text, uid]: string[]) => ({
+      uid,
+      name: text
+        .replace(createTagRegex("SmartBlock"), "")
+        .replace(createTagRegex("42SmartBlock"), "")
+        .trim(),
+    }))
     .filter(({ name }) => !HIDE_REGEX.test(name))
     .map(({ name, uid }) => ({
       uid,
@@ -862,10 +868,10 @@ const COMMANDS: {
   {
     text: "THEN",
     help: "Used with IF when IF is true\n\n1: Text to be inserted",
-    handler: (value) => {
+    handler: (...args: string[]) => {
       if (smartBlocksContext.ifCommand) {
         smartBlocksContext.ifCommand = undefined;
-        return value;
+        return args.join(",");
       }
       return "";
     },
@@ -873,10 +879,10 @@ const COMMANDS: {
   {
     text: "ELSE",
     help: "Used with IF when IF is false\n\n1: Text to be inserted",
-    handler: (value) => {
+    handler: (...args: string[]) => {
       if (smartBlocksContext.ifCommand === false) {
         smartBlocksContext.ifCommand = undefined;
-        return value;
+        return args.join(",");
       }
       return "";
     },
