@@ -465,7 +465,7 @@ const COMMANDS: {
       const hours = dt.getHours();
       const minutes = dt.getMinutes();
       const ampm = hours >= 12 ? "PM" : "AM";
-      const hoursAm = hours ? hours % 12 : 12;
+      const hoursAm = hours % 12 || 12;
       var strTime =
         hoursAm.toString().padStart(2, "0") +
         ":" +
