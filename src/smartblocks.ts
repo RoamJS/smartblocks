@@ -798,8 +798,10 @@ const COMMANDS: {
       const limit = Number(limitArg);
       const title = extractTag(titleArg);
       const results = getBlockUidsAndTextsReferencingPage(title)
-        .filter(({ text }) => {
-          const ref = DAILY_REF_REGEX.exec(text)?.[1];
+        .filter(({ text, uid }) => {
+          const ref =
+            DAILY_REF_REGEX.exec(text)?.[1] ||
+            DAILY_REF_REGEX.exec(getPageTitleByBlockUid(uid))?.[1];
           if (ref) {
             const d = parseRoamDate(ref);
             return undated! && !isBefore(d, start) && !isAfter(d, end);
@@ -1226,7 +1228,7 @@ const processBlockTextToPromises = (
               args: text
                 .split(/(\\+)?,/) // safari doesn't support negative look behind *shakes-fist.gif*
                 .map((s, i, a) =>
-                escapeOnlyRegex.test(a[i + 1])
+                  escapeOnlyRegex.test(a[i + 1])
                     ? `${s}${a[i + 1].slice(1)},${a[i + 2]}`
                     : escapeOnlyRegex.test(a[i - 1]) || escapeOnlyRegex.test(s)
                     ? undefined
