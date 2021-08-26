@@ -24,10 +24,12 @@ import { createOverlayRender } from "roamjs-components";
 import axios from "axios";
 import {
   createBlock,
+  deleteBlock,
   getCurrentUserDisplayName,
   getCurrentUserEmail,
   getGraph,
   getRoamUrl,
+  getShallowTreeByParentUid,
   InputTextNode,
 } from "roam-client";
 import Markdown from "markdown-to-jsx";
@@ -102,7 +104,7 @@ const Thumbnail = ({ src = lego }: { src?: string }): React.ReactElement => {
         }
       }
     };
-  }, [containerRef, setHeight,setWidth, src]);
+  }, [containerRef, setHeight, setWidth, src]);
   return (
     <div
       style={{
@@ -212,36 +214,27 @@ const StripeCheckout = ({
 const ROW_LENGTH = 4;
 const DRAWER_TABS = ["Marketplace", "Installed", "Published"] as const;
 type DrawerTab = typeof DRAWER_TABS[number];
+const graph = getGraph();
 
 const DrawerContent = ({
   parentUid,
   onClose,
 }: { onClose: () => void } & Props) => {
   const [smartblocks, setSmartblocks] = useState<Smartblocks[]>([]);
-  const installedSmartblocks = useMemo(
-    () => new Set(getCustomWorkflows().map(({ name }) => name)),
-    []
-  );
+  const [installed, setInstalled] = useState(false);
+  const [updateable, setUpdateable] = useState(false);
   const [tabId, setTabId] = useState<DrawerTab>("Marketplace");
   const [search, setSearch] = useState("");
   const filteredSmartblocks = useMemo(() => {
     const regex = new RegExp(search, "i");
-    return smartblocks
-      .filter(
-        tabId === "Marketplace"
-          ? (s) => !installedSmartblocks.has(s.name)
-          : tabId === "Installed"
-          ? (s) => installedSmartblocks.has(s.name) && s.author !== getGraph()
-          : (s) => s.author === getGraph()
-      )
-      .filter(
-        (f) =>
-          regex.test(f.name) ||
-          regex.test(f.description) ||
-          f.tags.some((s) => regex.test(s)) ||
-          regex.test(f.author)
-      );
-  }, [smartblocks, search, tabId, installedSmartblocks]);
+    return smartblocks.filter(
+      (f) =>
+        regex.test(f.name) ||
+        regex.test(f.description) ||
+        f.tags.some((s) => regex.test(s)) ||
+        regex.test(f.author)
+    );
+  }, [smartblocks, search, tabId]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selectedSmartBlockId, setSelectedSmartBlockId] = useState("");
@@ -251,19 +244,49 @@ const DrawerContent = ({
   );
   const [paymentSecret, setPaymentSecret] = useState("");
   useEffect(() => {
-    axios
-      .get<{ smartblocks: Smartblocks[] }>(
-        `${process.env.API_URL}/smartblocks-store`
-      )
-      .then((r) =>
-        setSmartblocks(
-          r.data.smartblocks.sort(({ name: a }, { name: b }) =>
-            a.localeCompare(b)
+    if (!selectedSmartBlockId) {
+      setLoading(true);
+      setError("");
+      axios
+        .get<{ smartblocks: Smartblocks[] }>(
+          `${process.env.API_URL}/smartblocks-store?tab=${tabId}&graph=${graph}`
+        )
+        .then((r) =>
+          setSmartblocks(
+            r.data.smartblocks.sort(({ name: a }, { name: b }) =>
+              a.localeCompare(b)
+            )
           )
         )
-      )
-      .finally(() => setLoading(false));
-  }, [setSmartblocks, setLoading]);
+        .catch((e) => {
+          setSmartblocks([]);
+          setError(e.response?.data?.message || e.response?.data || e.message);
+        })
+        .finally(() => setLoading(false));
+    }
+  }, [setSmartblocks, setLoading, tabId, selectedSmartBlockId]);
+  useEffect(() => {
+    if (selectedSmartBlockId) {
+      setLoading(true);
+      setError("");
+      axios
+        .get(
+          `${process.env.API_URL}/smartblocks-store?uuid=${selectedSmartBlockId}&graph=${graph}&open=true`
+        )
+        .then((r) => {
+          setInstalled(r.data.installed);
+          setUpdateable(r.data.updatable);
+        })
+        .catch((e) => {
+          setLoading(false);
+          setError(e.response?.data?.message || e.response?.data || e.message);
+        })
+        .finally(() => setLoading(false));
+    } else {
+      setUpdateable(false);
+      setInstalled(false);
+    }
+  }, [setUpdateable, setInstalled, selectedSmartBlockId]);
   const installWorkflow = useCallback(
     (workflow: string) => {
       const children = JSON.parse(workflow) as InputTextNode[];
@@ -296,7 +319,7 @@ const DrawerContent = ({
         </div>
         <div style={{ height: "100%", width: "60%", marginLeft: 16 }}>
           <div>
-            {installedSmartblocks.has(selectedSmartBlock.name) ? (
+            {installed ? (
               <i>Already Installed</i>
             ) : (
               <Price price={selectedSmartBlock.price} />
@@ -336,17 +359,68 @@ const DrawerContent = ({
                   loading={loading}
                 />
               </Elements>
-            ) : (
+            ) : updateable ? (
               <Button
                 style={{ margin: "16px 0" }}
-                text={"Install"}
-                disabled={installedSmartblocks.has(selectedSmartBlock.name)}
+                text={"Update"}
+                disabled={loading}
+                intent={Intent.WARNING}
                 onClick={() => {
                   setLoading(true);
                   setError("");
                   axios
                     .get(
-                      `${process.env.API_URL}/smartblocks-store?uuid=${selectedSmartBlockId}`
+                      `${process.env.API_URL}/smartblocks-store?uuid=${selectedSmartBlockId}&graph=${graph}`
+                    )
+                    .then((r) => {
+                      const children = JSON.parse(
+                        r.data.workflow
+                      ) as InputTextNode[];
+                      const uid =
+                        getCustomWorkflows().find(
+                          ({ name }) => name === selectedSmartBlock.name
+                        )?.uid ||
+                        createBlock({
+                          node: {
+                            text: `#SmartBlock ${selectedSmartBlock.name}`,
+                          },
+                          parentUid,
+                        });
+                      setTimeout(() => {
+                        getShallowTreeByParentUid(uid).forEach(
+                          ({ uid: child }) => deleteBlock(child)
+                        );
+                        children.forEach((node, order) =>
+                          createBlock({ node, order, parentUid: uid })
+                        );
+                        setTimeout(() => {
+                          window.location.assign(getRoamUrl(uid));
+                          onClose();
+                        }, 1000);
+                      }, 1);
+                    })
+                    .catch((e) => {
+                      setLoading(false);
+                      setError(
+                        e.response?.data?.message ||
+                          e.response?.data ||
+                          e.message
+                      );
+                    });
+                }}
+              />
+            ) : (
+              <Button
+                style={{ margin: "16px 0" }}
+                text={"Install"}
+                disabled={loading || installed}
+                intent={Intent.SUCCESS}
+                onClick={() => {
+                  setLoading(true);
+                  setError("");
+                  axios
+                    .get(
+                      `${process.env.API_URL}/smartblocks-store?uuid=${selectedSmartBlockId}&graph=${graph}`
                     )
                     .then((r) => {
                       if (r.data.secret) {
@@ -360,7 +434,11 @@ const DrawerContent = ({
                     })
                     .catch((e) => {
                       setLoading(false);
-                      setError(e.response?.data || e.message);
+                      setError(
+                        e.response?.data?.message ||
+                          e.response?.data ||
+                          e.message
+                      );
                     });
                 }}
               />
@@ -421,6 +499,7 @@ const DrawerContent = ({
         ) : !filteredSmartblocks.length ? (
           <div style={{ padding: 16 }}>
             <H6>No SmartBlocks Found.</H6>
+            <p style={{ color: "darkred" }}>{error}</p>
           </div>
         ) : (
           filteredSmartblocks.map((e, i) => {
@@ -428,14 +507,12 @@ const DrawerContent = ({
             return (
               <div
                 key={e.uuid}
-                className={`roamjs-smartblocks-store-item roamjs-${tabId.toLowerCase()}`}
+                className={`roamjs-smartblocks-store-item`}
                 style={{
                   gridColumnStart: `${gridColumnStart}`,
                   gridColumnEnd: `${gridColumnStart + 1}`,
                 }}
-                onClick={() =>
-                  tabId !== "Installed" && setSelectedSmartBlockId(e.uuid)
-                }
+                onClick={() => setSelectedSmartBlockId(e.uuid)}
               >
                 <Thumbnail src={e.img} />
                 <div

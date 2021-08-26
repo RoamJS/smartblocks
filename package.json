@@ -7,6 +7,7 @@
     "build": "roamjs-scripts build",
     "dev": "roamjs-scripts dev",
     "lambdas": "roamjs-scripts lambdas",
+    "preserver": "roamjs-scripts lambdas --build",
     "server": "localhost-lambdas"
   },
   "license": "MIT",
