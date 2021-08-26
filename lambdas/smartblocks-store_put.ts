@@ -1,9 +1,14 @@
 import { APIGatewayProxyHandler } from "aws-lambda";
 import AWS from "aws-sdk";
 import { v4 } from "uuid";
+import format from "date-fns/format";
 
 const dynamo = new AWS.DynamoDB({
   apiVersion: "2012-08-10",
+  region: "us-east-1",
+});
+const s3 = new AWS.S3({
+  apiVersion: "2006-03-01",
   region: "us-east-1",
 });
 const ses = new AWS.SES({ apiVersion: "2010-12-01", region: "us-east-1" });
@@ -32,19 +37,19 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     uuid?: string;
     price?: string;
   };
-  const price = (Number(priceArg) || 0)*100;
+  const price = (Number(priceArg) || 0) * 100;
   if (price < 0) {
     return {
       statusCode: 400,
       body: `Price must be greater than or equal to 0.`,
       headers,
-    }
+    };
   } else if (price > 0 && price < 100) {
     return {
       statusCode: 400,
       body: `Prices greater than 0 must be greater than $1.`,
       headers,
-    }
+    };
   }
   const requiresReview =
     /<%((J(A(VASCRIPT(ASYNC)?)?)?)|(ONBLOCKEXIT)|(IF(TRUE)?)):/.test(workflow);
@@ -72,23 +77,34 @@ export const handler: APIGatewayProxyHandler = async (event) => {
           headers,
         };
       }
+      const version = format(new Date(), "yyyy-MM-dd-hh-mm-ss");
       const putItem = () =>
-        dynamo
-          .putItem({
-            TableName: "RoamJSSmartBlocks",
-            Item: {
-              uuid: { S: uuid },
-              price: { N: `${price}` },
-              name: { S: name },
-              tags: { SS: tags?.length ? tags : ["Smartblock"] },
-              img: { S: img.replace(/^!\[.*?\]\(/, "").replace(/\)$/, "") },
-              author: { S: author },
-              description: { S: description },
-              workflow: { S: workflow },
-              status: { S: requiresReview ? "UNDER REVIEW" : "LIVE" },
-            },
+        s3
+          .upload({
+            Bucket: "roamjs-smartblocks",
+            Body: workflow,
+            Key: `${uuid}/${version}.json`,
+            ContentType: "application/json",
           })
           .promise()
+          .then(() =>
+            dynamo
+              .putItem({
+                TableName: "RoamJSSmartBlocks",
+                Item: {
+                  uuid: { S: uuid },
+                  price: { N: `${price}` },
+                  name: { S: name },
+                  tags: { SS: tags?.length ? tags : ["Smartblock"] },
+                  img: { S: img.replace(/^!\[.*?\]\(/, "").replace(/\)$/, "") },
+                  author: { S: author },
+                  description: { S: description },
+                  workflow: { S: version },
+                  status: { S: requiresReview ? "UNDER REVIEW" : "LIVE" },
+                },
+              })
+              .promise()
+          )
           .then(() =>
             ses
               .sendEmail({

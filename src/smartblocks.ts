@@ -433,7 +433,9 @@ const COMMANDS: {
     args: true,
     handler: (nlp, format) => {
       if (!nlp) {
-        return `[[${toRoamDate(customDateNlp.parseDate("today", getDateBasisDate()))}]]`;
+        return `[[${toRoamDate(
+          customDateNlp.parseDate("today", getDateBasisDate())
+        )}]]`;
       }
       const date = customDateNlp.parseDate(nlp, getDateBasisDate());
       if (format) {
@@ -532,7 +534,9 @@ const COMMANDS: {
     text: "TODOTODAY",
     help: "Returns a list of block refs of TODOs for today\n\n1. Max # blocks\n2. Format of output.\n3. optional filter values",
     handler: (...args) => {
-      const today = toRoamDate(customDateNlp.parseDate("today", getDateBasisDate()));
+      const today = toRoamDate(
+        customDateNlp.parseDate("today", getDateBasisDate())
+      );
       const todos = window.roamAlphaAPI
         .q(
           `[:find ?u ?s :where 
@@ -555,7 +559,10 @@ const COMMANDS: {
     help: "Returns a list of block refs of TODOs that are Overdue\n\n1. Max # blocks\n2. Format of output.\n3. optional filter values",
     handler: (...args) => {
       const blocks = getBlockUidsAndTextsReferencingPage("TODO");
-      const yesterday = subDays(customDateNlp.parseDate("today", getDateBasisDate()), 1);
+      const yesterday = subDays(
+        customDateNlp.parseDate("today", getDateBasisDate()),
+        1
+      );
       const todos = blocks
         .filter(({ text }) => DAILY_REF_REGEX.test(text))
         .map(({ text, uid }) => ({
@@ -573,7 +580,10 @@ const COMMANDS: {
     help: "Returns a list of block refs of TODOs that are Overdue including DNP TODOs\n\n1. Max # blocks\n2. Format of output.\n3. optional filter values",
     handler: (...args) => {
       const blocks = getBlockUidsAndTextsReferencingPage("TODO");
-      const yesterday = subDays(customDateNlp.parseDate("today", getDateBasisDate()), 1);
+      const yesterday = subDays(
+        customDateNlp.parseDate("today", getDateBasisDate()),
+        1
+      );
       const todos = blocks
         .map(({ text, uid }) => ({
           text,

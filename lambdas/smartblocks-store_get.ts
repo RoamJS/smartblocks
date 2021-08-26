@@ -1,5 +1,5 @@
 import { APIGatewayProxyHandler } from "aws-lambda";
-import AWS from "aws-sdk";
+import AWS, { DynamoDB } from "aws-sdk";
 import Stripe from "stripe";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
@@ -10,10 +10,33 @@ const dynamo = new AWS.DynamoDB({
   apiVersion: "2012-08-10",
   region: "us-east-1",
 });
+const s3 = new AWS.S3({
+  apiVersion: "2006-03-01",
+  region: "us-east-1",
+});
 const headers = {
   "Access-Control-Allow-Origin": "https://roamresearch.com",
   "Access-Control-Allow-Methods": "GET",
 };
+
+const getWorkflow = (item: DynamoDB.AttributeMap) =>
+  item.workflow.S.startsWith("[")
+    ? {
+        statusCode: 200,
+        body: JSON.stringify({ workflow: item.workflow.S }),
+        headers,
+      }
+    : s3
+        .getObject({
+          Bucket: "roamjs-smartblocks",
+          Key: `${item.uuid.S}/${item.workflow.S}.json`,
+        })
+        .promise()
+        .then((r) => ({
+          statusCode: 200,
+          body: JSON.stringify({ workflow: r.Body.toString() }),
+          headers,
+        }));
 
 export const handler: APIGatewayProxyHandler = async (event) => {
   const { uuid = "" } = event.queryStringParameters || {};
@@ -33,19 +56,11 @@ export const handler: APIGatewayProxyHandler = async (event) => {
                 body: `Invalid id ${uuid} doesn't represent a LIVE SmartBlock Workflow`,
               }
             : (Number(r.Item?.price?.N) || 0) <= 0
-            ? {
-                statusCode: 200,
-                body: JSON.stringify({ workflow: r.Item.workflow.S }),
-                headers,
-              }
+            ? getWorkflow(r.Item)
             : !!paymentIntentId
             ? stripe.paymentIntents.retrieve(paymentIntentId).then((p) =>
                 p.status === "succeeded"
-                  ? {
-                      statusCode: 200,
-                      body: JSON.stringify({ workflow: r.Item.workflow.S }),
-                      headers,
-                    }
+                  ? getWorkflow(r.Item)
                   : {
                       statusCode: 401,
                       body: `Invalid payment id`,
