@@ -28,6 +28,7 @@ import {
   getCurrentUserUid,
   getPageTitleByPageUid,
   createPage,
+  getFullTreeByParentUid,
 } from "roam-client";
 import * as chrono from "chrono-node";
 import datefnsFormat from "date-fns/format";
@@ -358,6 +359,7 @@ export type SmartBlocksContext = {
   unindent: Set<string>;
   focusOnBlock?: string;
   dateBasisMethod?: string;
+  refMapping: Record<string, string>;
 };
 
 export const smartBlocksContext: SmartBlocksContext = {
@@ -369,6 +371,7 @@ export const smartBlocksContext: SmartBlocksContext = {
   currentContent: "",
   indent: new Set(),
   unindent: new Set(),
+  refMapping: {},
 };
 const resetContext = (targetUid: string, variables: Record<string, string>) => {
   smartBlocksContext.onBlockExit = () => "";
@@ -384,6 +387,7 @@ const resetContext = (targetUid: string, variables: Record<string, string>) => {
   smartBlocksContext.indent = new Set();
   smartBlocksContext.unindent = new Set();
   smartBlocksContext.dateBasisMethod = undefined;
+  smartBlocksContext.refMapping = {};
 };
 
 const javascriptHandler =
@@ -1180,6 +1184,14 @@ const COMMANDS: {
     },
   },
   {
+    text: "HASHTAG",
+    help: "Returns the arguments as a Roam hashtag, so that your workflow definition doesn't create a reference.",
+    handler: (...args: string[]) => {
+      const tag = args.join(",");
+      return /\s/.test(tag) ? `#[[${tag}]]` : `#${tag}`;
+    },
+  },
+  {
     text: "TAG",
     help: "Returns the arguments as a Roam tag, so that your workflow definition doesn't create a reference.",
     handler: (...args: string[]) => `[[${args.join(",")}]]`,
@@ -1326,6 +1338,13 @@ const COMMANDS: {
         default:
           return `Invalid Sidebar State: ${stateArg}`;
       }
+    },
+  },
+  {
+    text: "REPLACE",
+    help: "Returns the text in the first argument after replacing one sub text with another.\n\n1. Source text\n2.Text to replace\n3.Text to replace with",
+    handler: (text = "", reg = "", out = "") => {
+      return text.replace(new RegExp(reg), out);
     },
   },
 ];
@@ -1534,6 +1553,7 @@ const processChildren = ({
       }
       const uid =
         (i === 0 && introUid) || window.roamAlphaAPI.util.generateUID();
+      smartBlocksContext.refMapping[n.uid] = uid;
       smartBlocksContext.currentUid = uid;
       smartBlocksContext.currentContent = introContent || "";
       return proccessBlockWithSmartness(n)
@@ -1562,6 +1582,16 @@ const processChildren = ({
     })
   ).then((results) => results.flatMap((r) => r));
 
+const resolveRefs = (nodes: InputTextNode[]): InputTextNode[] =>
+  nodes.map((node) => ({
+    ...node,
+    text: node.text.replace(
+      BLOCK_REF_REGEX,
+      (_, ref) => `((${smartBlocksContext.refMapping[ref] || ref}))`
+    ),
+    children: resolveRefs(node.children || []),
+  }));
+
 export const sbBomb = ({
   srcUid,
   target: { uid, start, end },
@@ -1577,6 +1607,7 @@ export const sbBomb = ({
   const childNodes = PREDEFINED_REGEX.test(srcUid)
     ? predefinedChildrenByUid[srcUid]
     : getTreeByBlockUid(srcUid).children;
+  const chillin = getFullTreeByParentUid(srcUid);
   const originalText = getTextByBlockUid(uid);
   const prefix = originalText.substring(0, start);
   const suffix = originalText.substring(end);
@@ -1592,6 +1623,7 @@ export const sbBomb = ({
           introUid: uid,
           introContent: prefix,
         })
+          .then(resolveRefs)
           .then(
             ([firstChild, ...tree]) =>
               new Promise<void>((resolve) =>
