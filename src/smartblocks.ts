@@ -13,6 +13,7 @@ import {
   createTagRegex,
   getAllBlockUids,
   getAllPageNames,
+  extractRef,
   extractTag,
   getPageUidByPageTitle,
   getPageTitleByBlockUid,
@@ -25,6 +26,8 @@ import {
   getBlockUidAndTextIncludingText,
   getDisplayNameByUid,
   getCurrentUserUid,
+  getPageTitleByPageUid,
+  createPage,
 } from "roam-client";
 import * as chrono from "chrono-node";
 import datefnsFormat from "date-fns/format";
@@ -1180,6 +1183,150 @@ const COMMANDS: {
     text: "TAG",
     help: "Returns the arguments as a Roam tag, so that your workflow definition doesn't create a reference.",
     handler: (...args: string[]) => `[[${args.join(",")}]]`,
+  },
+  {
+    text: "OPENPAGE",
+    help: "Opens or creates a page or block ref\n\n1. Page name or block ref\n2. A behavior to perform after navigating.",
+    handler: (...args) => {
+      const blockNumberArg =
+        args.length > 1 && args[args.length - 1].includes("GOTOBLOCK")
+          ? args[args.length - 1]
+          : undefined;
+      const pageOrUid = (blockNumberArg ? args.slice(0, -1) : args)
+        .join(",")
+        .trim();
+      const uid =
+        getPageUidByPageTitle(extractTag(pageOrUid)) || extractRef(pageOrUid);
+      const navUid =
+        !getPageTitleByPageUid(uid) || !getTextByBlockUid(uid)
+          ? createPage({ title: pageOrUid })
+          : uid;
+      setTimeout(() => {
+        window.location.assign(getRoamUrl(navUid));
+        if (typeof blockNumberArg === "string") {
+          const blockNumber =
+            Number(blockNumberArg.replace(/GOTOBLOCK/, "").trim()) || 1;
+          setTimeout(() => {
+            const blocks = Array.from(
+              document.querySelectorAll(
+                ".roam-article .rm-level-0 .rm-block-text"
+              )
+            );
+            const index =
+              blockNumber > 0 ? blockNumber - 1 : blocks.length + blockNumber;
+            if (index >= 0 && index < blocks.length) {
+              openBlock(blocks[index].id);
+            }
+          }, 500);
+        }
+      }, 500);
+      return "";
+    },
+  },
+  {
+    text: "SIDEBARWINDOWOPEN",
+    help: "Opens or creates a page in the sidebar\n\n1. Page name or block ref",
+    handler: (...args) => {
+      const afterNavArg =
+        args.length > 1 &&
+        ["GOTOBLOCK", "GRAPH"].some((s) => args[args.length - 1].includes(s))
+          ? args[args.length - 1]
+          : undefined;
+      const pageOrUid = (afterNavArg ? args.slice(0, -1) : args)
+        .join(",")
+        .trim();
+      const uid =
+        getPageUidByPageTitle(extractTag(pageOrUid)) || extractRef(pageOrUid);
+      const navUid =
+        !getPageTitleByPageUid(uid) || !getTextByBlockUid(uid)
+          ? createPage({ title: pageOrUid })
+          : uid;
+      setTimeout(() => {
+        window.roamAlphaAPI.ui.rightSidebar.open();
+        if (/GRAPH/.test(afterNavArg)) {
+          window.roamAlphaAPI.ui.rightSidebar.addWindow({
+            window: { type: "graph", "block-uid": navUid },
+          });
+        } else if (/GOTOBLOCK/.test(afterNavArg)) {
+          const blockNumber =
+            Number(afterNavArg.replace(/GOTOBLOCK/, "").trim()) || 1;
+          setTimeout(() => {
+            const blocks = Array.from(
+              document.querySelectorAll(
+                ".sidebar-content>div:first-child .rm-block-text"
+              )
+            );
+            const index =
+              blockNumber > 0 ? blockNumber - 1 : blocks.length + blockNumber;
+            if (index >= 0 && index < blocks.length) {
+              openBlock(blocks[index].id);
+            }
+          }, 500);
+        }
+      }, 500);
+      return "";
+    },
+  },
+  {
+    text: "SIDEBARWINDOWCLOSE",
+    help: "Closes sidebar pane\n\n1. number of side pane to close. Use 0 to close all panes.",
+    handler: (numberArg = "0") => {
+      const count = Number(numberArg) || 0;
+      const windows = window.roamAlphaAPI.ui.rightSidebar.getWindows();
+      if (count <= 0) {
+        window.roamAlphaAPI.ui.rightSidebar.close();
+      } else if (count <= windows.length) {
+        window.roamAlphaAPI.ui.rightSidebar.removeWindow({
+          // @ts-ignore broken api
+          window: windows[count],
+        });
+      }
+      return "";
+    },
+  },
+  {
+    text: "SIDEBARSTATE",
+    help: "Toggles state of sidebars\n\nValue of  1 to 4. \n1 - open left sidebar \n2 - close left side bar \n3 - open right side bar \n4 - close right side bar.",
+    handler: (stateArg = "1") => {
+      const state = Number(stateArg) || 1;
+      const leftButton = document.querySelector(".rm-open-left-sidebar-btn");
+      switch (state) {
+        case 1: //open left
+          if (leftButton) {
+            leftButton.dispatchEvent(
+              new MouseEvent("mouseover", {
+                view: window,
+                bubbles: true,
+                cancelable: true,
+                buttons: 1,
+              })
+            );
+            setTimeout(async () => {
+              document
+                .querySelector<HTMLSpanElement>(".rm-open-left-sidebar-btn")
+                .click();
+            }, 100);
+          }
+          return "";
+        case 2: //close left
+          if (!leftButton) {
+            document
+              .querySelector<HTMLSpanElement>(
+                ".roam-sidebar-content .bp3-icon-menu-closed"
+              )
+              .click();
+          }
+          return "";
+        case 3:
+          window.roamAlphaAPI.ui.rightSidebar.open();
+          return "";
+        case 4:
+          window.roamAlphaAPI.ui.rightSidebar.close();
+          return "";
+        default:
+          return `Invalid Sidebar State: ${stateArg}`;
+      }
+    },
   },
 ];
 export const handlerByCommand = Object.fromEntries(
