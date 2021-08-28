@@ -14,7 +14,7 @@ import {
   getPageTitleByBlockUid,
   getPageUidByPageTitle,
   getUids,
-  TreeNode,
+  RoamBasicNode,
 } from "roam-client";
 import { getCoords } from "./dom";
 import lego from "./img/lego3blocks.png";
@@ -32,7 +32,7 @@ type Props = {
   textarea: HTMLTextAreaElement;
   triggerLength: number;
   isCustomOnly: boolean;
-  dailyConfig?: TreeNode;
+  dailyConfig?: RoamBasicNode;
 };
 
 const VALID_FILTER = /^[\w\d\s_-]$/;

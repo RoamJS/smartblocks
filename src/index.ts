@@ -15,10 +15,12 @@ import {
   getTextByBlockUid,
   updateBlock,
   parseRoamDateUid,
+  getBasicTreeByParentUid,
 } from "roam-client";
 import {
   createConfigObserver,
   getSettingValueFromTree,
+  renderToast,
   setInputSetting,
   toFlexRegex,
 } from "roamjs-components";
@@ -31,7 +33,7 @@ import differenceInMilliseconds from "date-fns/differenceInMilliseconds";
 import { render } from "./SmartblocksMenu";
 import { render as renderStore } from "./SmartblocksStore";
 import { render as renderPopover } from "./SmartblockPopover";
-import { render as renderBulk} from "./BulkTrigger";
+import { render as renderBulk } from "./BulkTrigger";
 import {
   CommandHandler,
   getCustomWorkflows,
@@ -43,6 +45,37 @@ import {
 import TokenPanel from "./TokenPanel";
 import lego from "./img/lego3blocks.png";
 import StripePanel from "./StripePanel";
+import { Intent } from "@blueprintjs/core";
+
+const waitForRemoteSync = ({
+  label,
+  callback,
+  attempt = 0,
+}: {
+  label: string;
+  callback: () => void;
+  attempt?: number;
+}) => {
+  const icon = document.querySelector(".rm-sync__icon");
+  if (icon.classList.contains("rm-sync--synced")) {
+    callback();
+  } else if (attempt > 100) {
+    renderToast({
+      id: "remote-sync-warning",
+      intent: Intent.WARNING,
+      content: `Failed to run ${label} - timed out waiting for remote Roam changes to sync.`,
+    });
+  } else {
+    const newAttempt = attempt + 1;
+    setTimeout(() => {
+      waitForRemoteSync({
+        label,
+        callback,
+        attempt: newAttempt,
+      });
+    }, newAttempt * 100);
+  }
+};
 
 addStyle(`.roamjs-smartblocks-popover-target {
   display:inline-block;
@@ -245,7 +278,7 @@ runExtension("smartblocks", () => {
     },
   });
 
-  const tree = getTreeByPageName(CONFIG);
+  const tree = getBasicTreeByParentUid(getPageUidByPageTitle(CONFIG));
   const trigger =
     // getLegacy42Setting("SmartBlockTrigger") ||
     getSettingValueFromTree({
@@ -300,7 +333,7 @@ runExtension("smartblocks", () => {
           textarea,
           triggerLength: triggerRegex.source.replace("\\\\", "\\").length - 1,
           isCustomOnly,
-          dailyConfig
+          dailyConfig,
         });
       }
     }
@@ -308,13 +341,14 @@ runExtension("smartblocks", () => {
 
   const runDaily = () => {
     if (dailyConfig) {
+      const dailyChildren = getBasicTreeByParentUid(dailyConfig.uid);
       const time = getSettingValueFromTree({
-        tree: dailyConfig.children,
+        tree: dailyChildren,
         key: "time",
         defaultValue: "00:00",
       });
       const latest = getSettingValueFromTree({
-        tree: dailyConfig.children,
+        tree: dailyChildren,
         key: "latest",
         defaultValue: "01-01-1970",
       });
@@ -331,7 +365,7 @@ runExtension("smartblocks", () => {
         const latestDate = parseRoamDateUid(latest);
         if (isBefore(startOfDay(latestDate), startOfDay(today))) {
           const dailyWorkflowName = getSettingValueFromTree({
-            tree: dailyConfig.children,
+            tree: dailyChildren,
             key: "workflow name",
             defaultValue: "Daily",
           });
@@ -374,7 +408,7 @@ runExtension("smartblocks", () => {
       }
     }
   };
-  runDaily();
+  waitForRemoteSync({ label: "Daily Smartblock", callback: runDaily });
 
   window.roamAlphaAPI.ui.commandPalette.addCommand({
     label: "Open SmartBlocks Store",
@@ -391,9 +425,9 @@ runExtension("smartblocks", () => {
   window.roamAlphaAPI.ui.commandPalette.addCommand({
     label: "Run Multiple SmartBlocks",
     callback: () => {
-      renderBulk({})
-    }
-  })
+      renderBulk({});
+    },
+  });
 
   createHTMLObserver({
     className: "rm-page-ref--tag",
