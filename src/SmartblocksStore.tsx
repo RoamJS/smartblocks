@@ -341,7 +341,7 @@ const DrawerContent = ({
                   onSuccess={(id: string) =>
                     axios
                       .get(
-                        `${process.env.API_URL}/smartblocks-store?uuid=${selectedSmartBlockId}`,
+                        `${process.env.API_URL}/smartblocks-store?uuid=${selectedSmartBlockId}&graph=${graph}`,
                         {
                           headers: { Authorization: id },
                         }
@@ -351,7 +351,11 @@ const DrawerContent = ({
                       })
                       .catch((e) => {
                         setLoading(false);
-                        setError(e.response?.data || e.message);
+                        setError(
+                          e.response?.data?.message ||
+                            e.response?.data ||
+                            e.message
+                        );
                       })
                   }
                   setError={setError}

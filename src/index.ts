@@ -96,6 +96,9 @@ addStyle(`.roamjs-smartblocks-popover-target {
   padding: 4px;
   cursor: pointer;
   font-size: 12px;
+}
+
+.roamjs-smartblocks-store-item:hover {
   box-shadow: 0px 3px 6px #00000040;
   transform: translate(0,-3px);
 }
