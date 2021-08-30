@@ -121,28 +121,47 @@ export const handler: APIGatewayProxyHandler = async (event) => {
                     }
               )
             : dynamo
-                .getItem({
+                .query({
                   TableName: "RoamJSSmartBlocks",
-                  Key: { uuid: { S: r.Item.author.S } },
+                  IndexName: "name-author-index",
+                  ExpressionAttributeNames: {
+                    "#s": "name",
+                    "#a": "author",
+                  },
+                  ExpressionAttributeValues: {
+                    ":s": { S: uuid },
+                    ":a": { S: graph },
+                  },
+                  KeyConditionExpression: "#a = :a AND #s = :s",
                 })
                 .promise()
-                .then((t) =>
-                  stripe.paymentIntents.create({
-                    payment_method_types: ["card"],
-                    amount: Number(r.Item?.price?.N),
-                    currency: "usd",
-                    application_fee_amount:
-                      30 + Math.ceil(Number(r.Item?.price?.N) * 0.08),
-                    transfer_data: {
-                      destination: t.Item.stripe.S,
-                    },
-                  })
+                .then((i) =>
+                  i.Count > 0
+                    ? getWorkflow(r.Item, graph)
+                    : dynamo
+                        .getItem({
+                          TableName: "RoamJSSmartBlocks",
+                          Key: { uuid: { S: r.Item.author.S } },
+                        })
+                        .promise()
+                        .then((t) =>
+                          stripe.paymentIntents.create({
+                            payment_method_types: ["card"],
+                            amount: Number(r.Item?.price?.N),
+                            currency: "usd",
+                            application_fee_amount:
+                              30 + Math.ceil(Number(r.Item?.price?.N) * 0.08),
+                            transfer_data: {
+                              destination: t.Item.stripe.S,
+                            },
+                          })
+                        )
+                        .then((s) => ({
+                          statusCode: 200,
+                          body: JSON.stringify({ secret: s.client_secret }),
+                          headers,
+                        }))
                 )
-                .then((s) => ({
-                  statusCode: 200,
-                  body: JSON.stringify({ secret: s.client_secret }),
-                  headers,
-                }))
         )
         .catch((e) => ({
           statusCode: 500,
@@ -169,12 +188,13 @@ export const handler: APIGatewayProxyHandler = async (event) => {
             })
             .promise()
             .then((is) => {
-              const batches = Math.ceil(is.Count / 100);
+              const uuids = Array.from(new Set(is.Items.map(u => u.name.S)))
+              const batches = Math.ceil(uuids.length / 100);
               const requests = new Array(batches).fill(null).map((_, i, all) =>
-                new Array(i === all.length - 1 ? is.Count % 100 : 100)
+                new Array(i === all.length - 1 ? uuids.length % 100 : 100)
                   .fill(null)
                   .map((_, j) => ({
-                    uuid: { S: is.Items[i * 100 + j].name.S },
+                    uuid: { S: uuids[i * 100 + j] },
                   }))
               );
               return Promise.all(
