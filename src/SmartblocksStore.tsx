@@ -6,6 +6,7 @@ import {
   InputGroup,
   Intent,
   Label,
+  NumericInput,
   Position,
   Spinner,
   SpinnerSize,
@@ -223,6 +224,8 @@ const DrawerContent = ({
   const [smartblocks, setSmartblocks] = useState<Smartblocks[]>([]);
   const [installed, setInstalled] = useState(false);
   const [updateable, setUpdateable] = useState(false);
+  const [donatable, setDonatable] = useState(false);
+  const [donation, setDonation] = useState(0);
   const [tabId, setTabId] = useState<DrawerTab>("Marketplace");
   const [search, setSearch] = useState("");
   const filteredSmartblocks = useMemo(() => {
@@ -276,6 +279,7 @@ const DrawerContent = ({
         .then((r) => {
           setInstalled(r.data.installed);
           setUpdateable(r.data.updatable);
+          setDonatable(r.data.donatable);
         })
         .catch((e) => {
           setLoading(false);
@@ -285,8 +289,16 @@ const DrawerContent = ({
     } else {
       setUpdateable(false);
       setInstalled(false);
+      setDonatable(false);
     }
-  }, [setUpdateable, setInstalled, selectedSmartBlockId]);
+    setDonation(0);
+  }, [
+    setUpdateable,
+    setInstalled,
+    setDonatable,
+    selectedSmartBlockId,
+    setDonation,
+  ]);
   const installWorkflow = useCallback(
     (workflow: string) => {
       const children = JSON.parse(workflow) as InputTextNode[];
@@ -414,38 +426,52 @@ const DrawerContent = ({
                 }}
               />
             ) : (
-              <Button
-                style={{ margin: "16px 0" }}
-                text={"Install"}
-                disabled={loading || installed}
-                intent={Intent.SUCCESS}
-                onClick={() => {
-                  setLoading(true);
-                  setError("");
-                  axios
-                    .get(
-                      `${process.env.API_URL}/smartblocks-store?uuid=${selectedSmartBlockId}&graph=${graph}`
-                    )
-                    .then((r) => {
-                      if (r.data.secret) {
-                        setPaymentSecret(r.data.secret);
+              <div>
+                {donatable && (
+                  <>
+                    <h6>Thank the author by sending them a donation!</h6>
+                    <NumericInput
+                      leftIcon={"dollar"}
+                      min={0}
+                      step={1}
+                      value={donation}
+                      onValueChange={(e) => setDonation(e)}
+                    />
+                  </>
+                )}
+                <Button
+                  style={{ margin: "16px 0" }}
+                  text={"Install"}
+                  disabled={loading || installed}
+                  intent={Intent.SUCCESS}
+                  onClick={() => {
+                    setLoading(true);
+                    setError("");
+                    axios
+                      .get(
+                        `${process.env.API_URL}/smartblocks-store?uuid=${selectedSmartBlockId}&graph=${graph}&donation=${donation}`
+                      )
+                      .then((r) => {
+                        if (r.data.secret) {
+                          setPaymentSecret(r.data.secret);
+                          setLoading(false);
+                        } else if (r.data.workflow) {
+                          installWorkflow(r.data.workflow);
+                        } else {
+                          throw new Error("Returned empty response");
+                        }
+                      })
+                      .catch((e) => {
                         setLoading(false);
-                      } else if (r.data.workflow) {
-                        installWorkflow(r.data.workflow);
-                      } else {
-                        throw new Error("Returned empty response");
-                      }
-                    })
-                    .catch((e) => {
-                      setLoading(false);
-                      setError(
-                        e.response?.data?.message ||
-                          e.response?.data ||
-                          e.message
-                      );
-                    });
-                }}
-              />
+                        setError(
+                          e.response?.data?.message ||
+                            e.response?.data ||
+                            e.message
+                        );
+                      });
+                  }}
+                />
+              </div>
             )}
             <div style={{ minWidth: 24 }}>
               {loading && <Spinner size={SpinnerSize.SMALL} />}

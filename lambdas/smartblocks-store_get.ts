@@ -2,7 +2,6 @@ import { APIGatewayProxyHandler } from "aws-lambda";
 import AWS, { DynamoDB } from "aws-sdk";
 import Stripe from "stripe";
 import { v4 } from "uuid";
-import fs from "fs";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
   apiVersion: "2020-08-27",
@@ -59,10 +58,19 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     tab = "marketplace",
     graph = "",
     open,
+    donation = "0",
   } = event.queryStringParameters || {};
   const paymentIntentId =
     event.headers.Authorization || event.headers.authorization || "";
   const filterTab = TAB_REGEX.test(tab) ? tab.toLowerCase() : "marketplace";
+  const donationValue = (Number(donation) || 0) * 100;
+  if (donationValue > 0 && donationValue < 1) {
+    return {
+      statusCode: 400,
+      body: `Invalid donation amount. Any donation must be at least $1.`,
+      headers,
+    };
+  }
   return uuid
     ? dynamo
         .getItem({
@@ -77,38 +85,63 @@ export const handler: APIGatewayProxyHandler = async (event) => {
                 body: `Invalid id ${uuid} doesn't represent a LIVE SmartBlock Workflow`,
               }
             : !!open
-            ? dynamo
-                .query({
-                  TableName: "RoamJSSmartBlocks",
-                  IndexName: "name-author-index",
-                  ExpressionAttributeNames: {
-                    "#s": "name",
-                    "#a": "author",
-                  },
-                  ExpressionAttributeValues: {
-                    ":s": { S: uuid },
-                    ":a": { S: graph },
-                  },
-                  KeyConditionExpression: "#a = :a AND #s = :s",
-                })
-                .promise()
-                .then((i) => ({
+            ? graph === r.Item.author.S
+              ? {
                   statusCode: 200,
                   body: JSON.stringify({
-                    installed: !!i.Count,
+                    installed: true,
+                    updatable: false,
+                    donatable: false,
+                  }),
+                  headers,
+                }
+              : Promise.all([
+                  dynamo
+                    .query({
+                      TableName: "RoamJSSmartBlocks",
+                      IndexName: "name-author-index",
+                      ExpressionAttributeNames: {
+                        "#s": "name",
+                        "#a": "author",
+                      },
+                      ExpressionAttributeValues: {
+                        ":s": { S: uuid },
+                        ":a": { S: graph },
+                      },
+                      KeyConditionExpression: "#a = :a AND #s = :s",
+                    })
+                    .promise(),
+                  dynamo
+                    .getItem({
+                      TableName: "RoamJSSmartBlocks",
+                      Key: { uuid: { S: r.Item.author.S } },
+                    })
+                    .promise(),
+                ]).then(async ([link, publisher]) => ({
+                  statusCode: 200,
+                  body: JSON.stringify({
+                    installed: !!link.Count,
                     updatable:
-                      !!i.Count &&
-                      i.Items.reduce(
+                      !!link.Count &&
+                      link.Items.reduce(
                         (prev, cur) =>
                           cur.workflow.S.localeCompare(prev.workflow.S) > 0
                             ? cur
                             : prev,
                         { workflow: { S: "0000" } }
                       ).workflow?.S !== r.Item.workflow.S,
+                    donatable:
+                      (Number(r.Item?.price?.N) || 0) === 0 &&
+                      !!publisher.Item?.stripe?.S
+                        ? await stripe.accounts
+                            .retrieve(publisher.Item.stripe.S)
+                            .then((r) => r.details_submitted)
+                            .catch(() => false)
+                        : false,
                   }),
                   headers,
                 }))
-            : (Number(r.Item?.price?.N) || 0) <= 0
+            : (Number(r.Item?.price?.N) || 0) <= 0 && donationValue <= 0
             ? getWorkflow(r.Item, graph)
             : !!paymentIntentId
             ? stripe.paymentIntents.retrieve(paymentIntentId).then((p) =>
@@ -147,10 +180,14 @@ export const handler: APIGatewayProxyHandler = async (event) => {
                         .then((t) =>
                           stripe.paymentIntents.create({
                             payment_method_types: ["card"],
-                            amount: Number(r.Item?.price?.N),
+                            amount: Number(r.Item?.price?.N) || donationValue,
                             currency: "usd",
                             application_fee_amount:
-                              30 + Math.ceil(Number(r.Item?.price?.N) * 0.08),
+                              30 +
+                              Math.ceil(
+                                (Number(r.Item?.price?.N) || donationValue) *
+                                  0.08
+                              ),
                             transfer_data: {
                               destination: t.Item.stripe.S,
                             },
@@ -188,7 +225,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
             })
             .promise()
             .then((is) => {
-              const uuids = Array.from(new Set(is.Items.map(u => u.name.S)))
+              const uuids = Array.from(new Set(is.Items.map((u) => u.name.S)));
               const batches = Math.ceil(uuids.length / 100);
               const requests = new Array(batches).fill(null).map((_, i, all) =>
                 new Array(i === all.length - 1 ? uuids.length % 100 : 100)
