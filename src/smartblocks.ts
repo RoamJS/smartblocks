@@ -438,15 +438,15 @@ const COMMANDS: {
     text: "DATE",
     help: "Returns a Roam formatted dated page reference.\n\n1: NLP expression\n2: optional: format for returned date, example: YYYY-MM-DD",
     args: true,
-    handler: (nlp, format) => {
+    handler: (nlp, ...format) => {
       if (!nlp) {
         return `[[${toRoamDate(
           customDateNlp.parseDate("today", getDateBasisDate())
         )}]]`;
       }
       const date = customDateNlp.parseDate(nlp, getDateBasisDate());
-      if (format) {
-        return datefnsFormat(date, format, {
+      if (format.length) {
+        return datefnsFormat(date, format.join(","), {
           useAdditionalDayOfYearTokens: true,
           useAdditionalWeekYearTokens: true,
         });
