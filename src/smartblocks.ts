@@ -1188,7 +1188,7 @@ const COMMANDS: {
     help: "Returns the arguments as a Roam hashtag, so that your workflow definition doesn't create a reference.",
     handler: (...args: string[]) => {
       const tag = args.join(",");
-      return /\s/.test(tag) ? `#[[${tag}]]` : `#${tag}`;
+      return /[\s,]/.test(tag) ? `#[[${tag}]]` : `#${tag}`;
     },
   },
   {
