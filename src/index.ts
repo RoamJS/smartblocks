@@ -412,7 +412,7 @@ runExtension("smartblocks", () => {
     }
   };
   //waitForRemoteSync({ label: "Daily Smartblock", callback: runDaily });
-  runDaily();
+  setTimeout(runDaily, 5000);
 
   window.roamAlphaAPI.ui.commandPalette.addCommand({
     label: "Open SmartBlocks Store",
