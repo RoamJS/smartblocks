@@ -1606,8 +1606,7 @@ export const sbBomb = ({
   resetContext(uid, variables);
   const childNodes = PREDEFINED_REGEX.test(srcUid)
     ? predefinedChildrenByUid[srcUid]
-    : getTreeByBlockUid(srcUid).children;
-  const chillin = getFullTreeByParentUid(srcUid);
+    : getFullTreeByParentUid(srcUid).children;
   const originalText = getTextByBlockUid(uid);
   const prefix = originalText.substring(0, start);
   const suffix = originalText.substring(end);
