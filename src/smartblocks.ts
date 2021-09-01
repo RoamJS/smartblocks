@@ -51,6 +51,7 @@ import { renderPrompt } from "./Prompt";
 import { renderToast } from "roamjs-components";
 import { ParsingComponents } from "chrono-node/dist/results";
 import { ORDINAL_WORD_DICTIONARY } from "./dom";
+import { ToasterPosition } from "@blueprintjs/core";
 
 export const PREDEFINED_REGEX = /#\d*-predefined/;
 const PAGE_TITLE_REGEX = /^(?:#?\[\[(.*)\]\]|#([^\s]*))$/;
@@ -428,7 +429,7 @@ const javascriptHandler =
     });
   };
 
-const COMMANDS: {
+export const COMMANDS: {
   text: string;
   help: string;
   args?: true;
@@ -436,7 +437,7 @@ const COMMANDS: {
 }[] = [
   {
     text: "DATE",
-    help: "Returns a Roam formatted dated page reference.\n\n1: NLP expression\n2: optional: format for returned date, example: YYYY-MM-DD",
+    help: "Returns a Roam formatted dated page reference.\n\n1: NLP expression\n\n2: optional: format for returned date, example: YYYY-MM-DD",
     args: true,
     handler: (nlp, ...format) => {
       if (!nlp) {
@@ -539,7 +540,7 @@ const COMMANDS: {
   },
   {
     text: "TODOTODAY",
-    help: "Returns a list of block refs of TODOs for today\n\n1. Max # blocks\n2. Format of output.\n3. optional filter values",
+    help: "Returns a list of block refs of TODOs for today\n\n1. Max # blocks\n\n2. Format of output.\n\n3. optional filter values",
     handler: (...args) => {
       const today = toRoamDate(
         customDateNlp.parseDate("today", getDateBasisDate())
@@ -563,7 +564,7 @@ const COMMANDS: {
   },
   {
     text: "TODOOVERDUE",
-    help: "Returns a list of block refs of TODOs that are Overdue\n\n1. Max # blocks\n2. Format of output.\n3. optional filter values",
+    help: "Returns a list of block refs of TODOs that are Overdue\n\n1. Max # blocks\n\n2. Format of output.\n\n3. optional filter values",
     handler: (...args) => {
       const blocks = getBlockUidsAndTextsReferencingPage("TODO");
       const yesterday = subDays(
@@ -584,7 +585,7 @@ const COMMANDS: {
   },
   {
     text: "TODOOVERDUEDNP",
-    help: "Returns a list of block refs of TODOs that are Overdue including DNP TODOs\n\n1. Max # blocks\n2. Format of output.\n3. optional filter values",
+    help: "Returns a list of block refs of TODOs that are Overdue including DNP TODOs\n\n1. Max # blocks\n\n2. Format of output.\n\n3. optional filter values",
     handler: (...args) => {
       const blocks = getBlockUidsAndTextsReferencingPage("TODO");
       const yesterday = subDays(
@@ -612,7 +613,7 @@ const COMMANDS: {
   },
   {
     text: "TODOFUTURE",
-    help: "Returns a list of block refs of TODOs that are due in the future\n\n1. Max # blocks\n2. Format of output.\n3. optional filter values",
+    help: "Returns a list of block refs of TODOs that are due in the future\n\n1. Max # blocks\n\n2. Format of output.\n\n3. optional filter values",
     handler: (...args) => {
       const blocks = getBlockUidsAndTextsReferencingPage("TODO");
       const today = customDateNlp.parseDate("today", getDateBasisDate());
@@ -630,7 +631,7 @@ const COMMANDS: {
   },
   {
     text: "TODOFUTUREDNP",
-    help: "Returns a list of block refs of TODOs that are due in the future including DNP TODOs\n\n1. Max # blocks\n2. Format of output.\n3. optional filter values",
+    help: "Returns a list of block refs of TODOs that are due in the future including DNP TODOs\n\n1. Max # blocks\n\n2. Format of output.\n\n3. optional filter values",
     handler: (...args) => {
       const blocks = getBlockUidsAndTextsReferencingPage("TODO");
       const today = customDateNlp.parseDate("today", getDateBasisDate());
@@ -655,7 +656,7 @@ const COMMANDS: {
   },
   {
     text: "TODOUNDATED",
-    help: "Returns a list of block refs of TODOs with no date\n\n1. Max # blocks\n2. Format of output.\n3. optional filter values",
+    help: "Returns a list of block refs of TODOs with no date\n\n1. Max # blocks\n\n2. Format of output.\n\n3. optional filter values",
     handler: (...args) => {
       const blocks = getBlockUidsAndTextsReferencingPage("TODO");
       const todos = blocks
@@ -703,7 +704,7 @@ const COMMANDS: {
   },
   {
     text: "BREADCRUMBS",
-    help: "Returns a list of parent block refs to a given block ref\n\n1: Block reference\n2: Separator used between block references",
+    help: "Returns a list of parent block refs to a given block ref\n\n1: Block reference\n\n2: Separator used between block references",
     handler: (uidArg = "", ...delim) => {
       const separator = delim.join(",") || " > ";
       const uid = uidArg.replace(/^(\+|-)?\(\(/, "").replace(/\)\)$/, "");
@@ -772,7 +773,7 @@ const COMMANDS: {
   },
   {
     text: "BLOCKMENTIONS",
-    help: "Returns list of blocks mentioned\n\n1: Max blocks to return\n2: Page or Tag Name\n3:Format of output.\n4: (opt) filtering",
+    help: "Returns list of blocks mentioned\n\n1: Max blocks to return\n\n2: Page or Tag Name\n\n3:Format of output.\n\n4: (opt) filtering",
     handler: (
       limitArg = "20",
       titleArg = "",
@@ -798,7 +799,7 @@ const COMMANDS: {
   },
   {
     text: "BLOCKMENTIONSDATED",
-    help: "Returns list of blocks mentioned based on date range\n1: Max blocks to return\n2: Page or Tag Name\n3: Start Date\n4. End Date\n5: Sort (ASC,DESC,NONE)\n6:Format of Output\n7: (opt) filtering ",
+    help: "Returns list of blocks mentioned based on date range\n1: Max blocks to return\n\n2: Page or Tag Name\n\n3: Start Date\n\n4. End Date\n\n5: Sort (ASC,DESC,NONE)\n\n6:Format of Output\n\n7: (opt) filtering ",
     handler: (
       limitArg = "20",
       titleArg = "",
@@ -858,7 +859,7 @@ const COMMANDS: {
   },
   {
     text: "IF",
-    help: "Evaluates a condition for true. Use with THEN & ELSE.\n\n1: Logic to be evaluated\n2: (Optional) Value if true\n3: (Optional) Value if false",
+    help: "Evaluates a condition for true. Use with THEN & ELSE.\n\n1: Logic to be evaluated\n\n2: (Optional) Value if true\n\n3: (Optional) Value if false",
     handler: (condition = "false", then, els) => {
       try {
         const evaluated = eval(condition);
@@ -980,7 +981,7 @@ const COMMANDS: {
   },
   {
     text: "SET",
-    help: "Create a variable in memory\n\n1. Variable name\n2: Value of variable",
+    help: "Create a variable in memory\n\n1. Variable name\n\n2: Value of variable",
     handler: (name = "", ...value) => {
       smartBlocksContext.variables[name] = value.join(",");
       return "";
@@ -1056,10 +1057,25 @@ const COMMANDS: {
   },
   {
     text: "NOTIFICATION",
-    help: "Displays notification window\n\n1: Seconds\n2: Message",
-    handler: (timeoutArg, content) => {
+    help: "Displays notification window\n\n1: Seconds\n\n2: Message\n\n3: Position",
+    handler: (timeoutArg, ...contentArgs) => {
+      const positionArg = contentArgs.slice(-1)[0];
+      const isValid = ["top", "bottom"]
+        .flatMap((t) => ["", " left", " right"].map((o) => `${t}${o}`))
+        .includes(positionArg);
+      const position = isValid
+        ? (positionArg.replace(" ", "-") as ToasterPosition)
+        : "top";
+      const content = (isValid ? contentArgs.slice(0, -1) : contentArgs).join(
+        ","
+      );
       const timeout = (Math.max(Number(timeoutArg), 0) || 1) * 1000;
-      renderToast({ id: "smartblocks-notification", timeout, content });
+      renderToast({
+        id: "smartblocks-notification",
+        timeout,
+        content,
+        position,
+      });
       return "";
     },
   },
@@ -1198,7 +1214,7 @@ const COMMANDS: {
   },
   {
     text: "OPENPAGE",
-    help: "Opens or creates a page or block ref\n\n1. Page name or block ref\n2. A behavior to perform after navigating.",
+    help: "Opens or creates a page or block ref\n\n1. Page name or block ref\n\n2. A behavior to perform after navigating.",
     handler: (...args) => {
       const blockNumberArg =
         args.length > 1 && args[args.length - 1].includes("GOTOBLOCK")
@@ -1298,7 +1314,7 @@ const COMMANDS: {
   },
   {
     text: "SIDEBARSTATE",
-    help: "Toggles state of sidebars\n\nValue of  1 to 4. \n1 - open left sidebar \n2 - close left side bar \n3 - open right side bar \n4 - close right side bar.",
+    help: "Toggles state of sidebars\n\nValue of  1 to 4. \n1 - open left sidebar \n\n2 - close left side bar \n\n3 - open right side bar \n\n4 - close right side bar.",
     handler: (stateArg = "1") => {
       const state = Number(stateArg) || 1;
       const leftButton = document.querySelector(".rm-open-left-sidebar-btn");
@@ -1342,7 +1358,7 @@ const COMMANDS: {
   },
   {
     text: "REPLACE",
-    help: "Returns the text in the first argument after replacing one sub text with another.\n\n1. Source text\n2.Text to replace\n3.Text to replace with",
+    help: "Returns the text in the first argument after replacing one sub text with another.\n\n1. Source text\n\n2.Text to replace\n\n3.Text to replace with",
     handler: (text = "", reg = "", out = "") => {
       return text.replace(new RegExp(reg), out);
     },

@@ -16,10 +16,12 @@ import {
   updateBlock,
   parseRoamDateUid,
   getBasicTreeByParentUid,
+  getUids,
 } from "roam-client";
 import {
   createConfigObserver,
   getSettingValueFromTree,
+  renderCursorMenu,
   renderToast,
   setInputSetting,
   toFlexRegex,
@@ -36,6 +38,7 @@ import { render as renderPopover } from "./SmartblockPopover";
 import { render as renderBulk } from "./BulkTrigger";
 import {
   CommandHandler,
+  COMMANDS,
   getCustomWorkflows,
   handlerByCommand,
   sbBomb,
@@ -205,6 +208,7 @@ const getLegacy42Setting = (name: string) => {
 
 const ID = "smartblocks";
 const CONFIG = toConfig(ID);
+const COMMAND_ENTRY_REGEX = /<%$/;
 runExtension("smartblocks", () => {
   createConfigObserver({
     title: CONFIG,
@@ -290,7 +294,7 @@ runExtension("smartblocks", () => {
       defaultValue: "xx",
     })
       .replace(/"/g, "")
-      .replace(/\\/, "\\\\")
+      .replace(/\\/g, "\\\\")
       .trim();
   const triggerRegex = new RegExp(`${trigger}$`);
   const isCustomOnly = tree.some((t) =>
@@ -337,6 +341,42 @@ runExtension("smartblocks", () => {
           triggerLength: triggerRegex.source.replace("\\\\", "\\").length - 1,
           isCustomOnly,
           dailyConfig,
+        });
+      } else if (COMMAND_ENTRY_REGEX.test(valueToCursor)) {
+        renderCursorMenu({
+          initialItems: COMMANDS.map(({ text, help }) => ({
+            text,
+            id: text,
+            help,
+          })),
+          onItemSelect: (item) => {
+            const { blockUid } = getUids(textarea);
+            const suffix = textarea.value.substring(textarea.selectionStart);
+            const newPrefix = `${valueToCursor.slice(0, -2)}<%${item.text}%>`;
+            setTimeout(() => {
+              updateBlock({
+                uid: blockUid,
+                text: `${newPrefix}${suffix}`,
+              });
+              renderToast({
+                intent: Intent.PRIMARY,
+                id: "smartblocks-command-help",
+                content: `###### ${item.text}\n\n${item.help}`,
+                position: "bottom-right",
+                timeout: 10000,
+              });
+              setTimeout(() => {
+                const newTextArea = document.getElementById(
+                  textarea.id
+                ) as HTMLTextAreaElement;
+                newTextArea.setSelectionRange(
+                  newPrefix.length - 2,
+                  newPrefix.length - 2
+                );
+              });
+            }, 1);
+          },
+          textarea,
         });
       }
     }
