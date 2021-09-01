@@ -828,7 +828,7 @@ export const COMMANDS: {
             DAILY_REF_REGEX.exec(getPageTitleByBlockUid(uid))?.[1];
           if (ref) {
             const d = parseRoamDate(ref);
-            return undated! && !isBefore(d, start) && !isAfter(d, end);
+            return !undated && !isBefore(d, start) && !isAfter(d, end);
           } else {
             return undated;
           }
