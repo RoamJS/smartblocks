@@ -17,10 +17,12 @@ import {
   parseRoamDateUid,
   getBasicTreeByParentUid,
   getUids,
+  getCurrentPageUid,
 } from "roam-client";
 import {
   createConfigObserver,
   getSettingValueFromTree,
+  getSubTree,
   renderCursorMenu,
   renderToast,
   setInputSetting,
@@ -49,6 +51,7 @@ import TokenPanel from "./TokenPanel";
 import lego from "./img/lego3blocks.png";
 import StripePanel from "./StripePanel";
 import { Intent } from "@blueprintjs/core";
+import HotKeyPanel, { SmartblockHotKeys } from "./HotKeyPanel";
 
 const waitForRemoteSync = ({
   label,
@@ -114,6 +117,13 @@ addStyle(`.roamjs-smartblocks-popover-target {
 
 .roamjs-smartblocks-store-tabs .bp3-tab-list {
   justify-content: space-around;
+}
+
+.roamjs-smartblock-hotkey-block {
+  max-width: 160px;
+  width: 160px;
+  min-width: 160px;
+  margin: 0 4px;
 }
 
 /* https://stripe.com/docs/connect/collect-then-transfer-guide#create-account */
@@ -209,6 +219,10 @@ const getLegacy42Setting = (name: string) => {
 const ID = "smartblocks";
 const CONFIG = toConfig(ID);
 const COMMAND_ENTRY_REGEX = /<%$/;
+const smartblockHotKeys: SmartblockHotKeys = {
+  uidToMapping: {},
+  mappingToBlock: {},
+};
 runExtension("smartblocks", () => {
   createConfigObserver({
     title: CONFIG,
@@ -235,6 +249,15 @@ runExtension("smartblocks", () => {
               type: "flag",
               description:
                 "If checked, there will no longer appear a SmartBlocks logo on SmartBlocks buttons",
+            },
+            {
+              title: "hot keys",
+              type: "custom",
+              description:
+                "Map specific Smartblock workflows to a given hot key, with either an input combination or global modifier",
+              options: {
+                component: HotKeyPanel(smartblockHotKeys),
+              },
             },
           ],
         },
@@ -304,6 +327,11 @@ runExtension("smartblocks", () => {
     toFlexRegex("hide button icon").test(t.text)
   );
   const dailyConfig = tree.find((t) => toFlexRegex("daily").test(t.text));
+  const hotkeyConfig = getSubTree({ tree, key: "hot keys" });
+  hotkeyConfig.children.forEach(({ uid, text, children }) => {
+    smartblockHotKeys.uidToMapping[uid] = text;
+    smartblockHotKeys.mappingToBlock[text] = children?.[0]?.text;
+  });
 
   window.roamjs.extension.smartblocks = {};
   window.roamjs.extension.smartblocks.registerCommand = ({
@@ -378,9 +406,63 @@ runExtension("smartblocks", () => {
           },
           textarea,
         });
+      } else {
+        const [k, srcUid] =
+          Object.entries(smartblockHotKeys.mappingToBlock)
+            .map(([k, uid]) => [k.split("+"), uid] as const)
+            .filter(([k]) => k.every((l) => l.length === 1))
+            .find(([k]) => new RegExp(`${k.join("")}$`).test(valueToCursor)) ||
+          [];
+        if (srcUid) {
+          sbBomb({
+            srcUid,
+            target: {
+              uid: getUids(textarea).blockUid,
+              start: textarea.selectionStart - k.length,
+              end: k.length,
+            },
+          });
+        }
       }
     }
   });
+
+  const appRoot = document.querySelector<HTMLDivElement>(".roam-app");
+  if (appRoot) {
+    appRoot.addEventListener("keydown", (e) => {
+      const modifiers = new Set();
+      if (e.altKey) modifiers.add("alt");
+      if (e.shiftKey) modifiers.add("shift");
+      if (e.ctrlKey) modifiers.add("control");
+      if (e.metaKey) modifiers.add("meta");
+      if (modifiers.size) {
+        const mapping = Array.from(modifiers)
+          .sort()
+          .concat(e.key.toLowerCase())
+          .join("+");
+        const srcUid = smartblockHotKeys.mappingToBlock[mapping];
+        if (srcUid) {
+          e.preventDefault();
+          e.stopPropagation();
+          const target =
+            window.roamAlphaAPI.ui.getFocusedBlock()?.["block-uid"] ||
+            createBlock({ node: { text: "" }, parentUid: getCurrentPageUid() });
+          setTimeout(() => {
+            sbBomb({
+              srcUid,
+              target: {
+                uid: target,
+                start: getTextByBlockUid(target).length,
+                end: 0,
+              },
+            });
+          }, 1);
+        }
+      }
+    });
+  } else {
+    console.error('boooo')
+  }
 
   const runDaily = () => {
     if (dailyConfig) {
