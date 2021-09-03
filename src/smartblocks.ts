@@ -29,6 +29,7 @@ import {
   getPageTitleByPageUid,
   createPage,
   getFullTreeByParentUid,
+  isTagOnPage,
 } from "roam-client";
 import * as chrono from "chrono-node";
 import datefnsFormat from "date-fns/format";
@@ -971,6 +972,21 @@ export const COMMANDS: {
     },
   },
   {
+    text: "IFTAGINBLOCK",
+    help: "Compares whether the page name or id in the first argument is in the block referenced by the second argument.\n\n1. Page by title or id\n\n2. Block reference",
+    handler: (pageOrUid = "", blockUid = "") => {
+      const uid =
+        getPageUidByPageTitle(extractTag(pageOrUid)) || extractRef(pageOrUid);
+      const present = !!window.roamAlphaAPI.q(
+        `[:find ?b :where [?p :block/uid "${uid}"] [?b :block/refs ?p] [?b :block/uid ${blockUid}]]`
+      )[0]?.[0];
+      if (!present) {
+        smartBlocksContext.exitBlock = true;
+      }
+      return "";
+    },
+  },
+  {
     text: "GET",
     help: "Returns a variable\n\n1. Variable name",
     handler: (name = "") => {
@@ -1358,9 +1374,32 @@ export const COMMANDS: {
   },
   {
     text: "REPLACE",
-    help: "Returns the text in the first argument after replacing one sub text with another.\n\n1. Source text\n\n2.Text to replace\n\n3.Text to replace with",
+    help: "Returns the text in the first argument after replacing one sub text with another. If the first argument is a block ref, replaces the block text in that ref instead. If the first argument is a variable, replace with that variable's value.\n\n1. Source text\n\n2.Text to replace\n\n3.Text to replace with",
     handler: (text = "", reg = "", out = "") => {
-      return text.replace(new RegExp(reg), out);
+      const normText = smartBlocksContext.variables[text] || text;
+      const normOut = smartBlocksContext.variables[out] || out;
+      const uid = extractRef(normText);
+      const blockText = getTextByBlockUid(uid);
+      const regex = /^`(.*?)`$/.test(reg)
+        ? new RegExp(reg.slice(1, -1))
+        : new RegExp(reg);
+      if (blockText) {
+        updateBlock({ uid, text: blockText.replace(regex, normOut) });
+        return "";
+      }
+      return normText.replace(regex, normOut);
+    },
+  },
+  {
+    text: "UPDATEBLOCK",
+    help: "Updates the block referenced by the first argument with the text in the rest.\n\n1. Block reference\n\n2. Text to update with",
+    handler: (ref = "", ...rest) => {
+      const normRef = smartBlocksContext.variables[ref] || ref;
+      const text = rest.join(",");
+      const normOut = smartBlocksContext.variables[text] || text;
+      const uid = extractRef(normRef);
+      updateBlock({ uid, text: normOut });
+      return "";
     },
   },
 ];

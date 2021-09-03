@@ -419,7 +419,7 @@ runExtension("smartblocks", () => {
             target: {
               uid: getUids(textarea).blockUid,
               start: textarea.selectionStart - k.length,
-              end: k.length,
+              end: textarea.selectionStart,
             },
           });
         }
@@ -448,12 +448,13 @@ runExtension("smartblocks", () => {
             window.roamAlphaAPI.ui.getFocusedBlock()?.["block-uid"] ||
             createBlock({ node: { text: "" }, parentUid: getCurrentPageUid() });
           setTimeout(() => {
+            const start = getTextByBlockUid(target).length;
             sbBomb({
               srcUid,
               target: {
                 uid: target,
-                start: getTextByBlockUid(target).length,
-                end: 0,
+                start,
+                end: start,
               },
             });
           }, 1);
@@ -461,7 +462,7 @@ runExtension("smartblocks", () => {
       }
     });
   } else {
-    console.error('boooo')
+    console.error("boooo");
   }
 
   const runDaily = () => {
