@@ -3,6 +3,7 @@ import {
   Classes,
   Drawer,
   H6,
+  Icon,
   InputGroup,
   Intent,
   Label,
@@ -225,6 +226,7 @@ const DrawerContent = ({
   const [installed, setInstalled] = useState(false);
   const [updateable, setUpdateable] = useState(false);
   const [donatable, setDonatable] = useState(false);
+  const [numberOfDownloads, setNumberOfDownloads] = useState(0);
   const [donation, setDonation] = useState(0);
   const [tabId, setTabId] = useState<DrawerTab>("Marketplace");
   const [search, setSearch] = useState("");
@@ -280,6 +282,7 @@ const DrawerContent = ({
           setInstalled(r.data.installed);
           setUpdateable(r.data.updatable);
           setDonatable(r.data.donatable);
+          setNumberOfDownloads(r.data.count);
         })
         .catch((e) => {
           setLoading(false);
@@ -290,6 +293,7 @@ const DrawerContent = ({
       setUpdateable(false);
       setInstalled(false);
       setDonatable(false);
+      setNumberOfDownloads(0);
     }
     setDonation(0);
   }, [
@@ -331,11 +335,17 @@ const DrawerContent = ({
         </div>
         <div style={{ height: "100%", width: "60%", marginLeft: 16 }}>
           <div>
-            {installed ? (
-              <i>Already Installed</i>
-            ) : (
-              <Price price={selectedSmartBlock.price} />
-            )}
+            <span style={{ display: "inline-block", minWidth: 120 }}>
+              {installed ? (
+                <i>Already Installed</i>
+              ) : (
+                <Price price={selectedSmartBlock.price} />
+              )}
+            </span>
+            <b style={{ display: "inline-block", minWidth: 60, textAlign: 'right' }}>
+              {numberOfDownloads}{' '}
+              <Icon icon={"cloud-download"} />
+            </b>
           </div>
           <h6>{selectedSmartBlock.author}</h6>
           <h1>{selectedSmartBlock.name}</h1>

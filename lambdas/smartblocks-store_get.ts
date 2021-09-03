@@ -85,62 +85,82 @@ export const handler: APIGatewayProxyHandler = async (event) => {
                 body: `Invalid id ${uuid} doesn't represent a LIVE SmartBlock Workflow`,
               }
             : !!open
-            ? graph === r.Item.author.S
-              ? {
-                  statusCode: 200,
-                  body: JSON.stringify({
-                    installed: true,
-                    updatable: false,
-                    donatable: false,
-                  }),
-                  headers,
-                }
-              : Promise.all([
-                  dynamo
-                    .query({
-                      TableName: "RoamJSSmartBlocks",
-                      IndexName: "name-author-index",
-                      ExpressionAttributeNames: {
-                        "#s": "name",
-                        "#a": "author",
-                      },
-                      ExpressionAttributeValues: {
-                        ":s": { S: uuid },
-                        ":a": { S: graph },
-                      },
-                      KeyConditionExpression: "#a = :a AND #s = :s",
-                    })
-                    .promise(),
-                  dynamo
-                    .getItem({
-                      TableName: "RoamJSSmartBlocks",
-                      Key: { uuid: { S: r.Item.author.S } },
-                    })
-                    .promise(),
-                ]).then(async ([link, publisher]) => ({
-                  statusCode: 200,
-                  body: JSON.stringify({
-                    installed: !!link.Count,
-                    updatable:
-                      !!link.Count &&
-                      link.Items.reduce(
-                        (prev, cur) =>
-                          cur.workflow.S.localeCompare(prev.workflow.S) > 0
-                            ? cur
-                            : prev,
-                        { workflow: { S: "0000" } }
-                      ).workflow?.S !== r.Item.workflow.S,
-                    donatable:
-                      (Number(r.Item?.price?.N) || 0) === 0 &&
-                      !!publisher.Item?.stripe?.S
-                        ? await stripe.accounts
-                            .retrieve(publisher.Item.stripe.S)
-                            .then((r) => r.details_submitted)
-                            .catch(() => false)
-                        : false,
-                  }),
-                  headers,
-                }))
+            ? dynamo
+                .query({
+                  TableName: "RoamJSSmartBlocks",
+                  IndexName: "name-status-index",
+                  ExpressionAttributeNames: {
+                    "#s": "status",
+                    "#n": "name",
+                  },
+                  ExpressionAttributeValues: {
+                    ":s": { S: "INSTALLED" },
+                    ":n": { S: uuid },
+                  },
+                  KeyConditionExpression: "#n = :n AND #s = :s",
+                })
+                .promise()
+                .then((is) =>
+                  graph === r.Item.author.S
+                    ? {
+                        statusCode: 200,
+                        body: JSON.stringify({
+                          installed: true,
+                          updatable: false,
+                          donatable: false,
+                          count: is.Count,
+                        }),
+                        headers,
+                      }
+                    : Promise.all([
+                        dynamo
+                          .query({
+                            TableName: "RoamJSSmartBlocks",
+                            IndexName: "name-author-index",
+                            ExpressionAttributeNames: {
+                              "#s": "name",
+                              "#a": "author",
+                            },
+                            ExpressionAttributeValues: {
+                              ":s": { S: uuid },
+                              ":a": { S: graph },
+                            },
+                            KeyConditionExpression: "#a = :a AND #s = :s",
+                          })
+                          .promise(),
+                        dynamo
+                          .getItem({
+                            TableName: "RoamJSSmartBlocks",
+                            Key: { uuid: { S: r.Item.author.S } },
+                          })
+                          .promise(),
+                      ]).then(async ([link, publisher]) => ({
+                        statusCode: 200,
+                        body: JSON.stringify({
+                          count: is.Count,
+                          installed: !!link.Count,
+                          updatable:
+                            !!link.Count &&
+                            link.Items.reduce(
+                              (prev, cur) =>
+                                cur.workflow.S.localeCompare(prev.workflow.S) >
+                                0
+                                  ? cur
+                                  : prev,
+                              { workflow: { S: "0000" } }
+                            ).workflow?.S !== r.Item.workflow.S,
+                          donatable:
+                            (Number(r.Item?.price?.N) || 0) === 0 &&
+                            !!publisher.Item?.stripe?.S
+                              ? await stripe.accounts
+                                  .retrieve(publisher.Item.stripe.S)
+                                  .then((r) => r.details_submitted)
+                                  .catch(() => false)
+                              : false,
+                        }),
+                        headers,
+                      }))
+                )
             : (Number(r.Item?.price?.N) || 0) <= 0 && donationValue <= 0
             ? getWorkflow(r.Item, graph)
             : !!paymentIntentId
