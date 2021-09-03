@@ -144,6 +144,16 @@ resource "aws_dynamodb_table" "store" {
     write_capacity     = 0
   }
 
+  global_secondary_index {
+    hash_key           = "status"
+    name               = "name-status-index"
+    non_key_attributes = []
+    projection_type    = "ALL"
+    range_key          = "name"
+    read_capacity      = 0
+    write_capacity     = 0
+  }
+
   tags = {
     Application = "Roam JS Extensions"
   }
