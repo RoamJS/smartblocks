@@ -30,6 +30,7 @@ import {
   createPage,
   getFullTreeByParentUid,
   isTagOnPage,
+  DAILY_NOTE_PAGE_TITLE_REGEX,
 } from "roam-client";
 import * as chrono from "chrono-node";
 import datefnsFormat from "date-fns/format";
@@ -800,7 +801,7 @@ export const COMMANDS: {
   },
   {
     text: "BLOCKMENTIONSDATED",
-    help: "Returns list of blocks mentioned based on date range\n1: Max blocks to return\n\n2: Page or Tag Name\n\n3: Start Date\n\n4. End Date\n\n5: Sort (ASC,DESC,NONE)\n\n6:Format of Output\n\n7: (opt) filtering ",
+    help: "Returns list of blocks mentioned based on date range\n\n1: Max blocks to return\n\n2: Page or Tag Name\n\n3: Start Date\n\n4. End Date\n\n5: Sort (ASC,DESC,NONE)\n\n6:Format of Output\n\n7: (opt) filtering ",
     handler: (
       limitArg = "20",
       titleArg = "",
@@ -826,7 +827,7 @@ export const COMMANDS: {
         .filter(({ text, uid }) => {
           const ref =
             DAILY_REF_REGEX.exec(text)?.[1] ||
-            DAILY_REF_REGEX.exec(getPageTitleByBlockUid(uid))?.[1];
+            DAILY_NOTE_PAGE_TITLE_REGEX.exec(getPageTitleByBlockUid(uid))?.[1];
           if (ref) {
             const d = parseRoamDate(ref);
             return !undated && !isBefore(d, start) && !isAfter(d, end);
