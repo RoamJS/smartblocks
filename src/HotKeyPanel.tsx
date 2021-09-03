@@ -17,7 +17,13 @@ export type SmartblockHotKeys = {
 const HotKeyPanel =
   (smartblockHotKeys: SmartblockHotKeys) =>
   ({ parentUid, uid: inputUid }: { uid?: string; parentUid: string }) => {
-    const workflows = useMemo(getCustomWorkflows, []);
+    const workflows = useMemo(
+      () =>
+        getCustomWorkflows().sort(({ name: a }, { name: b }) =>
+          a.localeCompare(b)
+        ),
+      []
+    );
     const workflowNamesByUid = useMemo(
       () => Object.fromEntries(workflows.map((wf) => [wf.uid, wf.name])),
       []
