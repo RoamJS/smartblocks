@@ -22,14 +22,23 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { createOverlayRender } from "roamjs-components";
+import {
+  createOverlayRender,
+  getSettingValueFromTree,
+  getSubTree,
+} from "roamjs-components";
 import axios from "axios";
 import {
   createBlock,
   deleteBlock,
+  getBasicTreeByParentUid,
+  getCurrentPageUid,
   getCurrentUserDisplayName,
   getCurrentUserEmail,
+  getCurrentUserUid,
+  getDisplayNameByUid,
   getGraph,
+  getPageUidByPageTitle,
   getRoamUrl,
   getShallowTreeByParentUid,
   InputTextNode,
@@ -227,6 +236,10 @@ const DrawerContent = ({
   const [updateable, setUpdateable] = useState(false);
   const [donatable, setDonatable] = useState(false);
   const [numberOfDownloads, setNumberOfDownloads] = useState(0);
+  const [
+    selectedSmartBlockAuthorDisplayName,
+    setSelectedSmartBlockAuthorDisplayName,
+  ] = useState("");
   const [donation, setDonation] = useState(0);
   const [tabId, setTabId] = useState<DrawerTab>("Marketplace");
   const [search, setSearch] = useState("");
@@ -283,6 +296,20 @@ const DrawerContent = ({
           setUpdateable(r.data.updatable);
           setDonatable(r.data.donatable);
           setNumberOfDownloads(r.data.count);
+          setSelectedSmartBlockAuthorDisplayName(
+            selectedSmartBlock.author === getGraph()
+              ? getSettingValueFromTree({
+                  tree: getSubTree({
+                    tree: getBasicTreeByParentUid(
+                      getPageUidByPageTitle("roam/js/smartblocks")
+                    ),
+                    key: "publish",
+                  }).children,
+                  key: "display name",
+                  defaultValue: getDisplayNameByUid(getCurrentUserUid()),
+                })
+              : r.data.displayName
+          );
         })
         .catch((e) => {
           setLoading(false);
@@ -294,6 +321,7 @@ const DrawerContent = ({
       setInstalled(false);
       setDonatable(false);
       setNumberOfDownloads(0);
+      setSelectedSmartBlockAuthorDisplayName("");
     }
     setDonation(0);
   }, [
@@ -302,6 +330,8 @@ const DrawerContent = ({
     setDonatable,
     selectedSmartBlockId,
     setDonation,
+    setNumberOfDownloads,
+    setSelectedSmartBlockAuthorDisplayName,
   ]);
   const installWorkflow = useCallback(
     (workflow: string) => {
@@ -335,19 +365,29 @@ const DrawerContent = ({
         </div>
         <div style={{ height: "100%", width: "60%", marginLeft: 16 }}>
           <div>
-            <span style={{ display: "inline-block", minWidth: 120 }}>
+            <span
+              style={{ display: "inline-block", minWidth: 120 }}
+              className={loading && Classes.SKELETON}
+            >
               {installed ? (
                 <i>Already Installed</i>
               ) : (
                 <Price price={selectedSmartBlock.price} />
               )}
             </span>
-            <b style={{ display: "inline-block", minWidth: 60, textAlign: 'right' }}>
-              {numberOfDownloads}{' '}
-              <Icon icon={"cloud-download"} />
+            <b
+              style={{
+                display: "inline-block",
+                minWidth: 60,
+                textAlign: "right",
+              }}
+            >
+              {numberOfDownloads} <Icon icon={"cloud-download"} />
             </b>
           </div>
-          <h6>{selectedSmartBlock.author}</h6>
+          <h6 className={loading && Classes.SKELETON}>
+            {selectedSmartBlockAuthorDisplayName || selectedSmartBlock.author}
+          </h6>
           <h1>{selectedSmartBlock.name}</h1>
           <div
             style={{

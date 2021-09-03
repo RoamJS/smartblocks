@@ -18,6 +18,8 @@ import {
   getBasicTreeByParentUid,
   getUids,
   getCurrentPageUid,
+  getDisplayNameByUid,
+  getCurrentUserUid,
 } from "roam-client";
 import {
   createConfigObserver,
@@ -300,6 +302,13 @@ runExtension("smartblocks", () => {
               options: {
                 component: StripePanel,
               },
+            },
+            {
+              type: "text",
+              title: "display name",
+              description:
+                "The display name that will appear in the store next to your workflow. By default, your display name in Roam will be shown. If not set, then your graph name will be shown.",
+              defaultValue: getDisplayNameByUid(getCurrentUserUid()),
             },
           ],
         },

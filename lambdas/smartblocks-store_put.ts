@@ -27,6 +27,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     workflow,
     uuid = v4(),
     price: priceArg = "0",
+    displayName = "",
   } = JSON.parse(event.body) as {
     img?: string;
     name: string;
@@ -36,6 +37,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     workflow: string;
     uuid?: string;
     price?: string;
+    displayName?: string;
   };
   const price = (Number(priceArg) || 0) * 100;
   if (price < 0) {
@@ -78,7 +80,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
         };
       }
       const version = format(new Date(), "yyyy-MM-dd-hh-mm-ss");
-      const putItem = () =>
+      const putItem = (existingDisplayName: string) =>
         s3
           .upload({
             Bucket: "roamjs-smartblocks",
@@ -87,6 +89,26 @@ export const handler: APIGatewayProxyHandler = async (event) => {
             ContentType: "application/json",
           })
           .promise()
+          .then(() =>
+            displayName && displayName !== existingDisplayName
+              ? dynamo
+                  .updateItem({
+                    TableName: "RoamJSSmartBlocks",
+                    Key: {
+                      uuid: { S: author },
+                    },
+                    UpdateExpression: "SET #d = :d",
+                    ExpressionAttributeNames: {
+                      "#d": "description",
+                    },
+                    ExpressionAttributeValues: {
+                      ":d": { S: displayName },
+                    },
+                  })
+                  .promise()
+                  .then(() => Promise.resolve())
+              : Promise.resolve()
+          )
           .then(() =>
             dynamo
               .putItem({
@@ -147,7 +169,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
           .promise()
           .then((r) =>
             r.Item?.token?.S && r.Item?.token?.S === token
-              ? putItem()
+              ? putItem(r.Item.description?.S)
               : {
                   statusCode: 401,
                   body: `Token unauthorized for updating workflow ${existingWorkflow.name.S}`,
@@ -197,7 +219,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
                           body: `Not allowed to publish more than ${limit} workflows. Reach out to support@roamjs.com about increasing your limit.`,
                           headers,
                         }
-                      : putItem();
+                      : putItem(r.Item?.description?.S);
                   })
           );
       }

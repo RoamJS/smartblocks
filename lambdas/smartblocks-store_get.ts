@@ -137,6 +137,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
                       ]).then(async ([link, publisher]) => ({
                         statusCode: 200,
                         body: JSON.stringify({
+                          displayName: publisher.Item?.description?.S,
                           count: is.Count,
                           installed: !!link.Count,
                           updatable:

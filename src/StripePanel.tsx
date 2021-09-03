@@ -5,13 +5,15 @@ import {
   getFirstChildTextByBlockUid,
   getGraph,
   getShallowTreeByParentUid,
+  localStorageGet,
+  localStorageSet,
 } from "roam-client";
 import { toFlexRegex } from "roamjs-components";
 
 const width = 600;
 const height = 525;
 const StripePanel = ({ parentUid }: { uid?: string; parentUid: string }) => {
-  const [connected, setConnected] = useState(false);
+  const [connected, setConnected] = useState(!!localStorageGet("stripe"));
   const [showRetry, setShowRetry] = useState(false);
   const tokenUid = useMemo(
     () =>
@@ -39,6 +41,7 @@ const StripePanel = ({ parentUid }: { uid?: string; parentUid: string }) => {
         .then((r) => {
           if (r.data.done) {
             setConnected(true);
+            localStorageSet("stripe", "true");
             setShowRetry(false);
             setLoading(false);
             window.clearTimeout(intervalListener);

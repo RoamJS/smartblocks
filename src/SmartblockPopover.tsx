@@ -11,8 +11,11 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import ReactDOM from "react-dom";
 import {
   createBlock,
+  getBasicTreeByParentUid,
   getBlockUidFromTarget,
   getBlockUidsReferencingBlock,
+  getCurrentPageUid,
+  getDisplayNameByUid,
   getFirstChildTextByBlockUid,
   getFirstChildUidByBlockUid,
   getGraph,
@@ -24,8 +27,11 @@ import {
   updateBlock,
 } from "roam-client";
 import {
+  getSettingValueFromTree,
+  getSubTree,
   renderToast,
   toFlexRegex,
+  useSubTree,
 } from "roamjs-components";
 import lego from "./img/lego3blocks.png";
 import { HIDE_REGEX } from "./smartblocks";
@@ -46,29 +52,30 @@ const Content = ({
     () => getPageUidByPageTitle("roam/js/smartblocks"),
     []
   );
-  const parentUid = useMemo(
-    () =>
-      getShallowTreeByParentUid(pageUid).find((t) =>
-        toFlexRegex("publish").test(t.text)
-      )?.uid ||
-      createBlock({
-        node: { text: "publish" },
-        parentUid: pageUid,
-        order: 3,
-      }),
-    [pageUid]
-  );
-  const publishTree = useMemo(
-    () => getShallowTreeByParentUid(parentUid),
-    [parentUid]
-  );
+  const pageTree = useMemo(() => getBasicTreeByParentUid(pageUid), [pageUid]);
+  const { uid: publishUid, children: publishChildren } = useSubTree({
+    tree: pageTree,
+    key: "publish",
+    parentUid: pageUid,
+    order: 3,
+  });
   const tokenUid = useMemo(
-    () => publishTree.find((t) => toFlexRegex("token").test(t.text))?.uid || "",
-    [publishTree]
+    () =>
+      publishChildren.find((t) => toFlexRegex("token").test(t.text))?.uid || "",
+    [publishChildren]
   );
   const token = useMemo(
     () => (tokenUid && getFirstChildTextByBlockUid(tokenUid)) || "",
     [tokenUid]
+  );
+  const displayName = useMemo(
+    () =>
+      getSettingValueFromTree({
+        tree: publishChildren,
+        key: "display name",
+        defaultValue: getDisplayNameByUid(getCurrentPageUid()),
+      }),
+    [publishChildren]
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -121,14 +128,19 @@ const Content = ({
                     description: (description[0] || "").replace(/__/g, "_"),
                     workflow: JSON.stringify(children.map(toInputTextNode)),
                     price: Number(price[0] || "0") || 0,
+                    displayName,
                   },
                   { headers: { Authorization: token } }
                 )
                 .then((r) => {
                   const ref = `((${blockUid}))`;
                   const refUid =
-                    publishTree.find((t) => t.text.trim() === ref)?.uid ||
-                    createBlock({ node: { text: ref }, parentUid, order: 1 });
+                    publishChildren.find((t) => t.text.trim() === ref)?.uid ||
+                    createBlock({
+                      node: { text: ref },
+                      parentUid: publishUid,
+                      order: 1,
+                    });
                   setTimeout(() => {
                     const uuidUid =
                       getShallowTreeByParentUid(refUid).find((t) =>
