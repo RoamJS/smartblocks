@@ -26,6 +26,7 @@ import {
   createOverlayRender,
   getSettingValueFromTree,
   getSubTree,
+  renderToast,
 } from "roamjs-components";
 import axios from "axios";
 import {
@@ -146,12 +147,14 @@ const StripeCheckout = ({
   setError,
   onSuccess,
   loading,
+  isDonation,
 }: {
   secret: string;
   setLoading: (f: boolean) => void;
   setError: (m: string) => void;
   onSuccess: (id: string) => void;
   loading: boolean;
+  isDonation: boolean;
 }) => {
   const stripe = useStripe();
   const elements = useElements();
@@ -213,7 +216,7 @@ const StripeCheckout = ({
       </Label>
       <Button
         style={{ margin: "16px 0" }}
-        text={"Buy SmartBlock"}
+        text={isDonation ? "Donate" : "Buy SmartBlock"}
         disabled={loading}
         intent={Intent.PRIMARY}
         onClick={handleSubmit}
@@ -336,20 +339,53 @@ const DrawerContent = ({
   const installWorkflow = useCallback(
     (workflow: string) => {
       const children = JSON.parse(workflow) as InputTextNode[];
-      const uid = createBlock({
-        node: {
-          text: `#SmartBlock ${selectedSmartBlock.name}`,
-          children,
-        },
-        parentUid,
-      });
+      const uid =
+        getCustomWorkflows().find(
+          ({ name }) => name === selectedSmartBlock.name
+        )?.uid ||
+        createBlock({
+          node: {
+            text: `#SmartBlock ${selectedSmartBlock.name}`,
+          },
+          parentUid,
+        });
       setTimeout(() => {
-        window.location.assign(getRoamUrl(uid));
-        onClose();
-      }, 1000);
+        getShallowTreeByParentUid(uid).forEach(({ uid: child }) =>
+          deleteBlock(child)
+        );
+        children.forEach((node, order) =>
+          createBlock({ node, order, parentUid: uid })
+        );
+        setTimeout(() => {
+          window.location.assign(getRoamUrl(uid));
+          onClose();
+        }, 1000);
+      }, 1);
     },
     [selectedSmartBlock, onClose]
   );
+  const buttonOnClick = () => {
+    setLoading(true);
+    setError("");
+    axios
+      .get(
+        `${process.env.API_URL}/smartblocks-store?uuid=${selectedSmartBlockId}&graph=${graph}&donation=${donation}`
+      )
+      .then((r) => {
+        if (r.data.secret) {
+          setPaymentSecret(r.data.secret);
+          setLoading(false);
+        } else if (r.data.workflow) {
+          installWorkflow(r.data.workflow);
+        } else {
+          throw new Error("Returned empty response");
+        }
+      })
+      .catch((e) => {
+        setLoading(false);
+        setError(e.response?.data?.message || e.response?.data || e.message);
+      });
+  };
   return selectedSmartBlockId ? (
     <div className={Classes.DRAWER_BODY} style={{ position: "relative" }}>
       <div
@@ -367,7 +403,7 @@ const DrawerContent = ({
           <div>
             <span
               style={{ display: "inline-block", minWidth: 120 }}
-              className={loading && Classes.SKELETON}
+              className={loading ? Classes.SKELETON : ""}
             >
               {installed ? (
                 <i>Already Installed</i>
@@ -385,7 +421,7 @@ const DrawerContent = ({
               {numberOfDownloads} <Icon icon={"cloud-download"} />
             </b>
           </div>
-          <h6 className={loading && Classes.SKELETON}>
+          <h6 className={loading ? Classes.SKELETON : ""}>
             {selectedSmartBlockAuthorDisplayName || selectedSmartBlock.author}
           </h6>
           <h1>{selectedSmartBlock.name}</h1>
@@ -400,6 +436,7 @@ const DrawerContent = ({
               <Elements stripe={stripePromise}>
                 <StripeCheckout
                   secret={paymentSecret}
+                  isDonation={!!donation}
                   onSuccess={(id: string) =>
                     axios
                       .get(
@@ -409,7 +446,18 @@ const DrawerContent = ({
                         }
                       )
                       .then((r) => {
-                        installWorkflow(r.data.workflow);
+                        renderToast({
+                          id: "smartblock-store-success",
+                          intent: Intent.SUCCESS,
+                          content: `Successfully ${
+                            donation ? "Dontated Towards" : "Bought"
+                          } SmartBlock!`,
+                        });
+                        if (updateable || !installed) {
+                          installWorkflow(r.data.workflow);
+                        } else {
+                          onClose();
+                        }
                       })
                       .catch((e) => {
                         setLoading(false);
@@ -425,58 +473,8 @@ const DrawerContent = ({
                   loading={loading}
                 />
               </Elements>
-            ) : updateable ? (
-              <Button
-                style={{ margin: "16px 0" }}
-                text={"Update"}
-                disabled={loading}
-                intent={Intent.WARNING}
-                onClick={() => {
-                  setLoading(true);
-                  setError("");
-                  axios
-                    .get(
-                      `${process.env.API_URL}/smartblocks-store?uuid=${selectedSmartBlockId}&graph=${graph}`
-                    )
-                    .then((r) => {
-                      const children = JSON.parse(
-                        r.data.workflow
-                      ) as InputTextNode[];
-                      const uid =
-                        getCustomWorkflows().find(
-                          ({ name }) => name === selectedSmartBlock.name
-                        )?.uid ||
-                        createBlock({
-                          node: {
-                            text: `#SmartBlock ${selectedSmartBlock.name}`,
-                          },
-                          parentUid,
-                        });
-                      setTimeout(() => {
-                        getShallowTreeByParentUid(uid).forEach(
-                          ({ uid: child }) => deleteBlock(child)
-                        );
-                        children.forEach((node, order) =>
-                          createBlock({ node, order, parentUid: uid })
-                        );
-                        setTimeout(() => {
-                          window.location.assign(getRoamUrl(uid));
-                          onClose();
-                        }, 1000);
-                      }, 1);
-                    })
-                    .catch((e) => {
-                      setLoading(false);
-                      setError(
-                        e.response?.data?.message ||
-                          e.response?.data ||
-                          e.message
-                      );
-                    });
-                }}
-              />
             ) : (
-              <div>
+              <div className={loading ? Classes.SKELETON : ""}>
                 {donatable && (
                   <>
                     <h6>Thank the author by sending them a donation!</h6>
@@ -489,38 +487,29 @@ const DrawerContent = ({
                     />
                   </>
                 )}
-                <Button
-                  style={{ margin: "16px 0" }}
-                  text={"Install"}
-                  disabled={loading || installed}
-                  intent={Intent.SUCCESS}
-                  onClick={() => {
-                    setLoading(true);
-                    setError("");
-                    axios
-                      .get(
-                        `${process.env.API_URL}/smartblocks-store?uuid=${selectedSmartBlockId}&graph=${graph}&donation=${donation}`
-                      )
-                      .then((r) => {
-                        if (r.data.secret) {
-                          setPaymentSecret(r.data.secret);
-                          setLoading(false);
-                        } else if (r.data.workflow) {
-                          installWorkflow(r.data.workflow);
-                        } else {
-                          throw new Error("Returned empty response");
-                        }
-                      })
-                      .catch((e) => {
-                        setLoading(false);
-                        setError(
-                          e.response?.data?.message ||
-                            e.response?.data ||
-                            e.message
-                        );
-                      });
-                  }}
-                />
+                {updateable ? (
+                  <Button
+                    style={{ margin: "16px 0" }}
+                    text={"Update"}
+                    intent={Intent.WARNING}
+                    onClick={buttonOnClick}
+                  />
+                ) : installed && donatable ? (
+                  <Button
+                    style={{ margin: "16px 0" }}
+                    text={"Donate"}
+                    intent={Intent.SUCCESS}
+                    onClick={buttonOnClick}
+                  />
+                ) : (
+                  <Button
+                    style={{ margin: "16px 0" }}
+                    text={"Install"}
+                    disabled={installed}
+                    intent={Intent.PRIMARY}
+                    onClick={buttonOnClick}
+                  />
+                )}
               </div>
             )}
             <div style={{ minWidth: 24 }}>

@@ -190,7 +190,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
                 })
                 .promise()
                 .then((i) =>
-                  i.Count > 0
+                  i.Count > 0 && donationValue <= 0
                     ? getWorkflow(r.Item, graph)
                     : dynamo
                         .getItem({
