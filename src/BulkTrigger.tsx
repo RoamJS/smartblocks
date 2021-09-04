@@ -198,13 +198,12 @@ const BulkTrigger = ({ onClose }: { onClose: () => void }) => {
             onClick={() => {
               setLoading(true);
               setError("");
-              const text = "Loading...";
               const promises = locations.flatMap((loc) => {
                 const pageUid = getPageUidByPageTitle(loc);
                 return workflows.map((srcUid) => () => {
                   const order = getChildrenLengthByPageUid(pageUid);
                   const targetUid = createBlock({
-                    node: { text },
+                    node: { text: "" },
                     parentUid: pageUid,
                     order,
                   });
@@ -216,7 +215,7 @@ const BulkTrigger = ({ onClose }: { onClose: () => void }) => {
                           target: {
                             uid: targetUid,
                             start: 0,
-                            end: text.length,
+                            end: 0,
                           },
                         }).then(() => setTimeout(resolve, 1)),
                       1

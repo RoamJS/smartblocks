@@ -76,10 +76,6 @@ const SmartblocksMenu = ({
       const start = textarea.selectionStart - triggerLength;
       const end = textarea.selectionStart;
       onClose();
-      const loadingUid = createBlock({
-        node: { text: "Loading..." },
-        parentUid: blockUid,
-      });
       setTimeout(() => {
         sbBomb({
           srcUid,
@@ -90,7 +86,6 @@ const SmartblocksMenu = ({
           },
           mutableCursor: !srcName.includes("<%NOCURSOR%>"),
         }).then(() => {
-          deleteBlock(loadingUid);
           if (dailyConfig) {
             const dailyWorkflowName = getSettingValueFromTree({
               tree: dailyConfig.children,

@@ -510,16 +510,15 @@ runExtension("smartblocks", () => {
           const todayUid = toRoamDateUid(today);
           if (srcUid) {
             createPage({ title: toRoamDate(today) });
-            const text = "Loading...";
             const targetUid = createBlock({
-              node: { text },
+              node: { text: "" },
               parentUid: todayUid,
             });
             setTimeout(
               () =>
                 sbBomb({
                   srcUid,
-                  target: { uid: targetUid, start: 0, end: text.length },
+                  target: { uid: targetUid, start: 0, end: 0 },
                 }),
               1
             );
@@ -626,7 +625,6 @@ runExtension("smartblocks", () => {
                 variables["RemoveButton"] === "false" ||
                 variables["42RemoveButton"] === "false";
 
-              const loadingText = "Loading...";
               const props = {
                 srcUid,
                 variables,
@@ -634,7 +632,7 @@ runExtension("smartblocks", () => {
               };
               if (keepButton) {
                 const targetUid = createBlock({
-                  node: { text: loadingText },
+                  node: { text: "" },
                   parentUid,
                 });
                 setTimeout(
@@ -644,7 +642,7 @@ runExtension("smartblocks", () => {
                       target: {
                         uid: targetUid,
                         start: 0,
-                        end: loadingText.length,
+                        end: 0,
                       },
                     }),
                   1
@@ -655,7 +653,7 @@ runExtension("smartblocks", () => {
                   text: `${text.substring(
                     0,
                     index
-                  )}${loadingText}${text.substring(index + full.length)}`,
+                  )}${text.substring(index + full.length)}`,
                 });
                 setTimeout(
                   () =>
@@ -664,7 +662,7 @@ runExtension("smartblocks", () => {
                       target: {
                         uid: parentUid,
                         start: index,
-                        end: index + loadingText.length,
+                        end: index,
                       },
                     }),
                   1

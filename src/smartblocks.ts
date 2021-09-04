@@ -54,6 +54,7 @@ import { renderToast } from "roamjs-components";
 import { ParsingComponents } from "chrono-node/dist/results";
 import { ORDINAL_WORD_DICTIONARY } from "./dom";
 import { ToasterPosition } from "@blueprintjs/core";
+import { renderLoading } from "./Loading";
 
 export const PREDEFINED_REGEX = /#\d*-predefined/;
 const PAGE_TITLE_REGEX = /^(?:#?\[\[(.*)\]\]|#([^\s]*))$/;
@@ -1659,6 +1660,7 @@ export const sbBomb = ({
   variables?: Record<string, string>;
   mutableCursor?: boolean;
 }): Promise<void> => {
+  const finish = renderLoading(uid);
   resetContext(uid, variables);
   const childNodes = PREDEFINED_REGEX.test(srcUid)
     ? predefinedChildrenByUid[srcUid]
@@ -1804,7 +1806,7 @@ export const sbBomb = ({
                 }, 1)
               )
           )
-          .finally(resolve),
+          .finally(() => resolve(finish())),
       1
     )
   );
