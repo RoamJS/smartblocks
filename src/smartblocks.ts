@@ -1475,30 +1475,55 @@ const processBlockTextToPromises = (
     }
     const split = c.value.indexOf(":");
     const cmd = split < 0 ? c.value : c.value.substring(0, split);
-    const promiseArgs =
-      split < 0
-        ? Promise.resolve({ args: [], nodeProps: {} })
-        : proccessBlockText(c.value.substring(split + 1)).then((s) => {
-            const [{ text, children, uid: _, ...nodeProps }, ...rest] = s;
+    const afterColon = c.value.substring(split + 1);
+    let commandStack = 0;
+    return afterColon
+      .split("")
+      .reduce((prev, cur, i, arr) => {
+        if (cur === "," && !commandStack && arr[i - 1] !== "\\") {
+          return [...prev, ""];
+        } else if (cur === "\\" && arr[i + 1] === ",") {
+          return prev;
+        } else {
+          if (cur === "%") {
+            if (arr[i - 1] === "<") {
+              commandStack++;
+            } else if (arr[i + 1] === ">") {
+              commandStack--;
+            }
+          }
+          const current = prev.slice(-1)[0] || "";
+          return [...prev.slice(0, -1), `${current}${cur}`];
+        }
+      }, [] as string[])
+      .map((s) => () => proccessBlockText(s))
+      .reduce(
+        (prev, cur) =>
+          prev.then((p) =>
+            cur().then((c) => {
+              return [...p, c];
+            })
+          ),
+        Promise.resolve([] as InputTextNode[][])
+      )
+      .then((s) => {
+        if (!s.length) return { args: [], nodeProps: {} };
+        return {
+          args: s.map((c) => {
+            const [{ text, children, uid: _ }, ...rest] = c;
             nextBlocks.push(...rest);
             currentChildren.push(...(children || []));
-            const escapeOnlyRegex = /^\\+$/;
-            return {
-              args: text
-                .split(/(\\+)?,/) // safari doesn't support negative look behind *shakes-fist.gif*
-                .map((s, i, a) =>
-                  escapeOnlyRegex.test(a[i + 1])
-                    ? `${s}${a[i + 1].slice(1)},${a[i + 2]}`
-                    : escapeOnlyRegex.test(a[i - 1]) || escapeOnlyRegex.test(s)
-                    ? undefined
-                    : s
-                )
-                .filter((s) => !!s)
-                .map((s) => s.replace(/\\,/g, ",")),
-              nodeProps,
-            };
-          });
-    return promiseArgs
+            return text;
+          }),
+          nodeProps: s.reduce((prev, cur) => {
+            const nodeProps = {...cur[0]} || {} as InputTextNode;
+            delete nodeProps.children;
+            delete nodeProps.uid;
+            delete nodeProps.text;
+            return { ...prev, ...nodeProps };
+          }, {}),
+        };
+      })
       .then(({ args, nodeProps }) =>
         !!handlerByCommand[cmd]
           ? Promise.resolve(handlerByCommand[cmd](...args)).then((output) => ({
@@ -1680,7 +1705,8 @@ export const sbBomb = ({
   const childNodes = PREDEFINED_REGEX.test(srcUid)
     ? predefinedChildrenByUid[srcUid]
     : getFullTreeByParentUid(srcUid).children;
-  const props: { introUid?: string; introContent?: string; suffix?: string } = {};
+  const props: { introUid?: string; introContent?: string; suffix?: string } =
+    {};
   if (!isPage) {
     const originalText = getTextByBlockUid(uid);
     const prefix = originalText.substring(0, start);
@@ -1724,7 +1750,9 @@ export const sbBomb = ({
                         ...firstChild,
                         uid,
                         text: `${
-                          textPostProcess.startsWith(props.introContent) ? props.introContent : ""
+                          textPostProcess.startsWith(props.introContent)
+                            ? props.introContent
+                            : ""
                         }${firstChild.text || ""}${
                           textPostProcess.startsWith(props.introContent)
                             ? textPostProcess.endsWith(props.suffix)
