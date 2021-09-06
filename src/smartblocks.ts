@@ -31,6 +31,7 @@ import {
   getFullTreeByParentUid,
   isTagOnPage,
   DAILY_NOTE_PAGE_TITLE_REGEX,
+  getChildrenLengthByPageUid,
 } from "roam-client";
 import * as chrono from "chrono-node";
 import datefnsFormat from "date-fns/format";
@@ -377,21 +378,21 @@ export const smartBlocksContext: SmartBlocksContext = {
   unindent: new Set(),
   refMapping: {},
 };
-const resetContext = (targetUid: string, variables: Record<string, string>) => {
-  smartBlocksContext.onBlockExit = () => "";
-  smartBlocksContext.targetUid = targetUid;
-  smartBlocksContext.ifCommand = undefined;
-  smartBlocksContext.exitBlock = false;
-  smartBlocksContext.exitWorkflow = false;
-  smartBlocksContext.variables = variables;
-  smartBlocksContext.cursorPosition = undefined;
-  smartBlocksContext.currentUid = undefined;
-  smartBlocksContext.focusOnBlock = undefined;
-  smartBlocksContext.currentContent = "";
-  smartBlocksContext.indent = new Set();
-  smartBlocksContext.unindent = new Set();
-  smartBlocksContext.dateBasisMethod = undefined;
-  smartBlocksContext.refMapping = {};
+const resetContext = (context: Partial<SmartBlocksContext>) => {
+  smartBlocksContext.onBlockExit = context.onBlockExit || (() => "");
+  smartBlocksContext.targetUid = context.targetUid || "";
+  smartBlocksContext.ifCommand = context.ifCommand || undefined;
+  smartBlocksContext.exitBlock = context.exitBlock || false;
+  smartBlocksContext.exitWorkflow = context.exitWorkflow || false;
+  smartBlocksContext.variables = context.variables || {};
+  smartBlocksContext.cursorPosition = context.cursorPosition;
+  smartBlocksContext.currentUid = context.currentUid;
+  smartBlocksContext.focusOnBlock = context.focusOnBlock;
+  smartBlocksContext.currentContent = context.currentContent || "";
+  smartBlocksContext.indent = context.indent || new Set();
+  smartBlocksContext.unindent = context.unindent || new Set();
+  smartBlocksContext.dateBasisMethod = context.dateBasisMethod;
+  smartBlocksContext.refMapping = context.refMapping || {};
 };
 
 const javascriptHandler =
@@ -1178,12 +1179,26 @@ export const COMMANDS: {
   },
   {
     text: "SMARTBLOCK",
-    help: "Runs another SmartBlock\n\n1. SmartBlock name",
-    handler: (inputName = "") => {
+    help: "Runs another SmartBlock\n\n1. SmartBlock name\n\n2. Optional page name to execute the workflow remotely",
+    handler: (inputName = "", ...pageName) => {
       const srcUid = getCustomWorkflows().find(
         ({ name }) => name.replace(/<%[A-Z]+%>/, "").trim() === inputName.trim()
       )?.uid;
       if (srcUid) {
+        if (pageName.length) {
+          const title = pageName.join(",");
+          const targetUid =
+            getPageUidByPageTitle(title) || createPage({ title });
+          const parentContext = { ...smartBlocksContext };
+          return sbBomb({
+            srcUid,
+            target: { uid: targetUid, isPage: true },
+            variables: smartBlocksContext.variables,
+          }).then(() => {
+            resetContext(parentContext);
+            return "";
+          });
+        }
         const nodes = getTreeByBlockUid(srcUid).children;
         return processChildren({
           nodes,
@@ -1651,34 +1666,39 @@ const resolveRefs = (nodes: InputTextNode[]): InputTextNode[] =>
 
 export const sbBomb = ({
   srcUid,
-  target: { uid, start, end },
+  target: { uid, start = 0, end = start, isPage = false },
   variables = {},
   mutableCursor,
 }: {
   srcUid: string;
-  target: { uid: string; start: number; end: number };
+  target: { uid: string; start?: number; end?: number; isPage?: boolean };
   variables?: Record<string, string>;
   mutableCursor?: boolean;
 }): Promise<void> => {
   const finish = renderLoading(uid);
-  resetContext(uid, variables);
+  resetContext({ targetUid: uid, variables });
   const childNodes = PREDEFINED_REGEX.test(srcUid)
     ? predefinedChildrenByUid[srcUid]
     : getFullTreeByParentUid(srcUid).children;
-  const originalText = getTextByBlockUid(uid);
-  const prefix = originalText.substring(0, start);
-  const suffix = originalText.substring(end);
-  updateBlock({
-    uid,
-    text: `${prefix}${suffix}`,
-  });
-  return new Promise((resolve) =>
+  const props: { introUid?: string; introContent?: string; suffix?: string } = {};
+  if (!isPage) {
+    const originalText = getTextByBlockUid(uid);
+    const prefix = originalText.substring(0, start);
+    const suffix = originalText.substring(end);
+    updateBlock({
+      uid,
+      text: `${prefix}${suffix}`,
+    });
+    props.introUid = uid;
+    props.introContent = prefix;
+    props.suffix = suffix;
+  }
+  return new Promise<void>((resolve) =>
     setTimeout(
       () =>
         processChildren({
           nodes: childNodes,
-          introUid: uid,
-          introContent: prefix,
+          ...props,
         })
           .then(resolveRefs)
           .then(
@@ -1686,25 +1706,37 @@ export const sbBomb = ({
               new Promise<void>((resolve) =>
                 setTimeout(() => {
                   if (firstChild) {
-                    const startingOrder = getOrderByBlockUid(uid);
-                    const parentUid = getParentUidByBlockUid(uid);
-                    const textPostProcess = getTextByBlockUid(uid);
-                    updateBlock({
-                      ...firstChild,
-                      uid,
-                      text: `${
-                        textPostProcess.startsWith(prefix) ? prefix : ""
-                      }${firstChild.text || ""}${
-                        textPostProcess.startsWith(prefix)
-                          ? textPostProcess.endsWith(suffix)
-                            ? suffix
-                            : textPostProcess.slice(end)
-                          : textPostProcess
-                      }`,
-                    });
-                    firstChild.children.forEach((node, order) =>
-                      createBlock({ order, parentUid: uid, node })
-                    );
+                    const startingOrder = isPage
+                      ? getChildrenLengthByPageUid(uid)
+                      : getOrderByBlockUid(uid);
+                    const parentUid = isPage
+                      ? uid
+                      : getParentUidByBlockUid(uid);
+                    if (isPage) {
+                      createBlock({
+                        node: firstChild,
+                        parentUid,
+                        order: startingOrder,
+                      });
+                    } else {
+                      const textPostProcess = getTextByBlockUid(uid);
+                      updateBlock({
+                        ...firstChild,
+                        uid,
+                        text: `${
+                          textPostProcess.startsWith(props.introContent) ? props.introContent : ""
+                        }${firstChild.text || ""}${
+                          textPostProcess.startsWith(props.introContent)
+                            ? textPostProcess.endsWith(props.suffix)
+                              ? props.suffix
+                              : textPostProcess.slice(end)
+                            : textPostProcess
+                        }`,
+                      });
+                      firstChild.children.forEach((node, order) =>
+                        createBlock({ order, parentUid: uid, node })
+                      );
+                    }
                     tree.forEach((node, i) =>
                       createBlock({
                         parentUid,
@@ -1806,8 +1838,8 @@ export const sbBomb = ({
                 }, 1)
               )
           )
-          .finally(() => resolve(finish())),
+          .finally(resolve),
       1
     )
-  );
+  ).finally(finish);
 };
