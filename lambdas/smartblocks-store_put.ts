@@ -1,21 +1,7 @@
 import { APIGatewayProxyHandler } from "aws-lambda";
-import AWS from "aws-sdk";
 import { v4 } from "uuid";
 import format from "date-fns/format";
-
-const dynamo = new AWS.DynamoDB({
-  apiVersion: "2012-08-10",
-  region: "us-east-1",
-});
-const s3 = new AWS.S3({
-  apiVersion: "2006-03-01",
-  region: "us-east-1",
-});
-const ses = new AWS.SES({ apiVersion: "2010-12-01", region: "us-east-1" });
-const headers = {
-  "Access-Control-Allow-Origin": "https://roamresearch.com",
-  "Access-Control-Allow-Methods": "PUT",
-};
+import { headers, dynamo, s3, ses, validToken } from "./common";
 
 export const handler: APIGatewayProxyHandler = async (event) => {
   const {
@@ -55,8 +41,6 @@ export const handler: APIGatewayProxyHandler = async (event) => {
   }
   const requiresReview =
     /<%((J(A(VASCRIPT(ASYNC)?)?)?)|(ONBLOCKEXIT)|(IF(TRUE)?)):/.test(workflow);
-  const token =
-    event.headers.Authorization || event.headers.authorization || "";
   return dynamo
     .query({
       TableName: "RoamJSSmartBlocks",
@@ -168,7 +152,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
           })
           .promise()
           .then((r) =>
-            r.Item?.token?.S && r.Item?.token?.S === token
+            validToken(event, r.Item)
               ? putItem(r.Item.description?.S)
               : {
                   statusCode: 401,
@@ -184,7 +168,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
           })
           .promise()
           .then((r) =>
-            !r.Item?.token.S || r.Item?.token?.S !== token
+            !validToken(event, r.Item)
               ? {
                   statusCode: 401,
                   body: `Token unauthorized for creating workflows from graph ${author}`,

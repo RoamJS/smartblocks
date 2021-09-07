@@ -1,24 +1,7 @@
 import { APIGatewayProxyHandler } from "aws-lambda";
-import AWS, { DynamoDB } from "aws-sdk";
-import Stripe from "stripe";
+import { DynamoDB } from "aws-sdk";
 import { v4 } from "uuid";
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
-  apiVersion: "2020-08-27",
-  maxNetworkRetries: 3,
-});
-const dynamo = new AWS.DynamoDB({
-  apiVersion: "2012-08-10",
-  region: "us-east-1",
-});
-const s3 = new AWS.S3({
-  apiVersion: "2006-03-01",
-  region: "us-east-1",
-});
-const headers = {
-  "Access-Control-Allow-Origin": "https://roamresearch.com",
-  "Access-Control-Allow-Methods": "GET",
-};
+import { s3, dynamo, headers, stripe } from "./common";
 
 const getWorkflow = (item: DynamoDB.AttributeMap, graph: string) =>
   s3

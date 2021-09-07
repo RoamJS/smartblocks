@@ -1,21 +1,12 @@
 import { APIGatewayProxyHandler } from "aws-lambda";
-import AWS from "aws-sdk";
 import randomstring from "randomstring";
-
-const dynamo = new AWS.DynamoDB({
-  apiVersion: "2012-08-10",
-  region: "us-east-1",
-});
-const headers = {
-  "Access-Control-Allow-Origin": "https://roamresearch.com",
-  "Access-Control-Allow-Methods": "PUT",
-};
+import { dynamo, headers, validToken } from "./common";
+import sha256 from "crypto-js/sha256";
 
 export const handler: APIGatewayProxyHandler = async (event) => {
   const { graph } = JSON.parse(event.body) as {
     graph: string;
   };
-  const token = event.headers.Authorization || event.headers.authorization || '';;
   return dynamo 
     .getItem({
       TableName: "RoamJSSmartBlocks",
@@ -28,8 +19,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     .promise()
     .then((r) => {
       if (
-        !r.Item ||
-        (r.Item.status?.S === "USER" && r.Item.token?.S === token)
+       (!r.Item || r.Item?.status?.S === "USER") && validToken(event, r.Item)
       ) {
         const newToken = randomstring.generate();
         return dynamo
@@ -39,7 +29,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
               uuid: { S: graph },
               name: { S: graph },
               status: { S: "USER" },
-              token: { S: newToken },
+              token: { S: sha256(newToken).toString() },
             },
           })
           .promise()

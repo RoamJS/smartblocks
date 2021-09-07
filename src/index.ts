@@ -55,36 +55,6 @@ import StripePanel from "./StripePanel";
 import { Intent } from "@blueprintjs/core";
 import HotKeyPanel, { SmartblockHotKeys } from "./HotKeyPanel";
 
-const waitForRemoteSync = ({
-  label,
-  callback,
-  attempt = 0,
-}: {
-  label: string;
-  callback: () => void;
-  attempt?: number;
-}) => {
-  const icon = document.querySelector(".rm-sync__icon");
-  if (icon.classList.contains("rm-sync--synced")) {
-    callback();
-  } else if (attempt > 100) {
-    renderToast({
-      id: "remote-sync-warning",
-      intent: Intent.WARNING,
-      content: `Failed to run ${label} - timed out waiting for remote Roam changes to sync.`,
-    });
-  } else {
-    const newAttempt = attempt + 1;
-    setTimeout(() => {
-      waitForRemoteSync({
-        label,
-        callback,
-        attempt: newAttempt,
-      });
-    }, newAttempt * 100);
-  }
-};
-
 addStyle(`.roamjs-smartblocks-popover-target {
   display:inline-block;
   height:14px;
@@ -510,15 +480,11 @@ runExtension("smartblocks", () => {
           const todayUid = toRoamDateUid(today);
           if (srcUid) {
             createPage({ title: toRoamDate(today) });
-            const targetUid = createBlock({
-              node: { text: "" },
-              parentUid: todayUid,
-            });
             setTimeout(
               () =>
                 sbBomb({
                   srcUid,
-                  target: { uid: targetUid, start: 0, end: 0 },
+                  target: { uid: todayUid, isPage: true },
                 }),
               1
             );
@@ -542,7 +508,6 @@ runExtension("smartblocks", () => {
       }
     }
   };
-  //waitForRemoteSync({ label: "Daily Smartblock", callback: runDaily });
   setTimeout(runDaily, 5000);
 
   window.roamAlphaAPI.ui.commandPalette.addCommand({
@@ -650,10 +615,9 @@ runExtension("smartblocks", () => {
               } else {
                 updateBlock({
                   uid: parentUid,
-                  text: `${text.substring(
-                    0,
-                    index
-                  )}${text.substring(index + full.length)}`,
+                  text: `${text.substring(0, index)}${text.substring(
+                    index + full.length
+                  )}`,
                 });
                 setTimeout(
                   () =>

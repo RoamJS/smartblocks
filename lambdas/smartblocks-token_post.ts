@@ -1,19 +1,5 @@
 import { APIGatewayProxyHandler } from "aws-lambda";
-import AWS from "aws-sdk";
-import Stripe from "stripe";
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
-  apiVersion: "2020-08-27",
-  maxNetworkRetries: 3,
-});
-const dynamo = new AWS.DynamoDB({
-  apiVersion: "2012-08-10",
-  region: "us-east-1",
-});
-const headers = {
-  "Access-Control-Allow-Origin": "https://roamresearch.com",
-  "Access-Control-Allow-Methods": "PUT",
-};
+import { dynamo, headers, stripe, validToken } from "./common";
 
 export const handler: APIGatewayProxyHandler = async (event) => {
   const { operation, author } = JSON.parse(event.body);
@@ -24,8 +10,6 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       headers,
     };
   }
-  const token =
-    event.headers.Authorization || event.headers.authorization || "";
   return dynamo
     .getItem({
       TableName: "RoamJSSmartBlocks",
@@ -33,7 +17,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     })
     .promise()
     .then((r) =>
-      r.Item?.token?.S && r.Item?.token?.S !== token
+      validToken(event, r.Item)
         ? {
             statusCode: 401,
             body: `Token unauthorized for connecting account`,

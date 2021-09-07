@@ -1402,7 +1402,7 @@ export const COMMANDS: {
         : new RegExp(reg);
       if (blockText) {
         updateBlock({ uid, text: blockText.replace(regex, normOut) });
-        return "";
+        return new Promise(resolve => setTimeout(() => resolve(''), 1));
       }
       return normText.replace(regex, normOut);
     },
