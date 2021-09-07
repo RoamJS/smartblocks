@@ -20,6 +20,7 @@ import {
   getCurrentPageUid,
   getDisplayNameByUid,
   getCurrentUserUid,
+  createBlockObserver,
 } from "roam-client";
 import {
   createConfigObserver,
@@ -54,6 +55,7 @@ import lego from "./img/lego3blocks.png";
 import StripePanel from "./StripePanel";
 import { Intent } from "@blueprintjs/core";
 import HotKeyPanel, { SmartblockHotKeys } from "./HotKeyPanel";
+import XRegExp from "xregexp";
 
 addStyle(`.roamjs-smartblocks-popover-target {
   display:inline-block;
@@ -195,6 +197,7 @@ const smartblockHotKeys: SmartblockHotKeys = {
   uidToMapping: {},
   mappingToBlock: {},
 };
+const COLORS = ["darkblue", "darkred", "darkgreen", "darkgoldenrod"];
 runExtension("smartblocks", () => {
   createConfigObserver({
     title: CONFIG,
@@ -230,6 +233,12 @@ runExtension("smartblocks", () => {
               options: {
                 component: HotKeyPanel(smartblockHotKeys),
               },
+            },
+            {
+              title: "highlighting",
+              type: "flag",
+              description:
+                "Uses command highlighting to help write SmartBlock Workflows",
             },
           ],
         },
@@ -311,6 +320,9 @@ runExtension("smartblocks", () => {
     smartblockHotKeys.uidToMapping[uid] = text;
     smartblockHotKeys.mappingToBlock[text] = children?.[0]?.text;
   });
+  const highlighting = tree.some((t) =>
+    toFlexRegex("highlighting").test(t.text)
+  );
 
   window.roamjs.extension.smartblocks = {};
   window.roamjs.extension.smartblocks.registerCommand = ({
@@ -646,4 +658,74 @@ runExtension("smartblocks", () => {
       }
     },
   });
+
+  if (highlighting) {
+    createBlockObserver((b) => {
+      let colorIndex = 0;
+      const flattenTextNodes = (c: ChildNode): ChildNode[] =>
+        c.nodeName === "#text"
+          ? [c]
+          : Array.from(c.childNodes).flatMap(flattenTextNodes);
+      const textNodes = flattenTextNodes(b);
+      const getMatches = (
+        s: string,
+        offset: number
+      ): XRegExp.MatchRecursiveValueNameMatch[] => {
+        const matches = XRegExp.matchRecursive(s, "<%[A-Z]+:?", "%>", "g", {
+          valueNames: ["text", "left", "args", "right"],
+          unbalanced: "skip",
+        });
+        const someMatches = matches.length
+          ? matches.map((m) => ({
+              ...m,
+              start: m.start + offset,
+              end: m.end + offset,
+            }))
+          : [{ name: "text", value: s, start: offset, end: offset + s.length }];
+        return someMatches.flatMap((m) =>
+          m.name === "args" ? getMatches(m.value, m.start) : m
+        );
+      };
+      const matches = getMatches(
+        textNodes.map((t) => t.nodeValue).join(""),
+        0
+      ).filter((m) => m.end > m.start);
+      let totalCount = 0;
+      textNodes.forEach((t) => {
+        matches
+          .filter(
+            (m) =>
+              m.end >= totalCount && m.start <= totalCount + t.nodeValue.length
+          )
+          .map((m) => {
+            const overlap = t.nodeValue.substring(
+              Math.max(0, m.start - totalCount),
+              Math.min(t.nodeValue.length, m.end - totalCount)
+            );
+            if (m.name === "text") return document.createTextNode(overlap);
+            if (m.name === "left") {
+              const span = document.createElement("span");
+              span.style.color = COLORS[colorIndex % COLORS.length];
+              span.innerText = overlap;
+              colorIndex++;
+              return span;
+            }
+            if (m.name === "right") {
+              const span = document.createElement("span");
+              if (colorIndex > 0) {
+                colorIndex--;
+                span.style.color = COLORS[colorIndex % COLORS.length];
+              }
+              span.innerText = overlap;
+              return span;
+            }
+            return null;
+          })
+          .filter((s) => !!s)
+          .forEach((s) => t.parentElement.insertBefore(s, t));
+        totalCount += t.nodeValue.length;
+        t.remove();
+      });
+    });
+  }
 });
