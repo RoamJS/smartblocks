@@ -28,5 +28,5 @@ export const validToken = (event: APIGatewayProxyEvent, item: DynamoDB.Attribute
     const storedToken = item?.token?.S;
     if (!storedToken) return true;
     const clientToken = event.headers.Authorization || event.headers.authorization || "";
-    return storedToken === clientToken || sha256(clientToken).toString() === storedToken
+    return sha256(clientToken).toString() === storedToken
 }
