@@ -56,6 +56,7 @@ import StripePanel from "./StripePanel";
 import { Intent } from "@blueprintjs/core";
 import HotKeyPanel, { SmartblockHotKeys } from "./HotKeyPanel";
 import XRegExp from "xregexp";
+import axios from "axios";
 
 addStyle(`.roamjs-smartblocks-popover-target {
   display:inline-block;
@@ -479,44 +480,58 @@ runExtension("smartblocks", () => {
         const ms = differenceInMilliseconds(triggerTime, today);
         setTimeout(runDaily, ms + 1000);
       } else {
-        const latestDate = parseRoamDateUid(latest);
-        if (isBefore(startOfDay(latestDate), startOfDay(today))) {
-          const dailyWorkflowName = getSettingValueFromTree({
-            tree: dailyChildren,
-            key: "workflow name",
-            defaultValue: "Daily",
+        const todayUid = toRoamDateUid(today);
+        axios
+          .put(`${process.env.API_URL}/smartblocks-daily`, {
+            newDate: todayUid,
+            uuid: latest.length < 36 ? undefined : latest,
+          })
+          .then((r) => {
+            const latestDate =
+              latest.length < 36
+                ? parseRoamDateUid(latest)
+                : r.data.oldDate
+                ? parseRoamDateUid(r.data.oldDate)
+                : new Date(1970, 0, 1);
+            if (isBefore(startOfDay(latestDate), startOfDay(today))) {
+              const dailyWorkflowName = getSettingValueFromTree({
+                tree: dailyChildren,
+                key: "workflow name",
+                defaultValue: "Daily",
+              });
+              const srcUid = getCustomWorkflows().find(
+                ({ name }) => name === dailyWorkflowName
+              )?.uid;
+              if (srcUid) {
+                createPage({ title: toRoamDate(today) });
+                setTimeout(
+                  () =>
+                    sbBomb({
+                      srcUid,
+                      target: { uid: todayUid, isPage: true },
+                    }),
+                  1
+                );
+              } else {
+                createBlock({
+                  node: {
+                    text: `RoamJS Error: Daily SmartBlocks enabled, but couldn't find SmartBlock Workflow named "${dailyWorkflowName}"`,
+                  },
+                  parentUid: todayUid,
+                });
+              }
+            }
+            if (latest.length < 36) {
+              setInputSetting({
+                blockUid: dailyConfig.uid,
+                value: r.data.uuid,
+                key: "latest",
+                index: 2,
+              });
+            }
+            const ms = differenceInMilliseconds(addDays(triggerTime, 1), today);
+            setTimeout(runDaily, ms + 1000);
           });
-          const srcUid = getCustomWorkflows().find(
-            ({ name }) => name === dailyWorkflowName
-          )?.uid;
-          const todayUid = toRoamDateUid(today);
-          if (srcUid) {
-            createPage({ title: toRoamDate(today) });
-            setTimeout(
-              () =>
-                sbBomb({
-                  srcUid,
-                  target: { uid: todayUid, isPage: true },
-                }),
-              1
-            );
-          } else {
-            createBlock({
-              node: {
-                text: `RoamJS Error: Daily SmartBlocks enabled, but couldn't find SmartBlock Workflow named "${dailyWorkflowName}"`,
-              },
-              parentUid: todayUid,
-            });
-          }
-          setInputSetting({
-            blockUid: dailyConfig.uid,
-            value: todayUid,
-            key: "latest",
-            index: 2,
-          });
-        }
-        const ms = differenceInMilliseconds(addDays(triggerTime, 1), today);
-        setTimeout(runDaily, ms + 1000);
       }
     }
   };
