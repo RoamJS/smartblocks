@@ -691,41 +691,44 @@ runExtension("smartblocks", () => {
         0
       ).filter((m) => m.end > m.start);
       let totalCount = 0;
-      textNodes.forEach((t) => {
-        matches
-          .filter(
-            (m) =>
-              m.end >= totalCount && m.start <= totalCount + t.nodeValue.length
-          )
-          .map((m) => {
-            const overlap = t.nodeValue.substring(
-              Math.max(0, m.start - totalCount),
-              Math.min(t.nodeValue.length, m.end - totalCount)
-            );
-            if (m.name === "text") return document.createTextNode(overlap);
-            if (m.name === "left") {
-              const span = document.createElement("span");
-              span.style.color = COLORS[colorIndex % COLORS.length];
-              span.innerText = overlap;
-              colorIndex++;
-              return span;
-            }
-            if (m.name === "right") {
-              const span = document.createElement("span");
-              if (colorIndex > 0) {
-                colorIndex--;
+      if (matches.length > 1) {
+        textNodes.forEach((t) => {
+          matches
+            .filter(
+              (m) =>
+                m.end >= totalCount &&
+                m.start <= totalCount + t.nodeValue.length
+            )
+            .map((m) => {
+              const overlap = t.nodeValue.substring(
+                Math.max(0, m.start - totalCount),
+                Math.min(t.nodeValue.length, m.end - totalCount)
+              );
+              if (m.name === "text") return document.createTextNode(overlap);
+              if (m.name === "left") {
+                const span = document.createElement("span");
                 span.style.color = COLORS[colorIndex % COLORS.length];
+                span.innerText = overlap;
+                colorIndex++;
+                return span;
               }
-              span.innerText = overlap;
-              return span;
-            }
-            return null;
-          })
-          .filter((s) => !!s)
-          .forEach((s) => t.parentElement.insertBefore(s, t));
-        totalCount += t.nodeValue.length;
-        t.remove();
-      });
+              if (m.name === "right") {
+                const span = document.createElement("span");
+                if (colorIndex > 0) {
+                  colorIndex--;
+                  span.style.color = COLORS[colorIndex % COLORS.length];
+                }
+                span.innerText = overlap;
+                return span;
+              }
+              return null;
+            })
+            .filter((s) => !!s)
+            .forEach((s) => t.parentElement.insertBefore(s, t));
+          totalCount += t.nodeValue.length;
+          t.remove();
+        });
+      }
     });
   }
 });
