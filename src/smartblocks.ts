@@ -67,7 +67,9 @@ const getDateFromText = (s: string) =>
 
 const getDateBasisDate = () => {
   if (smartBlocksContext.dateBasisMethod === "DNP") {
-    const title = getPageTitleByBlockUid(smartBlocksContext.targetUid);
+    const title =
+      getPageTitleByBlockUid(smartBlocksContext.targetUid) ||
+      getPageTitleByPageUid(smartBlocksContext.targetUid);
     return DAILY_NOTE_PAGE_REGEX.test(title)
       ? parseRoamDate(title)
       : new Date();
@@ -759,7 +761,9 @@ export const COMMANDS: {
     text: "CURRENTPAGENAME",
     help: "Returns the current page name the smart block is running in.",
     handler: (mode) => {
-      const title = getPageTitleByBlockUid(smartBlocksContext.targetUid);
+      const title =
+        getPageTitleByBlockUid(smartBlocksContext.targetUid) ||
+        getPageTitleByPageUid(smartBlocksContext.targetUid);
       return mode === "base" ? title.split("/").slice(-1)[0] : title;
     },
   },
