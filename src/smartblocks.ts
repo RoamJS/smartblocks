@@ -365,6 +365,7 @@ export type SmartBlocksContext = {
   focusOnBlock?: string;
   dateBasisMethod?: string;
   refMapping: Record<string, string>;
+  afterWorkflowMethods: (() => void | Promise<void>)[];
 };
 
 export const smartBlocksContext: SmartBlocksContext = {
@@ -377,6 +378,7 @@ export const smartBlocksContext: SmartBlocksContext = {
   indent: new Set(),
   unindent: new Set(),
   refMapping: {},
+  afterWorkflowMethods: [],
 };
 const resetContext = (context: Partial<SmartBlocksContext>) => {
   smartBlocksContext.onBlockExit = context.onBlockExit || (() => "");
@@ -393,6 +395,7 @@ const resetContext = (context: Partial<SmartBlocksContext>) => {
   smartBlocksContext.unindent = context.unindent || new Set();
   smartBlocksContext.dateBasisMethod = context.dateBasisMethod;
   smartBlocksContext.refMapping = context.refMapping || {};
+  smartBlocksContext.afterWorkflowMethods = context.afterWorkflowMethods || [];
 };
 
 const javascriptHandler =
@@ -1253,34 +1256,48 @@ export const COMMANDS: {
         args.length > 1 && args[args.length - 1].includes("GOTOBLOCK")
           ? args[args.length - 1]
           : undefined;
-      const pageOrUid = (blockNumberArg ? args.slice(0, -1) : args)
+      const pageOrUidArg = (blockNumberArg ? args.slice(0, -1) : args)
         .join(",")
         .trim();
+      const pageOrUid =
+        smartBlocksContext.variables[pageOrUidArg] || pageOrUidArg;
       const uid =
         getPageUidByPageTitle(extractTag(pageOrUid)) || extractRef(pageOrUid);
+      const refsToCreate = new Set(
+        Object.values(smartBlocksContext.refMapping)
+      );
       const navUid =
-        !getPageTitleByPageUid(uid) || !getTextByBlockUid(uid)
+        !getPageTitleByPageUid(uid) &&
+        !getTextByBlockUid(uid) &&
+        !refsToCreate.has(uid)
           ? createPage({ title: pageOrUid })
           : uid;
-      setTimeout(() => {
-        window.location.assign(getRoamUrl(navUid));
-        if (typeof blockNumberArg === "string") {
-          const blockNumber =
-            Number(blockNumberArg.replace(/GOTOBLOCK/, "").trim()) || 1;
-          setTimeout(() => {
-            const blocks = Array.from(
-              document.querySelectorAll(
-                ".roam-article .rm-level-0 .rm-block-text"
-              )
-            );
-            const index =
-              blockNumber > 0 ? blockNumber - 1 : blocks.length + blockNumber;
-            if (index >= 0 && index < blocks.length) {
-              openBlock(blocks[index].id);
-            }
-          }, 500);
-        }
-      }, 500);
+      const navToPage = () => {
+        setTimeout(() => {
+          window.location.assign(getRoamUrl(navUid));
+          if (typeof blockNumberArg === "string") {
+            const blockNumber =
+              Number(blockNumberArg.replace(/GOTOBLOCK/, "").trim()) || 1;
+            setTimeout(() => {
+              const blocks = Array.from(
+                document.querySelectorAll(
+                  ".roam-article .rm-level-0 .rm-block-text"
+                )
+              );
+              const index =
+                blockNumber > 0 ? blockNumber - 1 : blocks.length + blockNumber;
+              if (index >= 0 && index < blocks.length) {
+                openBlock(blocks[index].id);
+              }
+            }, 500);
+          }
+        }, 500);
+      };
+      if (refsToCreate.has(navUid)) {
+        smartBlocksContext.afterWorkflowMethods.push(navToPage);
+      } else {
+        navToPage();
+      }
       return "";
     },
   },
@@ -1293,38 +1310,56 @@ export const COMMANDS: {
         ["GOTOBLOCK", "GRAPH"].some((s) => args[args.length - 1].includes(s))
           ? args[args.length - 1]
           : undefined;
-      const pageOrUid = (afterNavArg ? args.slice(0, -1) : args)
+      const pageOrUidArg = (afterNavArg ? args.slice(0, -1) : args)
         .join(",")
         .trim();
+      const pageOrUid =
+        smartBlocksContext.variables[pageOrUidArg] || pageOrUidArg;
       const uid =
         getPageUidByPageTitle(extractTag(pageOrUid)) || extractRef(pageOrUid);
+      const refsToCreate = new Set(
+        Object.values(smartBlocksContext.refMapping)
+      );
       const navUid =
-        !getPageTitleByPageUid(uid) || !getTextByBlockUid(uid)
+        !getPageTitleByPageUid(uid) &&
+        !getTextByBlockUid(uid) &&
+        !refsToCreate.has(uid)
           ? createPage({ title: pageOrUid })
           : uid;
-      setTimeout(() => {
-        window.roamAlphaAPI.ui.rightSidebar.open();
-        if (/GRAPH/.test(afterNavArg)) {
-          window.roamAlphaAPI.ui.rightSidebar.addWindow({
-            window: { type: "graph", "block-uid": navUid },
-          });
-        } else if (/GOTOBLOCK/.test(afterNavArg)) {
-          const blockNumber =
-            Number(afterNavArg.replace(/GOTOBLOCK/, "").trim()) || 1;
-          setTimeout(() => {
-            const blocks = Array.from(
-              document.querySelectorAll(
-                ".sidebar-content>div:first-child .rm-block-text"
-              )
-            );
-            const index =
-              blockNumber > 0 ? blockNumber - 1 : blocks.length + blockNumber;
-            if (index >= 0 && index < blocks.length) {
-              openBlock(blocks[index].id);
-            }
-          }, 500);
-        }
-      }, 500);
+      const openInSidebar = () => {
+        setTimeout(() => {
+          window.roamAlphaAPI.ui.rightSidebar.open();
+          if (/GRAPH/.test(afterNavArg)) {
+            window.roamAlphaAPI.ui.rightSidebar.addWindow({
+              window: { type: "graph", "block-uid": navUid },
+            });
+          } else if (/GOTOBLOCK/.test(afterNavArg)) {
+            const blockNumber =
+              Number(afterNavArg.replace(/GOTOBLOCK/, "").trim()) || 1;
+            setTimeout(() => {
+              const blocks = Array.from(
+                document.querySelectorAll(
+                  ".sidebar-content>div:first-child .rm-block-text"
+                )
+              );
+              const index =
+                blockNumber > 0 ? blockNumber - 1 : blocks.length + blockNumber;
+              if (index >= 0 && index < blocks.length) {
+                openBlock(blocks[index].id);
+              }
+            }, 500);
+          } else {
+            window.roamAlphaAPI.ui.rightSidebar.addWindow({
+              window: { type: "block", "block-uid": navUid },
+            });
+          }
+        }, 500);
+      };
+      if (refsToCreate.has(navUid)) {
+        smartBlocksContext.afterWorkflowMethods.push(openInSidebar);
+      } else {
+        openInSidebar();
+      }
       return "";
     },
   },
@@ -1402,7 +1437,7 @@ export const COMMANDS: {
         : new RegExp(reg);
       if (blockText) {
         updateBlock({ uid, text: blockText.replace(regex, normOut) });
-        return new Promise(resolve => setTimeout(() => resolve(''), 1));
+        return new Promise((resolve) => setTimeout(() => resolve(""), 1));
       }
       return normText.replace(regex, normOut);
     },
@@ -1516,7 +1551,7 @@ const processBlockTextToPromises = (
             return text;
           }),
           nodeProps: s.reduce((prev, cur) => {
-            const nodeProps = {...cur[0]} || {} as InputTextNode;
+            const nodeProps = { ...cur[0] } || ({} as InputTextNode);
             delete nodeProps.children;
             delete nodeProps.uid;
             delete nodeProps.text;
@@ -1865,6 +1900,9 @@ export const sbBomb = ({
                   resolve();
                 }, 1)
               )
+          )
+          .then(() =>
+            Promise.all(smartBlocksContext.afterWorkflowMethods.map((w) => w()))
           )
           .finally(resolve),
       1

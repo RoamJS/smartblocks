@@ -531,7 +531,8 @@ runExtension("smartblocks", () => {
             }
             const ms = differenceInMilliseconds(addDays(triggerTime, 1), today);
             setTimeout(runDaily, ms + 1000);
-          });
+          })
+          .catch(() => '');
       }
     }
   };
@@ -712,7 +713,7 @@ runExtension("smartblocks", () => {
             .filter(
               (m) =>
                 m.end >= totalCount &&
-                m.start <= totalCount + t.nodeValue.length
+                m.start < totalCount + t.nodeValue.length
             )
             .map((m) => {
               const overlap = t.nodeValue.substring(
