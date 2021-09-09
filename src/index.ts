@@ -43,7 +43,7 @@ import { render as renderBulk } from "./BulkTrigger";
 import {
   CommandHandler,
   COMMANDS,
-  getCustomWorkflows,
+  getCleanCustomWorkflows,
   handlerByCommand,
   sbBomb,
   SmartBlocksContext,
@@ -498,7 +498,7 @@ runExtension("smartblocks", () => {
                 key: "workflow name",
                 defaultValue: "Daily",
               });
-              const srcUid = getCustomWorkflows().find(
+              const srcUid = getCleanCustomWorkflows().find(
                 ({ name }) => name === dailyWorkflowName
               )?.uid;
               if (srcUid) {
@@ -531,7 +531,7 @@ runExtension("smartblocks", () => {
             const ms = differenceInMilliseconds(addDays(triggerTime, 1), today);
             setTimeout(runDaily, ms + 1000);
           })
-          .catch(() => '');
+          .catch(() => "");
       }
     }
   };
@@ -592,10 +592,10 @@ runExtension("smartblocks", () => {
           const { [1]: buttonText = "", index, [0]: full } = match;
           const [workflowName, args = ""] = buttonText.split(":");
           b.addEventListener("click", () => {
-            const { uid: srcUid, name: srcName } = getCustomWorkflows().find(
-              ({ name }) =>
-                name.replace(/<%[A-Z]+%>/, "").trim() === workflowName
-            );
+            const { uid: srcUid, name: srcName } =
+              getCleanCustomWorkflows().find(
+                ({ name }) => name === workflowName
+              );
             if (!srcUid) {
               createBlock({
                 node: {
@@ -711,8 +711,7 @@ runExtension("smartblocks", () => {
           matches
             .filter(
               (m) =>
-                m.end >= totalCount &&
-                m.start < totalCount + t.nodeValue.length
+                m.end >= totalCount && m.start < totalCount + t.nodeValue.length
             )
             .map((m) => {
               const overlap = t.nodeValue.substring(

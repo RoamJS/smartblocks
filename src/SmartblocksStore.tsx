@@ -52,7 +52,7 @@ import {
   useStripe,
 } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
-import { getCustomWorkflows } from "./smartblocks";
+import { getCleanCustomWorkflows } from "./smartblocks";
 import lego from "./img/lego3blocks.png";
 
 const stripePromise = loadStripe(process.env.STRIPE_PUBLIC_KEY);
@@ -340,7 +340,7 @@ const DrawerContent = ({
     (workflow: string) => {
       const children = JSON.parse(workflow) as InputTextNode[];
       const uid =
-        getCustomWorkflows().find(
+        getCleanCustomWorkflows().find(
           ({ name }) => name === selectedSmartBlock.name
         )?.uid ||
         createBlock({

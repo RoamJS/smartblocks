@@ -309,12 +309,21 @@ export const getCustomWorkflows = () =>
         .replace(createTagRegex("SmartBlock"), "")
         .replace(createTagRegex("42SmartBlock"), "")
         .trim(),
-    }))
+    }));
+
+export const getVisibleCustomWorkflows = () =>
+  getCustomWorkflows()
     .filter(({ name }) => !HIDE_REGEX.test(name))
     .map(({ name, uid }) => ({
       uid,
       name: name.replace(HIDE_REGEX, ""),
     }));
+
+export const getCleanCustomWorkflows = () =>
+  getCustomWorkflows().map(({ name, uid }) => ({
+    uid,
+    name: name.replace(/<%[A-Z]+%>/, "").trim(),
+  }));
 
 const getFormatter =
   (format: string) =>
@@ -1188,8 +1197,8 @@ export const COMMANDS: {
     text: "SMARTBLOCK",
     help: "Runs another SmartBlock\n\n1. SmartBlock name\n\n2. Optional page name to execute the workflow remotely",
     handler: (inputName = "", ...pageName) => {
-      const srcUid = getCustomWorkflows().find(
-        ({ name }) => name.replace(/<%[A-Z]+%>/, "").trim() === inputName.trim()
+      const srcUid = getCleanCustomWorkflows().find(
+        ({ name }) => name === inputName.trim()
       )?.uid;
       if (srcUid) {
         if (pageName.length) {

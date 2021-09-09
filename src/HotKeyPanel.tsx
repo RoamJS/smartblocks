@@ -7,7 +7,7 @@ import {
   updateBlock,
 } from "roam-client";
 import { MenuItemSelect } from "roamjs-components";
-import { getCustomWorkflows } from "./smartblocks";
+import { getCleanCustomWorkflows } from "./smartblocks";
 
 export type SmartblockHotKeys = {
   uidToMapping: Record<string, string>;
@@ -19,7 +19,7 @@ const HotKeyPanel =
   ({ parentUid, uid: inputUid }: { uid?: string; parentUid: string }) => {
     const workflows = useMemo(
       () =>
-        getCustomWorkflows().sort(({ name: a }, { name: b }) =>
+        getCleanCustomWorkflows().sort(({ name: a }, { name: b }) =>
           a.localeCompare(b)
         ),
       []

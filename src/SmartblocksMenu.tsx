@@ -8,9 +8,7 @@ import React, {
 } from "react";
 import ReactDOM from "react-dom";
 import {
-  createBlock,
   DAILY_NOTE_PAGE_REGEX,
-  deleteBlock,
   getPageTitleByBlockUid,
   getPageUidByPageTitle,
   getUids,
@@ -20,7 +18,7 @@ import { getCoords } from "./dom";
 import lego from "./img/lego3blocks.png";
 import gear from "./img/gear.png";
 import {
-  getCustomWorkflows,
+  getVisibleCustomWorkflows,
   predefinedWorkflows,
   PREDEFINED_REGEX,
   sbBomb,
@@ -48,7 +46,7 @@ const SmartblocksMenu = ({
   const menuRef = useRef<HTMLUListElement>(null);
   const [filter, setFilter] = useState("");
   const initialWorkflows = useMemo(() => {
-    return getCustomWorkflows()
+    return getVisibleCustomWorkflows()
       .sort(({ name: a }, { name: b }) => a.localeCompare(b))
       .concat(isCustomOnly ? [] : predefinedWorkflows);
   }, []);

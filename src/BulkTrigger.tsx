@@ -22,11 +22,11 @@ import {
   PageInput,
   useArrowKeyDown,
 } from "roamjs-components";
-import { getCustomWorkflows, sbBomb } from "./smartblocks";
+import { getVisibleCustomWorkflows, sbBomb } from "./smartblocks";
 import fuzzy from "fuzzy";
 
 const BulkTrigger = ({ onClose }: { onClose: () => void }) => {
-  const allWorkflows = useMemo(() => getCustomWorkflows(), []);
+  const allWorkflows = useMemo(() => getVisibleCustomWorkflows(), []);
   const workflowNameByUid = useMemo(
     () => Object.fromEntries(allWorkflows.map(({ uid, name }) => [uid, name])),
     [allWorkflows]
