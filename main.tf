@@ -78,6 +78,10 @@ module "roamjs_lambda" {
       path = "smartblocks-daily", 
       method = "put"
     },
+    { 
+      path = "smartblocks-store", 
+      method = "delete"
+    },
   ]
   aws_access_token = var.aws_access_token
   aws_secret_token = var.aws_secret_token
