@@ -234,6 +234,7 @@ const DrawerContent = ({
   parentUid,
   onClose,
 }: { onClose: () => void } & Props) => {
+  const workflows = useMemo(getCleanCustomWorkflows, []);
   const [smartblocks, setSmartblocks] = useState<Smartblocks[]>([]);
   const [installed, setInstalled] = useState(false);
   const [updateable, setUpdateable] = useState(false);
@@ -295,7 +296,12 @@ const DrawerContent = ({
           `${process.env.API_URL}/smartblocks-store?uuid=${selectedSmartBlockId}&graph=${graph}&open=true`
         )
         .then((r) => {
-          setInstalled(r.data.installed);
+          const selectedName = selectedSmartBlock.name
+            .replace(/<%[A-Z]+%>/g, "")
+            .trim();
+          setInstalled(
+            r.data.installed && workflows.some((w) => w.name === selectedName)
+          );
           setUpdateable(r.data.updatable);
           setDonatable(r.data.donatable);
           setNumberOfDownloads(r.data.count);
@@ -335,14 +341,13 @@ const DrawerContent = ({
     setDonation,
     setNumberOfDownloads,
     setSelectedSmartBlockAuthorDisplayName,
+    workflows,
   ]);
   const installWorkflow = useCallback(
     (workflow: string) => {
       const children = JSON.parse(workflow) as InputTextNode[];
       const uid =
-        getCleanCustomWorkflows().find(
-          ({ name }) => name === selectedSmartBlock.name
-        )?.uid ||
+        workflows.find(({ name }) => name === selectedSmartBlock.name)?.uid ||
         createBlock({
           node: {
             text: `#SmartBlock ${selectedSmartBlock.name}`,

@@ -743,7 +743,7 @@ runExtension("smartblocks", () => {
             .filter((s) => !!s)
             .forEach((s) => t.parentElement.insertBefore(s, t));
           totalCount += t.nodeValue.length;
-          t.remove();
+          t.nodeValue = "";
         });
       }
     });
