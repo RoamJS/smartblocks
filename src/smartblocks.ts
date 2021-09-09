@@ -319,8 +319,8 @@ export const getVisibleCustomWorkflows = () =>
       name: name.replace(HIDE_REGEX, ""),
     }));
 
-export const getCleanCustomWorkflows = () =>
-  getCustomWorkflows().map(({ name, uid }) => ({
+export const getCleanCustomWorkflows = (workflows = getCustomWorkflows()) =>
+  workflows.map(({ name, uid }) => ({
     uid,
     name: name.replace(/<%[A-Z]+%>/, "").trim(),
   }));
@@ -365,7 +365,7 @@ export type SmartBlocksContext = {
   onBlockExit: CommandHandler;
   targetUid: string;
   ifCommand?: boolean;
-  exitBlock: 'yes' | 'no' | 'empty';
+  exitBlock: "yes" | "no" | "empty";
   exitWorkflow: boolean;
   variables: Record<string, string>;
   cursorPosition?: { uid: string; selection: number };
@@ -382,7 +382,7 @@ export type SmartBlocksContext = {
 export const smartBlocksContext: SmartBlocksContext = {
   onBlockExit: () => "",
   targetUid: "",
-  exitBlock: 'no',
+  exitBlock: "no",
   exitWorkflow: false,
   variables: {},
   currentContent: "",
@@ -395,7 +395,7 @@ const resetContext = (context: Partial<SmartBlocksContext>) => {
   smartBlocksContext.onBlockExit = context.onBlockExit || (() => "");
   smartBlocksContext.targetUid = context.targetUid || "";
   smartBlocksContext.ifCommand = context.ifCommand || undefined;
-  smartBlocksContext.exitBlock = context.exitBlock || 'no';
+  smartBlocksContext.exitBlock = context.exitBlock || "no";
   smartBlocksContext.exitWorkflow = context.exitWorkflow || false;
   smartBlocksContext.variables = context.variables || {};
   smartBlocksContext.cursorPosition = context.cursorPosition;
@@ -931,7 +931,7 @@ export const COMMANDS: {
     handler: (condition) => {
       try {
         if (!eval(condition)) {
-          smartBlocksContext.exitBlock = 'yes';
+          smartBlocksContext.exitBlock = "yes";
         }
         return "";
       } catch (e) {
@@ -955,7 +955,7 @@ export const COMMANDS: {
           );
         });
       if (!match) {
-        smartBlocksContext.exitBlock = 'yes';
+        smartBlocksContext.exitBlock = "yes";
       }
       return "";
     },
@@ -970,7 +970,7 @@ export const COMMANDS: {
         .map((s) => Number(s))
         .includes(today.getDate());
       if (!match) {
-        smartBlocksContext.exitBlock = 'yes';
+        smartBlocksContext.exitBlock = "yes";
       }
       return "";
     },
@@ -985,7 +985,7 @@ export const COMMANDS: {
         .map((s) => (s === "7" ? 0 : Number(s)))
         .includes(today.getDay());
       if (!match) {
-        smartBlocksContext.exitBlock = 'yes';
+        smartBlocksContext.exitBlock = "yes";
       }
       return "";
     },
@@ -1000,7 +1000,7 @@ export const COMMANDS: {
         `[:find ?b :where [?p :block/uid "${uid}"] [?b :block/refs ?p] [?b :block/uid ${blockUid}]]`
       )[0]?.[0];
       if (!present) {
-        smartBlocksContext.exitBlock = 'yes';
+        smartBlocksContext.exitBlock = "yes";
       }
       return "";
     },
@@ -1119,7 +1119,7 @@ export const COMMANDS: {
     text: "NOBLOCKOUTPUT",
     help: "No content output from a block",
     handler: () => {
-      smartBlocksContext.exitBlock = 'empty';
+      smartBlocksContext.exitBlock = "empty";
       return "";
     },
   },
@@ -1516,7 +1516,10 @@ const processBlockTextToPromises = (
       ? matches
       : ([{ name: "text", value: s }] as XRegExp.MatchRecursiveValueNameMatch[])
   ).map((c) => () => {
-    if (smartBlocksContext.exitBlock === 'yes' || smartBlocksContext.exitWorkflow) {
+    if (
+      smartBlocksContext.exitBlock === "yes" ||
+      smartBlocksContext.exitWorkflow
+    ) {
       return Promise.resolve<InputTextNode[]>([{ text: "" }]);
     }
     if (c.name === "text") {
@@ -1642,8 +1645,8 @@ const proccessBlockWithSmartness = async (
       nextBlocks,
       currentChildren
     );
-    if (smartBlocksContext.exitBlock !== 'no') {
-      smartBlocksContext.exitBlock = 'no';
+    if (smartBlocksContext.exitBlock !== "no") {
+      smartBlocksContext.exitBlock = "no";
       return [];
     }
     await smartBlocksContext.onBlockExit();

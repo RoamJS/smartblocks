@@ -44,6 +44,7 @@ import {
   CommandHandler,
   COMMANDS,
   getCleanCustomWorkflows,
+  getCustomWorkflows,
   handlerByCommand,
   sbBomb,
   SmartBlocksContext,
@@ -592,10 +593,10 @@ runExtension("smartblocks", () => {
           const { [1]: buttonText = "", index, [0]: full } = match;
           const [workflowName, args = ""] = buttonText.split(":");
           b.addEventListener("click", () => {
-            const { uid: srcUid, name: srcName } =
-              getCleanCustomWorkflows().find(
-                ({ name }) => name === workflowName
-              );
+            const workflows = getCustomWorkflows();
+            const { uid: srcUid } = getCleanCustomWorkflows(workflows).find(
+              ({ name }) => name === workflowName
+            );
             if (!srcUid) {
               createBlock({
                 node: {
@@ -620,7 +621,9 @@ runExtension("smartblocks", () => {
               const props = {
                 srcUid,
                 variables,
-                mutableCursor: !srcName.includes("<%NOCURSOR%>"),
+                mutableCursor: !(
+                  workflows.find((w) => w.uid === srcUid)?.name || ""
+                ).includes("<%NOCURSOR%>"),
               };
               if (keepButton) {
                 const targetUid = createBlock({
