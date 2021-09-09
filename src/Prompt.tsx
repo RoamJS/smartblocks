@@ -29,11 +29,16 @@ const Prompt = ({
   resolve,
 }: { onClose: () => void } & Props) => {
   const formattedDisplay = useMemo(
-    () => display.replace("{page}", "").replace("{block}", "").trim(),
+    () =>
+      display
+        .replace("{page}", "")
+        .replace("{block}", "")
+        .replace("{ref}", "")
+        .trim(),
     [display]
   );
   const isPageInput = useMemo(() => /{page}/.test(display), [display]);
-  const isBlockInput = useMemo(() => /{block}/.test(display), [display]);
+  const isBlockInput = useMemo(() => /{(block|ref)}/.test(display), [display]);
   const formattedOptions = useMemo(
     () => (isPageInput ? options.map(extractTag) : options),
     [options, isPageInput]
@@ -52,6 +57,7 @@ const Prompt = ({
     [resolve, onClose]
   );
   const contentRef = useRef<HTMLDivElement>(null);
+  const [uid, setUid] = useState("");
   useEffect(() => {
     if (!loaded) {
       setLoaded(true);
@@ -69,7 +75,9 @@ const Prompt = ({
       canOutsideClickCancel
       canEscapeKeyCancel
       onCancel={() => resolveAndClose("")}
-      onConfirm={() => resolveAndClose(value)}
+      onConfirm={() =>
+        resolveAndClose(/{ref}/.test(display) ? `((${uid}))` : value)
+      }
       cancelButtonText={"cancel"}
     >
       <H3>SmartBlocks Input</H3>
@@ -93,8 +101,13 @@ const Prompt = ({
           ) : isBlockInput ? (
             <BlockInput
               value={value}
-              setValue={setValue}
-              onConfirm={() => resolveAndClose(value)}
+              setValue={(q, s) => {
+                setValue(q);
+                setUid(s);
+              }}
+              onConfirm={() => {
+                resolveAndClose(/{ref}/.test(display) ? `((${uid}))` : value);
+              }}
             />
           ) : (
             <InputGroup
