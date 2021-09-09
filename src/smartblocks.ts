@@ -845,7 +845,7 @@ export const COMMANDS: {
         .filter(({ text, uid }) => {
           const ref =
             DAILY_REF_REGEX.exec(text)?.[1] ||
-            DAILY_NOTE_PAGE_TITLE_REGEX.exec(getPageTitleByBlockUid(uid))?.[1];
+            DAILY_NOTE_PAGE_TITLE_REGEX.exec(getPageTitleByBlockUid(uid))?.[0];
           if (ref) {
             const d = parseRoamDate(ref);
             return !undated && !isBefore(d, start) && !isAfter(d, end);
