@@ -1,7 +1,6 @@
 import {
   toConfig,
   runExtension,
-  getTreeByPageName,
   getBlockUidsAndTextsReferencingPage,
   addStyle,
   toRoamDateUid,
