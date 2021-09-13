@@ -1495,7 +1495,10 @@ const proccessBlockText = async (s: string): Promise<InputTextNode[]> => {
     return [
       {
         children: [],
-        text: `Block threw an error while running: ${s}`,
+        text: `Block threw an error while running: ${s.substring(
+          0,
+          s.length > 50 ? 47 : 50
+        )}${s.length > 50 ? "..." : ""}`,
       },
     ];
   }

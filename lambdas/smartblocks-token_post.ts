@@ -17,7 +17,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     })
     .promise()
     .then((r) =>
-      validToken(event, r.Item)
+      !validToken(event, r.Item)
         ? {
             statusCode: 401,
             body: `Token unauthorized for connecting account`,
