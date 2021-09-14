@@ -33,8 +33,6 @@ type Props = {
   dailyConfig?: RoamBasicNode;
 };
 
-const VALID_FILTER = /^[\w\d\s_-]$/;
-
 const SmartblocksMenu = ({
   onClose,
   textarea,
@@ -121,7 +119,7 @@ const SmartblocksMenu = ({
       } else if (e.key === "Enter") {
         const index = Number(menuRef.current.getAttribute("data-active-index"));
         onSelect(index);
-      } else if (VALID_FILTER.test(e.key)) {
+      } else if (e.key.length === 1) {
         const value = menuRef.current.getAttribute("data-filter");
         setFilter(`${value}${e.key}`);
       } else if (e.key === "Backspace") {
