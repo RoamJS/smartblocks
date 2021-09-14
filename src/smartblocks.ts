@@ -465,7 +465,7 @@ export const COMMANDS: {
       }
       const date = customDateNlp.parseDate(nlp, getDateBasisDate());
       if (!date) {
-        return `Could not return a valid date with text "${date}"`;
+        return `Could not return a valid date with text "${nlp}"`;
       }
       if (format.length) {
         return datefnsFormat(date, format.join(","), {
