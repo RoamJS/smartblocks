@@ -20,6 +20,7 @@ import {
   getDisplayNameByUid,
   getCurrentUserUid,
   createBlockObserver,
+  openBlock,
 } from "roam-client";
 import {
   createConfigObserver,
@@ -386,13 +387,17 @@ runExtension("smartblocks", () => {
                 timeout: 10000,
               });
               setTimeout(() => {
-                const newTextArea = document.getElementById(
-                  textarea.id
-                ) as HTMLTextAreaElement;
-                newTextArea.setSelectionRange(
-                  newPrefix.length - 2,
-                  newPrefix.length - 2
-                );
+                const newBlock = document.getElementById(textarea.id) as
+                  | HTMLTextAreaElement
+                  | HTMLDivElement;
+                if (newBlock.tagName === "DIV") {
+                  openBlock(textarea.id, newPrefix.length - 2);
+                } else {
+                  (newBlock as HTMLTextAreaElement).setSelectionRange(
+                    newPrefix.length - 2,
+                    newPrefix.length - 2
+                  );
+                }
               });
             }, 1);
           },

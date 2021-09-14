@@ -464,6 +464,9 @@ export const COMMANDS: {
         )}]]`;
       }
       const date = customDateNlp.parseDate(nlp, getDateBasisDate());
+      if (!date) {
+        return `Could not return a valid date with text "${date}"`;
+      }
       if (format.length) {
         return datefnsFormat(date, format.join(","), {
           useAdditionalDayOfYearTokens: true,
