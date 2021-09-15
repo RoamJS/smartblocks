@@ -1869,58 +1869,24 @@ export const sbBomb = ({
                             1
                           );
                         } else {
-                          const observer = new MutationObserver((mrs, obs) => {
-                            const el = mrs
-                              .flatMap((m) => Array.from(m.addedNodes))
-                              .filter((d) => d.nodeName === "DIV")
-                              .flatMap((m: HTMLDivElement) =>
-                                Array.from(
-                                  m.querySelectorAll<HTMLDivElement>(
-                                    "div.roam-block"
-                                  )
+                          const { uid: blockUid, selection } =
+                            smartBlocksContext.cursorPosition;
+                          const el = Array.from(
+                            document.body.querySelectorAll<HTMLElement>(
+                              "div.roam-block"
+                            )
+                          )
+                            .concat(
+                              Array.from(
+                                document.body.querySelectorAll<HTMLElement>(
+                                  "textarea"
                                 )
                               )
-                              .find((d) =>
-                                d.id.endsWith(
-                                  smartBlocksContext.cursorPosition.uid
-                                )
-                              );
-                            if (el) {
-                              setTimeout(
-                                () =>
-                                  openBlock(
-                                    el.id,
-                                    smartBlocksContext.cursorPosition.selection
-                                  ),
-                                1
-                              );
-                              obs.disconnect();
-                            }
-                            // weird edge case with input and cursor as first block
-                            const activeEl = mrs
-                              .flatMap((m) => Array.from(m.addedNodes))
-                              .find(
-                                (d) =>
-                                  d === document.activeElement &&
-                                  d.nodeName === "TEXTAREA"
-                              ) as HTMLTextAreaElement;
-                            if (activeEl) {
-                              setTimeout(
-                                () =>
-                                  activeEl.setSelectionRange(
-                                    smartBlocksContext.cursorPosition.selection,
-                                    smartBlocksContext.cursorPosition.selection
-                                  ),
-                                1
-                              );
-                              obs.disconnect();
-                            }
-                          });
-                          observer.observe(document.body, {
-                            childList: true,
-                            subtree: true,
-                          });
-                          setTimeout(() => observer.disconnect(), 60000);
+                            )
+                            .find((d) => d.id.endsWith(blockUid));
+                          if (el) {
+                            setTimeout(() => openBlock(el.id, selection), 1);
+                          }
                         }
                       }
                     } else {
