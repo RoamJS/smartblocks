@@ -1533,7 +1533,7 @@ const processBlockTextToPromises = (
     }
     const split = c.value.indexOf(":");
     const cmd = split < 0 ? c.value : c.value.substring(0, split);
-    const afterColon = c.value.substring(split + 1);
+    const afterColon = split < 0 ? "" : c.value.substring(split + 1);
     let commandStack = 0;
     return afterColon
       .split("")
