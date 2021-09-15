@@ -364,7 +364,7 @@ export type SmartBlocksContext = {
   onBlockExit: CommandHandler;
   targetUid: string;
   ifCommand?: boolean;
-  exitBlock: "yes" | "no" | "empty";
+  exitBlock: "yes" | "no" | "end" | "empty";
   exitWorkflow: boolean;
   variables: Record<string, string>;
   cursorPosition?: { uid: string; selection: number };
@@ -479,7 +479,9 @@ export const COMMANDS: {
     text: "TIME",
     help: "Returns time in 24 hour format",
     handler: (nlp) => {
-      const dt = nlp ? customDateNlp.parseDate(nlp, getDateBasisDate()) : new Date();
+      const dt = nlp
+        ? customDateNlp.parseDate(nlp, getDateBasisDate())
+        : new Date();
       return (
         dt.getHours().toString().padStart(2, "0") +
         ":" +
@@ -491,7 +493,9 @@ export const COMMANDS: {
     text: "TIMEAMPM",
     help: "Returns time in AM/PM format.",
     handler: (nlp) => {
-      const dt = nlp ? customDateNlp.parseDate(nlp, getDateBasisDate()) : new Date();
+      const dt = nlp
+        ? customDateNlp.parseDate(nlp, getDateBasisDate())
+        : new Date();
       const hours = dt.getHours();
       const minutes = dt.getMinutes();
       const ampm = hours >= 12 ? "PM" : "AM";
@@ -1119,7 +1123,15 @@ export const COMMANDS: {
   },
   {
     text: "NOBLOCKOUTPUT",
-    help: "No content output from a block",
+    help: "Enforces no content output from a block",
+    handler: () => {
+      smartBlocksContext.exitBlock = "end";
+      return "";
+    },
+  },
+  {
+    text: "SKIPIFEMPTY",
+    help: "If a block's content is empty, skip it",
     handler: () => {
       smartBlocksContext.exitBlock = "empty";
       return "";
@@ -1651,8 +1663,11 @@ const proccessBlockWithSmartness = async (
       currentChildren
     );
     if (smartBlocksContext.exitBlock !== "no") {
+      const oldExitBlock = smartBlocksContext.exitBlock;
       smartBlocksContext.exitBlock = "no";
-      return [];
+      if (oldExitBlock === "yes" || oldExitBlock === "end" || !props.text) {
+        return [];
+      }
     }
     await smartBlocksContext.onBlockExit();
     const processedChildren = await processChildren({
