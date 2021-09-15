@@ -29,7 +29,6 @@ import {
   getPageTitleByPageUid,
   createPage,
   getFullTreeByParentUid,
-  isTagOnPage,
   DAILY_NOTE_PAGE_TITLE_REGEX,
   getChildrenLengthByPageUid,
 } from "roam-client";
@@ -479,8 +478,8 @@ export const COMMANDS: {
   {
     text: "TIME",
     help: "Returns time in 24 hour format",
-    handler: () => {
-      const dt = new Date();
+    handler: (nlp) => {
+      const dt = nlp ? customDateNlp.parseDate(nlp, getDateBasisDate()) : new Date();
       return (
         dt.getHours().toString().padStart(2, "0") +
         ":" +
