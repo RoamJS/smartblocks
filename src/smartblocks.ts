@@ -490,8 +490,8 @@ export const COMMANDS: {
   {
     text: "TIMEAMPM",
     help: "Returns time in AM/PM format.",
-    handler: () => {
-      const dt = new Date();
+    handler: (nlp) => {
+      const dt = nlp ? customDateNlp.parseDate(nlp, getDateBasisDate()) : new Date();
       const hours = dt.getHours();
       const minutes = dt.getMinutes();
       const ampm = hours >= 12 ? "PM" : "AM";
