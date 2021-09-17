@@ -144,8 +144,12 @@ const StripePanel = ({ parentUid }: { uid?: string; parentUid: string }) => {
             {showRetry && (
               <div style={{ marginTop: 8 }}>
                 <p>
-                  If you accidentally close out of the Stripe window, feel free
-                  to try again here:
+                  If your country is not currently supported, reach out to
+                  support@roamjs.com to inquire about supporting your country.
+                </p>
+                <p>
+                  If you close out of the Stripe window, feel free to try again
+                  here:
                 </p>
                 <Button
                   intent={Intent.WARNING}

@@ -55,7 +55,7 @@ import { renderPrompt } from "./Prompt";
 import { renderToast } from "roamjs-components";
 import { ParsingComponents } from "chrono-node/dist/results";
 import { ORDINAL_WORD_DICTIONARY } from "./dom";
-import { ToasterPosition } from "@blueprintjs/core";
+import { Intent, ToasterPosition } from "@blueprintjs/core";
 import { renderLoading } from "./Loading";
 
 export const PREDEFINED_REGEX = /#\d*-predefined/;
@@ -748,16 +748,6 @@ export const COMMANDS: {
     },
   },
   {
-    text: "CURRENTBLOCKREF",
-    help: "Sets a variable to the block UID for the current block\n\n1. Variable name",
-    handler: (name = "") => {
-      if (name) {
-        smartBlocksContext.variables[name] = smartBlocksContext.currentUid;
-      }
-      return smartBlocksContext.currentUid;
-    },
-  },
-  {
     text: "CURRENTBLOCKCONTENT",
     help: "Sets a variable to the block UID for the current block\n\n1. Variable name",
     handler: (name = "") => {
@@ -1061,9 +1051,11 @@ export const COMMANDS: {
     text: "CURRENTBLOCKREF",
     help: "Sets a variable to the block UID for the current block\n\n1. Variable name",
     handler: (name = "") => {
-      smartBlocksContext.variables[
-        name
-      ] = `((${smartBlocksContext.currentUid}))`;
+      if (name) {
+        smartBlocksContext.variables[
+          name
+        ] = `((${smartBlocksContext.currentUid}))`;
+      }
       return "";
     },
   },
@@ -1791,6 +1783,9 @@ const resolveRefs = (nodes: InputTextNode[]): InputTextNode[] =>
     children: resolveRefs(node.children || []),
   }));
 
+const count = (t: InputTextNode[]): number =>
+  t.map((c) => count(c.children) + 1).reduce((p, c) => p + c, 0);
+
 export const sbBomb = ({
   srcUid,
   target: { uid, start = 0, end = start, isPage = false },
@@ -1830,9 +1825,19 @@ export const sbBomb = ({
         })
           .then(resolveRefs)
           .then(
-            ([firstChild, ...tree]) =>
+            (tree) =>
               new Promise<void>((resolve) =>
                 setTimeout(() => {
+                  const [firstChild, ...next] = tree;
+                  const numNodes = count(tree);
+                  if (numNodes >= 300) {
+                    renderToast({
+                      intent: Intent.WARNING,
+                      id: "smartblocks-limit",
+                      content:
+                        "This workflow outputs more than 300 blocks which is Roam's limit. Reach out to support@roamjs.com if this applies to you",
+                    });
+                  }
                   if (firstChild) {
                     const startingOrder = isPage
                       ? getChildrenLengthByPageUid(uid)
@@ -1867,7 +1872,7 @@ export const sbBomb = ({
                         createBlock({ order, parentUid: uid, node })
                       );
                     }
-                    tree.forEach((node, i) =>
+                    next.forEach((node, i) =>
                       createBlock({
                         parentUid,
                         order: startingOrder + 1 + i,
@@ -1901,22 +1906,24 @@ export const sbBomb = ({
                         } else {
                           const { uid: blockUid, selection } =
                             smartBlocksContext.cursorPosition;
-                          const el = Array.from(
-                            document.body.querySelectorAll<HTMLElement>(
-                              "div.roam-block"
-                            )
-                          )
-                            .concat(
-                              Array.from(
-                                document.body.querySelectorAll<HTMLElement>(
-                                  "textarea"
-                                )
+                          setTimeout(() => {
+                            const el = Array.from(
+                              document.body.querySelectorAll<HTMLElement>(
+                                "div.roam-block"
                               )
                             )
-                            .find((d) => d.id.endsWith(blockUid));
-                          if (el) {
-                            setTimeout(() => openBlock(el.id, selection), 1);
-                          }
+                              .concat(
+                                Array.from(
+                                  document.body.querySelectorAll<HTMLElement>(
+                                    "textarea"
+                                  )
+                                )
+                              )
+                              .find((d) => d.id.endsWith(blockUid));
+                            if (el) {
+                              setTimeout(() => openBlock(el.id, selection), 1);
+                            }
+                          }, 10);
                         }
                       }
                     } else {
