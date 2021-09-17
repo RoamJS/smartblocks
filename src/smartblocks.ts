@@ -486,7 +486,10 @@ export const COMMANDS: {
     help: "Returns time in 24 hour format",
     handler: (nlp) => {
       const dt = nlp
-        ? customDateNlp.parseDate(nlp, getDateBasisDate())
+        ? customDateNlp.parseDate(nlp, getDateBasisDate()) ||
+          // chrono fails basic parsing requiring forward date if ambiguous
+          // https://github.com/wanasit/chrono/commit/4f264a9f21fbd04eb740bf48f5616f6e6e0e78b7
+          customDateNlp.parseDate(`in ${nlp}`, getDateBasisDate())
         : new Date();
       return (
         dt.getHours().toString().padStart(2, "0") +
@@ -500,7 +503,10 @@ export const COMMANDS: {
     help: "Returns time in AM/PM format.",
     handler: (nlp) => {
       const dt = nlp
-        ? customDateNlp.parseDate(nlp, getDateBasisDate())
+        ? customDateNlp.parseDate(nlp, getDateBasisDate()) ||
+          // chrono fails basic parsing requiring forward date if ambiguous
+          // https://github.com/wanasit/chrono/commit/4f264a9f21fbd04eb740bf48f5616f6e6e0e78b7
+          customDateNlp.parseDate(`in ${nlp}`, getDateBasisDate())
         : new Date();
       const hours = dt.getHours();
       const minutes = dt.getMinutes();
