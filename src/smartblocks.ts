@@ -87,7 +87,7 @@ const ORDINAL_REGEX = new RegExp(
     .join("|")}|(?:[1-9])?[0-9](?:st|nd|rd|th)?)\\b`,
   "i"
 );
-const customDateNlp = chrono.casual.clone();
+const customDateNlp = new chrono.Chrono();
 customDateNlp.parsers.push(
   {
     pattern: () => /\b((start|end) )?of\b/i,
@@ -464,7 +464,11 @@ export const COMMANDS: {
           customDateNlp.parseDate("today", getDateBasisDate())
         )}]]`;
       }
-      const date = customDateNlp.parseDate(nlp, getDateBasisDate());
+      const date =
+        customDateNlp.parseDate(nlp, getDateBasisDate()) ||
+        // chrono fails basic parsing requiring forward date if ambiguous
+        // https://github.com/wanasit/chrono/commit/4f264a9f21fbd04eb740bf48f5616f6e6e0e78b7
+        customDateNlp.parseDate(`in ${nlp}`, getDateBasisDate());
       if (!date) {
         return `Could not return a valid date with text "${nlp}"`;
       }
