@@ -451,13 +451,12 @@ const javascriptHandler =
 export const COMMANDS: {
   text: string;
   help: string;
-  args?: true;
+  delayArgs?: true;
   handler: CommandHandler;
 }[] = [
   {
     text: "DATE",
     help: "Returns a Roam formatted dated page reference.\n\n1: NLP expression\n\n2: optional: format for returned date, example: YYYY-MM-DD",
-    args: true,
     handler: (nlp, ...format) => {
       if (!nlp) {
         return `[[${toRoamDate(
@@ -1279,11 +1278,25 @@ export const COMMANDS: {
   },
   {
     text: "REPEAT",
+    delayArgs: true,
     help: "Repeats the current block a number of specified times\n\n1. Number of times for repeat",
-    handler: (repeatArg = "1", content = "") => {
-      const count = Number(repeatArg) || 1;
-      return Array(count).fill(content);
-    },
+    handler: (repeatArg = "1", content = "") =>
+      proccessBlockText(repeatArg)
+        .then(([{ text }]) =>
+          Array(Number(text) || 1)
+            .fill(content)
+            .map((s) => () => proccessBlockText(s))
+            .reduce(
+              (prev, cur) =>
+                prev.then((p) =>
+                  cur().then((c) => {
+                    return [...p, c];
+                  })
+                ),
+              Promise.resolve([] as InputTextNode[][])
+            )
+        )
+        .then((s) => s.flatMap((c) => c)),
   },
   {
     text: "DATEBASIS",
@@ -1516,7 +1529,7 @@ export const COMMANDS: {
   },
 ];
 export const handlerByCommand = Object.fromEntries(
-  COMMANDS.map((c) => [c.text, c.handler])
+  COMMANDS.map(({ text, help, ...rest }) => [text, rest])
 );
 
 const proccessBlockText = async (s: string): Promise<InputTextNode[]> => {
@@ -1578,56 +1591,60 @@ const processBlockTextToPromises = (
     const cmd = split < 0 ? c.value : c.value.substring(0, split);
     const afterColon = split < 0 ? "" : c.value.substring(split + 1);
     let commandStack = 0;
-    return afterColon
-      .split("")
-      .reduce((prev, cur, i, arr) => {
-        if (cur === "," && !commandStack && arr[i - 1] !== "\\") {
-          return [...prev, ""];
-        } else if (cur === "\\" && arr[i + 1] === ",") {
-          return prev;
-        } else {
-          if (cur === "%") {
-            if (arr[i - 1] === "<") {
-              commandStack++;
-            } else if (arr[i + 1] === ">") {
-              commandStack--;
-            }
+    const args = afterColon.split("").reduce((prev, cur, i, arr) => {
+      if (cur === "," && !commandStack && arr[i - 1] !== "\\") {
+        return [...prev, ""];
+      } else if (cur === "\\" && arr[i + 1] === ",") {
+        return prev;
+      } else {
+        if (cur === "%") {
+          if (arr[i - 1] === "<") {
+            commandStack++;
+          } else if (arr[i + 1] === ">") {
+            commandStack--;
           }
-          const current = prev.slice(-1)[0] || "";
-          return [...prev.slice(0, -1), `${current}${cur}`];
         }
-      }, [] as string[])
-      .map((s) => () => proccessBlockText(s))
-      .reduce(
-        (prev, cur) =>
-          prev.then((p) =>
-            cur().then((c) => {
-              return [...p, c];
+        const current = prev.slice(-1)[0] || "";
+        return [...prev.slice(0, -1), `${current}${cur}`];
+      }
+    }, [] as string[]);
+    const { handler, delayArgs } = handlerByCommand[cmd] || {};
+    return (
+      delayArgs
+        ? Promise.resolve({ args, nodeProps: {} })
+        : args
+            .map((s) => () => proccessBlockText(s))
+            .reduce(
+              (prev, cur) =>
+                prev.then((p) =>
+                  cur().then((c) => {
+                    return [...p, c];
+                  })
+                ),
+              Promise.resolve([] as InputTextNode[][])
+            )
+            .then((s) => {
+              if (!s.length) return { args: [], nodeProps: {} };
+              return {
+                args: s.map((c) => {
+                  const [{ text, children, uid: _ }, ...rest] = c;
+                  nextBlocks.push(...rest);
+                  currentChildren.push(...(children || []));
+                  return text;
+                }),
+                nodeProps: s.reduce((prev, cur) => {
+                  const nodeProps = { ...cur[0] } || ({} as InputTextNode);
+                  delete nodeProps.children;
+                  delete nodeProps.uid;
+                  delete nodeProps.text;
+                  return { ...prev, ...nodeProps };
+                }, {}),
+              };
             })
-          ),
-        Promise.resolve([] as InputTextNode[][])
-      )
-      .then((s) => {
-        if (!s.length) return { args: [], nodeProps: {} };
-        return {
-          args: s.map((c) => {
-            const [{ text, children, uid: _ }, ...rest] = c;
-            nextBlocks.push(...rest);
-            currentChildren.push(...(children || []));
-            return text;
-          }),
-          nodeProps: s.reduce((prev, cur) => {
-            const nodeProps = { ...cur[0] } || ({} as InputTextNode);
-            delete nodeProps.children;
-            delete nodeProps.uid;
-            delete nodeProps.text;
-            return { ...prev, ...nodeProps };
-          }, {}),
-        };
-      })
+    )
       .then(({ args, nodeProps }) =>
-        !!handlerByCommand[cmd]
-          ? Promise.resolve(handlerByCommand[cmd](...args)).then((output) => ({
+        !!handler
+          ? Promise.resolve(handler(...args)).then((output) => ({
               output,
               nodeProps,
             }))

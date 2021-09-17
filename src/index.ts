@@ -336,7 +336,7 @@ runExtension("smartblocks", () => {
       c: Pick<SmartBlocksContext, "targetUid" | "variables">
     ) => CommandHandler;
   }) => {
-    handlerByCommand[text] = handler(smartBlocksContext);
+    handlerByCommand[text] = { handler: handler(smartBlocksContext) };
   };
   Object.keys(window.roamjs.extension).forEach((text) => {
     if (window.roamjs.extension[text].registerSmartBlocksCommand) {
