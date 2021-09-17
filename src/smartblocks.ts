@@ -1167,19 +1167,47 @@ export const COMMANDS: {
     text: "SUM",
     help: "Add all of the parameters together\n1: An addend to sum.",
     handler: (...args) =>
-      args.reduce((a, b) => a + (Number(b) || 0), 0).toString(),
+      args.reduce((a, b) => {
+        const isADate = DAILY_NOTE_PAGE_REGEX.test(extractTag(a));
+        const isBDate = DAILY_NOTE_PAGE_REGEX.test(extractTag(b));
+        if (isADate && isBDate) {
+          return b;
+        } else if (isADate) {
+          return toRoamDate(
+            addDays(parseRoamDate(extractTag(a)), Number(b) || 0)
+          );
+        } else if (isBDate) {
+          return toRoamDate(
+            addDays(parseRoamDate(extractTag(b)), Number(a) || 0)
+          );
+        } else {
+          return ((Number(a) || 0) + (Number(b) || 0)).toString();
+        }
+      }, "0"),
   },
   {
     text: "DIFFERENCE",
     help: "Find the difference between two parameters\n1: The minuend. 2: The subtrahend.",
-    handler: (minuend = "0", subtrahend = "0") =>
-      DAILY_NOTE_PAGE_REGEX.test(extractTag(minuend)) &&
-      DAILY_NOTE_PAGE_REGEX.test(extractTag(subtrahend))
-        ? differenceInDays(
-            parseRoamDate(extractTag(minuend)),
-            parseRoamDate(extractTag(subtrahend))
-          ).toString()
-        : ((Number(minuend) || 0) - (Number(subtrahend) || 0)).toString(),
+    handler: (minuend = "0", subtrahend = "0") => {
+      const isMinDate = DAILY_NOTE_PAGE_REGEX.test(extractTag(minuend));
+      const isSubDate = DAILY_NOTE_PAGE_REGEX.test(extractTag(subtrahend));
+      if (isMinDate && isSubDate) {
+        return differenceInDays(
+          parseRoamDate(extractTag(minuend)),
+          parseRoamDate(extractTag(subtrahend))
+        ).toString();
+      } else if (isMinDate) {
+        return toRoamDate(
+          subDays(parseRoamDate(extractTag(minuend)), Number(subtrahend) || 0)
+        );
+      } else if (isSubDate) {
+        return toRoamDate(
+          subDays(parseRoamDate(extractTag(subtrahend)), Number(minuend) || 0)
+        );
+      } else {
+        return ((Number(minuend) || 0) - (Number(subtrahend) || 0)).toString();
+      }
+    },
   },
   {
     text: "PRODUCT",
