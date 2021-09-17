@@ -1219,7 +1219,7 @@ export const COMMANDS: {
       )?.uid;
       if (srcUid) {
         if (pageName.length) {
-          const title = pageName.join(",");
+          const title = extractTag(pageName.join(","));
           const targetUid =
             getPageUidByPageTitle(title) || createPage({ title });
           const parentContext = { ...smartBlocksContext };
