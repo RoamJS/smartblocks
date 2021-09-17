@@ -69,8 +69,9 @@ export const getCoords = (t: HTMLTextAreaElement) => {
       span.offsetTop +
       parseInt(computed.borderTopWidth) +
       parseInt(computed.fontSize) -
-      t.scrollTop,
-    left: windowLeft + span.offsetLeft + parseInt(computed.borderLeftWidth),
+      t.scrollTop -
+      9,
+    left: windowLeft + span.offsetLeft + parseInt(computed.borderLeftWidth) - 1,
   };
   document.body.removeChild(div);
   return coordinates;
@@ -116,7 +117,7 @@ export const ORDINAL_WORD_DICTIONARY: { [word: string]: number } = {
   "twenty-eighth": 28,
   "twenty ninth": 29,
   "twenty-ninth": 29,
-  "thirtieth": 30,
+  thirtieth: 30,
   "thirty first": 31,
   "thirty-first": 31,
 };

@@ -152,7 +152,11 @@ const SmartblocksMenu = ({
       canEscapeKeyClose
       minimal
       target={<span />}
-      position={Position.BOTTOM_RIGHT}
+      position={Position.BOTTOM_LEFT}
+      modifiers={{
+        flip: { enabled: false },
+        preventOverflow: { enabled: false },
+      }}
       content={
         <Menu
           ulRef={menuRef}

@@ -41,6 +41,8 @@ import addYears from "date-fns/addYears";
 import subDays from "date-fns/subDays";
 import isBefore from "date-fns/isBefore";
 import isAfter from "date-fns/isAfter";
+import endOfDay from "date-fns/endOfDay";
+import startOfDay from "date-fns/startOfDay";
 import startOfWeek from "date-fns/startOfWeek";
 import startOfMonth from "date-fns/startOfMonth";
 import startOfYear from "date-fns/startOfYear";
@@ -839,11 +841,11 @@ export const COMMANDS: {
       const undated = startArg === "-1" && endArg === "-1";
       const start =
         !undated && startArg
-          ? customDateNlp.parseDate(startArg, referenceDate)
+          ? startOfDay(customDateNlp.parseDate(startArg, referenceDate))
           : new Date(0);
       const end =
         !undated && endArg
-          ? customDateNlp.parseDate(endArg, referenceDate)
+          ? endOfDay(customDateNlp.parseDate(endArg, referenceDate))
           : new Date(9999, 11, 31);
       const limit = Number(limitArg);
       const title = extractTag(titleArg);
