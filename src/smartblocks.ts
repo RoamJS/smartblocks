@@ -769,9 +769,9 @@ export const COMMANDS: {
   },
   {
     text: "CONCAT",
-    help: "Combines a comma separated list of strings into one string\n\n1: comma separated list",
+    help: "Combines a comma separated list of text into one. Handles references\n\n1: comma separated list",
     handler: (...args) => {
-      return args.join("");
+      return args.map((a) => getTextByBlockUid(extractRef(a)) || a).join("");
     },
   },
   {
