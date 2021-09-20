@@ -6,7 +6,7 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { extractTag } from "roam-client";
+import { extractRef, extractTag, getTextByBlockUid } from "roam-client";
 import {
   BlockInput,
   createOverlayRender,
@@ -47,7 +47,12 @@ const Prompt = ({
     () => (isPageInput ? extractTag(initialValue) : initialValue),
     [initialValue, isPageInput]
   );
-  const [value, setValue] = useState(formattedInitialValue);
+  const [value, setValue] = useState(() =>
+    isBlockInput
+      ? getTextByBlockUid(extractRef(formattedInitialValue)) ||
+        formattedInitialValue
+      : formattedInitialValue
+  );
   const [loaded, setLoaded] = useState(false);
   const resolveAndClose = useCallback(
     (s: string) => {
@@ -55,6 +60,20 @@ const Prompt = ({
       onClose();
     },
     [resolve, onClose]
+  );
+  const getAllBlocks = useMemo(
+    () =>
+      formattedOptions.length
+        ? () =>
+            [formattedInitialValue]
+              .concat(formattedOptions)
+              .map(extractRef)
+              .map((uid) => ({
+                text: getTextByBlockUid(uid),
+                uid,
+              }))
+        : undefined,
+    [formattedInitialValue, formattedOptions]
   );
   const contentRef = useRef<HTMLDivElement>(null);
   const [uid, setUid] = useState("");
@@ -84,7 +103,19 @@ const Prompt = ({
       <div className={Classes.ALERT_BODY} ref={contentRef}>
         <Label>
           {formattedDisplay}
-          {formattedOptions.length ? (
+          {isBlockInput ? (
+            <BlockInput
+              value={value}
+              setValue={(q, s) => {
+                setValue(q);
+                setUid(s);
+              }}
+              onConfirm={() => {
+                resolveAndClose(/{ref}/.test(display) ? `((${uid}))` : value);
+              }}
+              getAllBlocks={getAllBlocks}
+            />
+          ) : formattedOptions.length ? (
             <MenuItemSelect
               activeItem={value}
               onItemSelect={(v) => setValue(v)}
@@ -97,17 +128,6 @@ const Prompt = ({
               value={value}
               setValue={setValue}
               onConfirm={() => resolveAndClose(value)}
-            />
-          ) : isBlockInput ? (
-            <BlockInput
-              value={value}
-              setValue={(q, s) => {
-                setValue(q);
-                setUid(s);
-              }}
-              onConfirm={() => {
-                resolveAndClose(/{ref}/.test(display) ? `((${uid}))` : value);
-              }}
             />
           ) : (
             <InputGroup

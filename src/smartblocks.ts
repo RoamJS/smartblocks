@@ -704,7 +704,7 @@ export const COMMANDS: {
     text: "INPUT",
     help: "Prompts user for input which will then be inserted into block\n\n1: text to display in prompt. Add a @@ followed by text for a default value",
     handler: async (...args) => {
-      const [display, initialValue, ...options] = args.join(",").split("%%");
+      const [display, initialValue, ...options] = args.join("%%").split("%%");
       return await renderPrompt({ display, initialValue, options });
     },
   },
@@ -912,11 +912,12 @@ export const COMMANDS: {
   },
   {
     text: "THEN",
+    delayArgs: true,
     help: "Used with IF when IF is true\n\n1: Text to be inserted",
     handler: (...args: string[]) => {
       if (smartBlocksContext.ifCommand) {
         smartBlocksContext.ifCommand = undefined;
-        return args.join(",");
+        return proccessBlockText(args.join(","));
       }
       return "";
     },
@@ -1536,7 +1537,7 @@ const proccessBlockText = async (s: string): Promise<InputTextNode[]> => {
   try {
     const nextBlocks: InputTextNode[] = [];
     const currentChildren: InputTextNode[] = [];
-    const promises = processBlockTextToPromises(s, nextBlocks, currentChildren);
+    const promises = processBlockTextToPromises(s);
     const props = await processPromisesToBlockProps(
       promises,
       nextBlocks,
@@ -1563,11 +1564,10 @@ const proccessBlockText = async (s: string): Promise<InputTextNode[]> => {
   }
 };
 
-const processBlockTextToPromises = (
-  s: string,
-  nextBlocks: InputTextNode[],
-  currentChildren: InputTextNode[]
-) => {
+const flattenText = (blocks: InputTextNode[]): string[] =>
+  blocks.flatMap((block) => [block.text, ...flattenText(block.children || [])]);
+
+const processBlockTextToPromises = (s: string) => {
   const matches = XRegExp.matchRecursive(s, "<%", "%>", "g", {
     valueNames: ["text", null, "command", null],
     escapeChar: "\\",
@@ -1626,12 +1626,7 @@ const processBlockTextToPromises = (
             .then((s) => {
               if (!s.length) return { args: [], nodeProps: {} };
               return {
-                args: s.map((c) => {
-                  const [{ text, children, uid: _ }, ...rest] = c;
-                  nextBlocks.push(...rest);
-                  currentChildren.push(...(children || []));
-                  return text;
-                }),
+                args: s.flatMap((c) => flattenText(c)),
                 nodeProps: s.reduce((prev, cur) => {
                   const nodeProps = { ...cur[0] } || ({} as InputTextNode);
                   delete nodeProps.children;
@@ -1695,11 +1690,7 @@ const proccessBlockWithSmartness = async (
   try {
     const nextBlocks: InputTextNode[] = [];
     const currentChildren: InputTextNode[] = [];
-    const promises = processBlockTextToPromises(
-      n.text,
-      nextBlocks,
-      currentChildren
-    ).map(
+    const promises = processBlockTextToPromises(n.text).map(
       (p) => () =>
         p().then((t) => {
           smartBlocksContext.currentContent += t[0]?.text || "";
