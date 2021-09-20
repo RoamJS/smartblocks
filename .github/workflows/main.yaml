@@ -20,7 +20,7 @@ jobs:
       - name: build
         run: npm run build 
       - name: RoamJS Publish
-        uses: dvargas92495/roamjs-publish@0.2.4
+        uses: dvargas92495/roamjs-publish@0.2.5
         with:
           token: ${{ secrets.ROAMJS_DEVELOPER_TOKEN }}
           source: build
