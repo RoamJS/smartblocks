@@ -25,6 +25,7 @@ import {
 } from "./smartblocks";
 import fuzzy from "fuzzy";
 import { getSettingValueFromTree, setInputSetting } from "roamjs-components";
+import { isMobile } from "react-device-detect";
 
 type Props = {
   textarea: HTMLTextAreaElement;
@@ -130,6 +131,9 @@ const SmartblocksMenu = ({
           onClose();
           return;
         }
+      } else if (isMobile) {
+        const value = menuRef.current.getAttribute("data-filter");
+        setFilter(`${value}${String.fromCharCode(e.keyCode)}`);
       } else if (e.key !== "Shift") {
         onClose();
         return;
