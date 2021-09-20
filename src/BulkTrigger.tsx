@@ -25,14 +25,18 @@ import {
 import { getVisibleCustomWorkflows, sbBomb } from "./smartblocks";
 import fuzzy from "fuzzy";
 
-const BulkTrigger = ({ onClose }: { onClose: () => void }) => {
+type Props = {
+  initialLocations: string[];
+}
+
+const BulkTrigger = ({ onClose, initialLocations }: { onClose: () => void } & Props) => {
   const allWorkflows = useMemo(() => getVisibleCustomWorkflows(), []);
   const workflowNameByUid = useMemo(
     () => Object.fromEntries(allWorkflows.map(({ uid, name }) => [uid, name])),
     [allWorkflows]
   );
   const [workflows, setWorkflows] = useState<string[]>([]);
-  const [locations, setLocations] = useState<string[]>([]);
+  const [locations, setLocations] = useState<string[]>(initialLocations);
   const [activeWorkflow, setActiveWorkflow] = useState("");
   const [activeLocation, setActiveLocation] = useState("");
   const [loading, setLoading] = useState(false);

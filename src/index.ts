@@ -558,7 +558,16 @@ runExtension("smartblocks", () => {
   window.roamAlphaAPI.ui.commandPalette.addCommand({
     label: "Run Multiple SmartBlocks",
     callback: () => {
-      renderBulk({});
+      const parentUid = window.roamAlphaAPI.ui.getFocusedBlock()?.["block-uid"];
+      renderBulk({
+        initialLocations: parentUid
+          ? window.roamAlphaAPI
+              .q(
+                `[:find (pull ?p [:node/title]) :where [?b :block/uid "${parentUid}"] [?c :block/parents ?b] [?c :block/refs ?p]]`
+              )
+              .map((a) => a[0]?.title as string)
+          : [],
+      });
     },
   });
 
