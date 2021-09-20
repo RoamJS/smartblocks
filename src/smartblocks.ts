@@ -574,6 +574,21 @@ export const COMMANDS: {
     },
   },
   {
+    text: "RANDOMCHILDOF",
+    help: "Returns a random child block from a block references a page\n\n1: Page name or UID.",
+    handler: (titleOrUid = "") => {
+      const possibleTitle = extractTag(titleOrUid);
+      const parentUid = getPageUidByPageTitle(possibleTitle) || titleOrUid;
+      const uids = window.roamAlphaAPI
+        .q(
+          `[:find (pull ?c [:block/uid]) :where [?b :block/uid "${parentUid}"] [?r :block/refs ?b] [?c :block/parents ?r]]`
+        )
+        .map((r) => r[0]?.uid as string);
+      const uid = uids[Math.floor(Math.random() * uids.length)];
+      return uids.length ? `((${uid}))` : "No blocks on page!";
+    },
+  },
+  {
     text: "TODOTODAY",
     help: "Returns a list of block refs of TODOs for today\n\n1. Max # blocks\n\n2. Format of output.\n\n3. optional filter values",
     handler: (...args) => {
