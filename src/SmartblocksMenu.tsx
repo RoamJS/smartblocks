@@ -26,6 +26,7 @@ import {
 import fuzzy from "fuzzy";
 import { getSettingValueFromTree, setInputSetting } from "roamjs-components";
 import { isMobile } from "react-device-detect";
+import axios from "axios";
 
 type Props = {
   textarea: HTMLTextAreaElement;
@@ -92,12 +93,14 @@ const SmartblocksMenu = ({
             if (dailyWorkflowName === srcName) {
               const title = getPageTitleByBlockUid(blockUid);
               if (DAILY_NOTE_PAGE_REGEX.test(title)) {
-                const value = getPageUidByPageTitle(title);
-                setInputSetting({
-                  blockUid: dailyConfig.uid,
-                  value,
+                const newDate = getPageUidByPageTitle(title);
+                const uuid = getSettingValueFromTree({
+                  tree: dailyConfig.children,
                   key: "latest",
-                  index: 2,
+                });
+                axios.put(`${process.env.API_URL}/smartblocks-daily`, {
+                  newDate,
+                  uuid,
                 });
               }
             }
