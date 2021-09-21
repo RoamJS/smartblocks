@@ -52,6 +52,7 @@ import {
   smartBlocksContext,
 } from "./smartblocks";
 import TokenPanel from "./TokenPanel";
+import ReviewPanel from './ReviewPanel';
 import lego from "./img/lego3blocks.png";
 import StripePanel from "./StripePanel";
 import { Intent } from "@blueprintjs/core";
@@ -100,6 +101,26 @@ addStyle(`.roamjs-smartblocks-popover-target {
   width: 160px;
   min-width: 160px;
   margin: 0 4px;
+}
+
+.roamjs-smartblock-workflow-review {
+  z-index: 2100;
+}
+
+.roamjs-smartblock-workflow-review .bp3-dialog {
+  position: absolute;
+  top: 32px;
+  bottom: 32px;
+  left: 32px;
+  right: 32px;
+  width: unset;
+  box-shadow: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.roamjs-smartblock-workflow-review .bp3-dialog-header {
+  width: 100%;
 }
 
 /* https://stripe.com/docs/connect/collect-then-transfer-guide#create-account */
@@ -291,6 +312,14 @@ runExtension("smartblocks", () => {
                 "The display name that will appear in the store next to your workflow. By default, your display name in Roam will be shown. If not set, then your graph name will be shown.",
               defaultValue: getDisplayNameByUid(getCurrentUserUid()),
             },
+            {
+              title: "review",
+              type: "custom",
+              description: "Smartblock workflows under review",
+              options: {
+                component: ReviewPanel,
+              }
+            }
           ],
         },
       ],
