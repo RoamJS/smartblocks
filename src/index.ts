@@ -398,7 +398,18 @@ runExtension("smartblocks", () => {
             text,
             id: text,
             help,
-          })),
+          })).concat([
+            {
+              text: "NOCURSOR",
+              id: "NOCURSOR",
+              help: "Workflow modifier that removes the cursor from Roam Blocks at the end of the workflow",
+            },
+            {
+              text: "HIDE",
+              id: "HIDE",
+              help: "Workflow modifier that hides this workflow from the standard SmartBlock menu execution",
+            },
+          ]),
           onItemSelect: (item) => {
             const { blockUid } = getUids(textarea);
             const suffix = textarea.value.substring(textarea.selectionStart);
