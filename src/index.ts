@@ -52,7 +52,7 @@ import {
   smartBlocksContext,
 } from "./smartblocks";
 import TokenPanel from "./TokenPanel";
-import ReviewPanel from './ReviewPanel';
+import ReviewPanel from "./ReviewPanel";
 import lego from "./img/lego3blocks.png";
 import StripePanel from "./StripePanel";
 import { Intent } from "@blueprintjs/core";
@@ -318,8 +318,8 @@ runExtension("smartblocks", () => {
               description: "Smartblock workflows under review",
               options: {
                 component: ReviewPanel,
-              }
-            }
+              },
+            },
           ],
         },
       ],
@@ -727,7 +727,9 @@ runExtension("smartblocks", () => {
         c.nodeName === "#text"
           ? [c]
           : Array.from(c.childNodes).flatMap(flattenTextNodes);
-      const textNodes = flattenTextNodes(b);
+      const textNodes = flattenTextNodes(b).filter(
+        (t) => !t.parentElement.closest(".CodeMirror")
+      );
       const getMatches = (
         s: string,
         offset: number
@@ -757,7 +759,7 @@ runExtension("smartblocks", () => {
           matches
             .filter(
               (m) =>
-                m.end >= totalCount && m.start < totalCount + t.nodeValue.length
+                m.end > totalCount && m.start < totalCount + t.nodeValue.length
             )
             .map((m) => {
               const overlap = t.nodeValue.substring(
