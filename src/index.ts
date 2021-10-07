@@ -21,6 +21,7 @@ import {
   getCurrentUserUid,
   createBlockObserver,
   openBlock,
+  getPageTitleByPageUid,
 } from "roam-client";
 import {
   createConfigObserver,
@@ -373,6 +374,43 @@ runExtension("smartblocks", () => {
       delete window.roamjs.extension[text];
     }
   });
+  window.roamjs.extension.smartblocks.triggerSmartblock = ({
+    srcName,
+    srcUid = getCleanCustomWorkflows().find(({ name }) => name === srcName)
+      ?.uid,
+    targetName,
+    targetUid = getPageUidByPageTitle(targetName),
+    variables,
+  }: {
+    srcName?: string;
+    srcUid?: string;
+    targetName?: string;
+    targetUid?: string;
+    variables?: Record<string, string>;
+  }) => {
+    if (!srcUid) {
+      if (srcName) {
+        throw new Error(`Could not find workflow with name ${srcName}`);
+      } else {
+        throw new Error("Either the `srcName` or `srcUid` input is required");
+      }
+    }
+    if (!targetUid) {
+      if (targetName) {
+        throw new Error(`Could not find page with name ${targetName}`);
+      } else {
+        throw new Error("Either the `targetName` or `targetUid` input is required");
+      }
+    }
+    return sbBomb({
+      srcUid,
+      target: {
+        uid: targetUid,
+        isPage: !!(targetName || getPageTitleByPageUid(targetUid)),
+      },
+      variables,
+    });
+  };
 
   document.addEventListener("input", (e) => {
     const target = e.target as HTMLElement;

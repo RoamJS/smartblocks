@@ -1516,14 +1516,14 @@ export const COMMANDS: {
   {
     text: "REPLACE",
     help: "Returns the text in the first argument after replacing one sub text with another. If the first argument is a block ref, replaces the block text in that ref instead. If the first argument is a variable, replace with that variable's value.\n\n1. Source text\n\n2.Text to replace\n\n3.Text to replace with",
-    handler: (text = "", reg = "", out = "") => {
+    handler: (text = "", reg = "", out = "", flags = '') => {
       const normText = smartBlocksContext.variables[text] || text;
       const normOut = smartBlocksContext.variables[out] || out;
       const uid = extractRef(normText);
       const blockText = getTextByBlockUid(uid);
       const regex = /^`(.*?)`$/.test(reg)
-        ? new RegExp(reg.slice(1, -1))
-        : new RegExp(reg);
+        ? new RegExp(reg.slice(1, -1), flags)
+        : new RegExp(reg, flags);
       if (blockText) {
         updateBlock({ uid, text: blockText.replace(regex, normOut) });
         return new Promise((resolve) => setTimeout(() => resolve(""), 1));
