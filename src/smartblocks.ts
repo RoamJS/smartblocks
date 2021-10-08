@@ -31,6 +31,7 @@ import {
   getFullTreeByParentUid,
   DAILY_NOTE_PAGE_TITLE_REGEX,
   getChildrenLengthByPageUid,
+  normalizePageTitle,
 } from "roam-client";
 import * as chrono from "chrono-node";
 import datefnsFormat from "date-fns/format";
@@ -562,11 +563,10 @@ export const COMMANDS: {
       const uids = window.roamAlphaAPI
         .q(
           `[:find ?u :where [?r :block/uid ?u] ${refUids
-            .map(
-              ({uid, excludes}, i) => {
-                const mentions = `[?b${i} :block/uid "${uid}"] [?r :block/refs ?b${i}]`;
-                return excludes ? `(not ${mentions})` : mentions
-              })
+            .map(({ uid, excludes }, i) => {
+              const mentions = `[?b${i} :block/uid "${uid}"] [?r :block/refs ?b${i}]`;
+              return excludes ? `(not ${mentions})` : mentions;
+            })
             .join(" ")}]`
         )
         .map((s) => s[0]);
@@ -822,6 +822,30 @@ export const COMMANDS: {
       getDisplayNameByUid(getCurrentUserUid()) ||
       getCurrentUserDisplayName() ||
       "No Diplay Name for Current User",
+  },
+  {
+    text: "PAGEMENTIONS",
+    help: "Returns list of pages that mention the input title\n\n1: Max blocks to return\n\n2: Page or Tag Name",
+    handler: (limitArg = "20", ...search: string[]) => {
+      const limit = Number(limitArg) || 20;
+      const titles = window.roamAlphaAPI
+        .q(
+          `[:find ?t :where [?p :node/title ?t] ${search
+            .map((s, i) => {
+              const mentions = `[?b${i} :node/title "${normalizePageTitle(
+                extractTag(s)
+              )}"] [?r${i} :block/refs ?b${i}] [?r${i} :block/page ?p]`;
+              return mentions;
+            })
+            .join(" ")}]`
+        )
+        .map((s) => s[0] as string);
+      if (limit === -1) return `${titles.length}`;
+      return titles
+        .sort((a, b) => a.localeCompare(b))
+        .slice(0, limit)
+        .map((s) => `[[${s}]]`);
+    },
   },
   {
     text: "BLOCKMENTIONS",

@@ -236,6 +236,7 @@ const DrawerContent = ({
 }: { onClose: () => void } & Props) => {
   const workflows = useMemo(getCleanCustomWorkflows, []);
   const [smartblocks, setSmartblocks] = useState<Smartblocks[]>([]);
+  const [users, setUsers] = useState<Record<string, string>>({});
   const [installed, setInstalled] = useState(false);
   const [updateable, setUpdateable] = useState(false);
   const [donatable, setDonatable] = useState(false);
@@ -254,9 +255,10 @@ const DrawerContent = ({
         regex.test(f.name) ||
         regex.test(f.description) ||
         f.tags.some((s) => regex.test(s)) ||
-        regex.test(f.author)
+        regex.test(f.author) ||
+        (users[f.author] && regex.test(users[f.author]))
     );
-  }, [smartblocks, search, tabId]);
+  }, [smartblocks, search, tabId, users]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selectedSmartBlockId, setSelectedSmartBlockId] = useState("");
@@ -270,16 +272,27 @@ const DrawerContent = ({
       setLoading(true);
       setError("");
       axios
-        .get<{ smartblocks: Smartblocks[] }>(
+        .get<{
+          smartblocks: Smartblocks[];
+          users: { author: string; displayName: string }[];
+        }>(
           `${process.env.API_URL}/smartblocks-store?tab=${tabId}&graph=${graph}`
         )
-        .then((r) =>
+        .then((r) => {
           setSmartblocks(
             r.data.smartblocks.sort(({ name: a }, { name: b }) =>
               a.localeCompare(b)
             )
-          )
-        )
+          );
+          setUsers(
+            Object.fromEntries(
+              r.data.users.map(({ author, displayName }) => [
+                author,
+                displayName,
+              ])
+            )
+          );
+        })
         .catch((e) => {
           setSmartblocks([]);
           setError(e.response?.data?.message || e.response?.data || e.message);

@@ -212,77 +212,96 @@ export const handler: APIGatewayProxyHandler = async (event) => {
           }),
           headers,
         }))
-    : (filterTab === "installed"
-        ? dynamo
-            .query({
-              TableName: "RoamJSSmartBlocks",
-              IndexName: "status-author-index",
-              ExpressionAttributeNames: {
-                "#s": "status",
-                "#a": "author",
-              },
-              ExpressionAttributeValues: {
-                ":s": { S: "INSTALLED" },
-                ":a": { S: graph },
-              },
-              KeyConditionExpression: "#a = :a AND #s = :s",
-            })
-            .promise()
-            .then((is) => {
-              const uuids = Array.from(new Set(is.Items.map((u) => u.name.S)));
-              const batches = Math.ceil(uuids.length / 100);
-              const requests = new Array(batches).fill(null).map((_, i, all) =>
-                new Array(i === all.length - 1 ? uuids.length % 100 : 100)
+    : Promise.all([
+        filterTab === "installed"
+          ? dynamo
+              .query({
+                TableName: "RoamJSSmartBlocks",
+                IndexName: "status-author-index",
+                ExpressionAttributeNames: {
+                  "#s": "status",
+                  "#a": "author",
+                },
+                ExpressionAttributeValues: {
+                  ":s": { S: "INSTALLED" },
+                  ":a": { S: graph },
+                },
+                KeyConditionExpression: "#a = :a AND #s = :s",
+              })
+              .promise()
+              .then((is) => {
+                const uuids = Array.from(
+                  new Set(is.Items.map((u) => u.name.S))
+                );
+                const batches = Math.ceil(uuids.length / 100);
+                const requests = new Array(batches)
                   .fill(null)
-                  .map((_, j) => ({
-                    uuid: { S: uuids[i * 100 + j] },
-                  }))
-              );
-              return Promise.all(
-                requests.map((Keys) =>
-                  dynamo
-                    .batchGetItem({
-                      RequestItems: { RoamJSSmartBlocks: { Keys } },
-                    })
-                    .promise()
-                )
-              ).then((all) => {
-                return all.flatMap((a) => a.Responses.RoamJSSmartBlocks);
-              });
-            })
-        : filterTab === "published"
-        ? dynamo
-            .query({
-              TableName: "RoamJSSmartBlocks",
-              IndexName: "status-author-index",
-              ExpressionAttributeNames: {
-                "#s": "status",
-                "#a": "author",
-              },
-              ExpressionAttributeValues: {
-                ":s": { S: "LIVE" },
-                ":a": { S: graph },
-              },
-              KeyConditionExpression: "#a = :a AND #s = :s",
-            })
-            .promise()
-            .then((r) => r.Items)
-        : dynamo
-            .query({
-              TableName: "RoamJSSmartBlocks",
-              IndexName: "status-index",
-              ExpressionAttributeNames: {
-                "#s": "status",
-              },
-              ExpressionAttributeValues: {
-                ":s": { S: "LIVE" },
-              },
-              KeyConditionExpression: "#s = :s",
-            })
-            .promise()
-            .then((r) => r.Items)
-      )
-        .then((items) => ({
+                  .map((_, i, all) =>
+                    new Array(i === all.length - 1 ? uuids.length % 100 : 100)
+                      .fill(null)
+                      .map((_, j) => ({
+                        uuid: { S: uuids[i * 100 + j] },
+                      }))
+                  );
+                return Promise.all(
+                  requests.map((Keys) =>
+                    dynamo
+                      .batchGetItem({
+                        RequestItems: { RoamJSSmartBlocks: { Keys } },
+                      })
+                      .promise()
+                  )
+                ).then((all) => {
+                  return all.flatMap((a) => a.Responses.RoamJSSmartBlocks);
+                });
+              })
+          : filterTab === "published"
+          ? dynamo
+              .query({
+                TableName: "RoamJSSmartBlocks",
+                IndexName: "status-author-index",
+                ExpressionAttributeNames: {
+                  "#s": "status",
+                  "#a": "author",
+                },
+                ExpressionAttributeValues: {
+                  ":s": { S: "LIVE" },
+                  ":a": { S: graph },
+                },
+                KeyConditionExpression: "#a = :a AND #s = :s",
+              })
+              .promise()
+              .then((r) => r.Items)
+          : dynamo
+              .query({
+                TableName: "RoamJSSmartBlocks",
+                IndexName: "status-index",
+                ExpressionAttributeNames: {
+                  "#s": "status",
+                },
+                ExpressionAttributeValues: {
+                  ":s": { S: "LIVE" },
+                },
+                KeyConditionExpression: "#s = :s",
+              })
+              .promise()
+              .then((r) => r.Items),
+        dynamo
+          .query({
+            TableName: "RoamJSSmartBlocks",
+            IndexName: "status-index",
+            ExpressionAttributeNames: {
+              "#s": "status",
+            },
+            ExpressionAttributeValues: {
+              ":s": { S: "USER" },
+            },
+            KeyConditionExpression: "#s = :s",
+          })
+          .promise()
+          .then((r) => r.Items),
+      ])
+        .then(([items, users]) => ({
           statusCode: 200,
           body: JSON.stringify({
             smartblocks: items.map((i) =>
@@ -292,6 +311,10 @@ export const handler: APIGatewayProxyHandler = async (event) => {
                   .map(([k, v]) => [k, v.N ? Number(v.N) : v.S || v.SS])
               )
             ),
+            users: users.map((i) => ({
+              author: i.uuid.S,
+              displayName: i.description?.S || '',
+            }))
           }),
           headers,
         }))
