@@ -544,10 +544,18 @@ export const COMMANDS: {
     text: "RANDOMBLOCKMENTION",
     help: "Returns random block where page ref mentioned\n\n1: Page name or UID",
     handler: (...args) => {
-      const refUids = args.map((titleOrUid) => {
-        const possibleTitle = extractTag(titleOrUid);
-        return getPageUidByPageTitle(possibleTitle) || titleOrUid;
-      });
+      const refUids = args
+        .map((titleOrUid) => ({
+          titleOrUid: titleOrUid.replace(/^-/, ""),
+          excludes: /^-/.test(titleOrUid),
+        }))
+        .map(({ titleOrUid, excludes }) => {
+          const possibleTitle = extractTag(titleOrUid);
+          return {
+            uid: getPageUidByPageTitle(possibleTitle) || titleOrUid,
+            excludes,
+          };
+        });
       if (!refUids.length) {
         return "Please include at least one page name or UID.";
       }
@@ -555,8 +563,10 @@ export const COMMANDS: {
         .q(
           `[:find ?u :where [?r :block/uid ?u] ${refUids
             .map(
-              (uid, i) => `[?r :block/refs ?b${i}] [?b${i} :block/uid "${uid}"]`
-            )
+              ({uid, excludes}, i) => {
+                const mentions = `[?b${i} :block/uid "${uid}"] [?r :block/refs ?b${i}]`;
+                return excludes ? `(not ${mentions})` : mentions
+              })
             .join(" ")}]`
         )
         .map((s) => s[0]);
@@ -1516,7 +1526,7 @@ export const COMMANDS: {
   {
     text: "REPLACE",
     help: "Returns the text in the first argument after replacing one sub text with another. If the first argument is a block ref, replaces the block text in that ref instead. If the first argument is a variable, replace with that variable's value.\n\n1. Source text\n\n2.Text to replace\n\n3.Text to replace with",
-    handler: (text = "", reg = "", out = "", flags = '') => {
+    handler: (text = "", reg = "", out = "", flags = "") => {
       const normText = smartBlocksContext.variables[text] || text;
       const normOut = smartBlocksContext.variables[out] || out;
       const uid = extractRef(normText);
