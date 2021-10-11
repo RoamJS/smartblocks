@@ -355,18 +355,22 @@ runExtension("smartblocks", () => {
   const highlighting = tree.some((t) =>
     toFlexRegex("highlighting").test(t.text)
   );
+  const customCommands: { text: string; help: string }[] = [];
 
   window.roamjs.extension.smartblocks = {};
   window.roamjs.extension.smartblocks.registerCommand = ({
     text,
+    help = `Description for ${text}`,
     handler,
   }: {
     text: string;
+    help?: string;
     handler: (
       c: Pick<SmartBlocksContext, "targetUid" | "variables">
     ) => CommandHandler;
   }) => {
     handlerByCommand[text] = { handler: handler(smartBlocksContext) };
+    customCommands.push({ text, help });
   };
   Object.keys(window.roamjs.extension).forEach((text) => {
     if (window.roamjs.extension[text].registerSmartBlocksCommand) {
@@ -399,7 +403,9 @@ runExtension("smartblocks", () => {
       if (targetName) {
         throw new Error(`Could not find page with name ${targetName}`);
       } else {
-        throw new Error("Either the `targetName` or `targetUid` input is required");
+        throw new Error(
+          "Either the `targetName` or `targetUid` input is required"
+        );
       }
     }
     return sbBomb({
@@ -447,6 +453,11 @@ runExtension("smartblocks", () => {
               id: "HIDE",
               help: "Workflow modifier that hides this workflow from the standard SmartBlock menu execution",
             },
+            ...customCommands.map(({ text, help }) => ({
+              text,
+              id: text,
+              help,
+            })),
           ]),
           onItemSelect: (item) => {
             const { blockUid } = getUids(textarea);
