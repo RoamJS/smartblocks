@@ -787,6 +787,7 @@ export const COMMANDS: {
     handler: (name = "") => {
       if (name) {
         smartBlocksContext.variables[name] = smartBlocksContext.currentContent;
+        return "";
       }
       return smartBlocksContext.currentContent;
     },
@@ -801,11 +802,17 @@ export const COMMANDS: {
   {
     text: "CURRENTPAGENAME",
     help: "Returns the current page name the smart block is running in.",
-    handler: (mode) => {
+    handler: (modeOrName) => {
       const title =
         getPageTitleByBlockUid(smartBlocksContext.targetUid) ||
         getPageTitleByPageUid(smartBlocksContext.targetUid);
-      return mode === "base" ? title.split("/").slice(-1)[0] : title;
+      const pageName =
+        modeOrName === "base" ? title.split("/").slice(-1)[0] : title;
+      if (modeOrName && modeOrName !== "base") {
+        smartBlocksContext.variables[modeOrName] = pageName;
+        return "";
+      }
+      return pageName;
     },
   },
   {
@@ -1110,12 +1117,12 @@ export const COMMANDS: {
     text: "CURRENTBLOCKREF",
     help: "Sets a variable to the block UID for the current block\n\n1. Variable name",
     handler: (name = "") => {
+      const ref = `((${smartBlocksContext.currentUid}))`;
       if (name) {
-        smartBlocksContext.variables[
-          name
-        ] = `((${smartBlocksContext.currentUid}))`;
+        smartBlocksContext.variables[name] = ref;
+        return "";
       }
-      return "";
+      return ref;
     },
   },
   {
