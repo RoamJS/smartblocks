@@ -1,7 +1,9 @@
 import { APIGatewayProxyHandler } from "aws-lambda";
 import { DynamoDB } from "aws-sdk";
+import axios from "axios";
+import type Stripe from "stripe";
 import { v4 } from "uuid";
-import { s3, dynamo, headers, stripe } from "./common";
+import { s3, dynamo, headers, stripe, ses } from "./common";
 
 const getWorkflow = (item: DynamoDB.AttributeMap, graph: string) =>
   s3
@@ -145,18 +147,73 @@ export const handler: APIGatewayProxyHandler = async (event) => {
                         headers,
                       }))
                 )
-            : (Number(r.Item?.price?.N) || 0) <= 0 && donationValue <= 0
-            ? getWorkflow(r.Item, graph)
             : !!paymentIntentId
             ? stripe.paymentIntents.retrieve(paymentIntentId).then((p) =>
                 p.status === "succeeded"
-                  ? getWorkflow(r.Item, graph)
+                  ? getWorkflow(r.Item, graph).then(async (response) => {
+                      const noUser = {
+                        name: "Anonymous User",
+                        email: "",
+                      };
+                      return Promise.all([
+                        stripe.accounts.retrieve(
+                          p.transfer_data.destination as string
+                        ),
+                        p.customer
+                          ? stripe.customers
+                              .retrieve(p.customer as string)
+                              .then((c) => (c as Stripe.Customer) || noUser)
+                              .catch((e) => {
+                                console.log(e);
+                                return noUser;
+                              })
+                          : Promise.resolve(noUser),
+                      ])
+                        .then(
+                          ([a, c]) =>
+                            a.email &&
+                            ses
+                              .sendEmail({
+                                Destination: {
+                                  ToAddresses: [a.email],
+                                },
+                                Message: {
+                                  Body: {
+                                    Text: {
+                                      Charset: "UTF-8",
+                                      Data: `${c.name} just paid $${
+                                        p.amount / 100
+                                      } for your SmartBlock workflow ${
+                                        r.Item?.name?.S
+                                      }!\n\n${
+                                        c.email &&
+                                        `You could reach them at ${c.email} to say thanks!`
+                                      }`,
+                                    },
+                                  },
+                                  Subject: {
+                                    Charset: "UTF-8",
+                                    Data: `New RoamJS SmartBlock Purchase!`,
+                                  },
+                                },
+                                Source: "support@roamjs.com",
+                              })
+                              .promise()
+                        )
+                        .then(() => response)
+                        .catch((e) => {
+                          console.log(e);
+                          return response;
+                        });
+                    })
                   : {
                       statusCode: 401,
                       body: `Invalid payment id`,
                       headers,
                     }
               )
+            : (Number(r.Item?.price?.N) || 0) <= 0 && donationValue <= 0
+            ? getWorkflow(r.Item, graph)
             : dynamo
                 .query({
                   TableName: "RoamJSSmartBlocks",
@@ -313,8 +370,8 @@ export const handler: APIGatewayProxyHandler = async (event) => {
             ),
             users: users.map((i) => ({
               author: i.uuid.S,
-              displayName: i.description?.S || '',
-            }))
+              displayName: i.description?.S || "",
+            })),
           }),
           headers,
         }))

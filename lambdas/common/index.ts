@@ -24,9 +24,13 @@ export const ses = new AWS.SES({
   region: "us-east-1",
 });
 
-export const validToken = (event: APIGatewayProxyEvent, item: DynamoDB.AttributeMap) => {
-    const storedToken = item?.token?.S;
-    if (!storedToken) return true;
-    const clientToken = event.headers.Authorization || event.headers.authorization || "";
-    return sha256(clientToken).toString() === storedToken
-}
+export const validToken = (
+  event: APIGatewayProxyEvent,
+  item: DynamoDB.AttributeMap
+) => {
+  const storedToken = item?.token?.S;
+  if (!storedToken) return true;
+  const clientToken =
+    event.headers.Authorization || event.headers.authorization || "";
+  return sha256(clientToken).toString() === storedToken;
+};
