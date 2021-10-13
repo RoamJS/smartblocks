@@ -58,6 +58,7 @@ import { ParsingComponents } from "chrono-node/dist/results";
 import { ORDINAL_WORD_DICTIONARY } from "./dom";
 import { Intent, ToasterPosition } from "@blueprintjs/core";
 import { renderLoading } from "./Loading";
+import axios from "axios";
 
 export const PREDEFINED_REGEX = /#\d*-predefined/;
 const PAGE_TITLE_REGEX = /^(?:#?\[\[(.*)\]\]|#([^\s]*))$/;
@@ -1582,6 +1583,13 @@ export const COMMANDS: {
       const uid = extractRef(normRef);
       updateBlock({ uid, text: normOut });
       return "";
+    },
+  },
+  {
+    text: "APIGET",
+    help: "Sends an API request with the GET method to fetch data from a third party\n\n1. URL",
+    handler: (url = "") => {
+      return axios.get(url).then((r) => JSON.stringify(r.data));
     },
   },
 ];
