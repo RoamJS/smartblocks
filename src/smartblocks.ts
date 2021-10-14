@@ -1778,12 +1778,13 @@ const proccessBlockWithSmartness = async (
       nodes: n.children,
       nextBlocks,
     });
-    const { textAlign, viewType, heading } = n;
+    const { textAlign, viewType, heading, open } = n;
     return [
       {
         textAlign,
         viewType,
         heading,
+        open,
         ...props,
         children: [...currentChildren, ...processedChildren],
       },

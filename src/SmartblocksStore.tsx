@@ -24,6 +24,7 @@ import React, {
 } from "react";
 import {
   createOverlayRender,
+  Description,
   getSettingValueFromTree,
   getSubTree,
   renderToast,
@@ -33,7 +34,6 @@ import {
   createBlock,
   deleteBlock,
   getBasicTreeByParentUid,
-  getCurrentPageUid,
   getCurrentUserDisplayName,
   getCurrentUserEmail,
   getCurrentUserUid,
@@ -359,8 +359,11 @@ const DrawerContent = ({
   const installWorkflow = useCallback(
     (workflow: string) => {
       const children = JSON.parse(workflow) as InputTextNode[];
+      const selectedName = selectedSmartBlock.name
+        .replace(/<%[A-Z]+%>/g, "")
+        .trim();
       const uid =
-        workflows.find(({ name }) => name === selectedSmartBlock.name)?.uid ||
+        workflows.find(({ name }) => name === selectedName)?.uid ||
         createBlock({
           node: {
             text: `#SmartBlock ${selectedSmartBlock.name}`,
@@ -387,7 +390,10 @@ const DrawerContent = ({
     setError("");
     axios
       .get(
-        `${process.env.API_URL}/smartblocks-store?uuid=${selectedSmartBlockId}&graph=${graph}&donation=${donation}`
+        `${process.env.API_URL}/smartblocks-store?uuid=${selectedSmartBlockId}&graph=${graph}&donation=${donation}`,
+        {
+          headers: { "x-roamjs-email": getCurrentUserEmail() || "" },
+        }
       )
       .then((r) => {
         if (r.data.secret) {
@@ -442,7 +448,7 @@ const DrawerContent = ({
           <h6 className={loading ? Classes.SKELETON : ""}>
             {selectedSmartBlockAuthorDisplayName || selectedSmartBlock.author}
           </h6>
-          <h1>{selectedSmartBlock.name}</h1>
+          <h1>{selectedSmartBlock.name.replace(/<%[A-Z]+%>/g, "").trim()}</h1>
           <div
             style={{
               display: "flex",
@@ -460,7 +466,9 @@ const DrawerContent = ({
                       .get(
                         `${process.env.API_URL}/smartblocks-store?uuid=${selectedSmartBlockId}&graph=${graph}`,
                         {
-                          headers: { Authorization: id },
+                          headers: {
+                            Authorization: id,
+                          },
                         }
                       )
                       .then((r) => {

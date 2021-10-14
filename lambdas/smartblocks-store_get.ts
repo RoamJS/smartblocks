@@ -37,6 +37,20 @@ const TAB_REGEX = new RegExp(
   "i"
 );
 
+const ensureCustomer = (email: string): Promise<string | undefined> => {
+  if (!email) {
+    return Promise.resolve(undefined);
+  }
+  return stripe.customers
+    .list({ email })
+    .then((c) =>
+      c.data.length
+        ? c.data[0].id
+        : stripe.customers.create({ email }).then((c) => c.id)
+    )
+    .catch(() => undefined);
+};
+
 export const handler: APIGatewayProxyHandler = async (event) => {
   const {
     uuid = "",
@@ -47,6 +61,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
   } = event.queryStringParameters || {};
   const paymentIntentId =
     event.headers.Authorization || event.headers.authorization || "";
+  const email = event.headers["x-roamjs-email"] || "";
   const filterTab = TAB_REGEX.test(tab) ? tab.toLowerCase() : "marketplace";
   const donationValue = (Number(donation) || 0) * 100;
   if (donationValue > 0 && donationValue < 1) {
@@ -168,9 +183,10 @@ export const handler: APIGatewayProxyHandler = async (event) => {
                                 return noUser;
                               })
                           : Promise.resolve(noUser),
+                        stripe.paymentMethods.retrieve(p.payment_method as string)
                       ])
                         .then(
-                          ([a, c]) =>
+                          ([a, c, pm]) =>
                             a.email &&
                             ses
                               .sendEmail({
@@ -181,13 +197,13 @@ export const handler: APIGatewayProxyHandler = async (event) => {
                                   Body: {
                                     Text: {
                                       Charset: "UTF-8",
-                                      Data: `${c.name} just paid $${
+                                      Data: `${c.name || noUser.name} just paid $${
                                         p.amount / 100
                                       } for your SmartBlock workflow ${
                                         r.Item?.name?.S
                                       }!\n\n${
-                                        c.email &&
-                                        `You could reach them at ${c.email} to say thanks!`
+                                        (c.email || pm.billing_details.email) &&
+                                        `You could reach them at ${c.email || pm.billing_details.email} to say thanks!`
                                       }`,
                                     },
                                   },
@@ -239,20 +255,23 @@ export const handler: APIGatewayProxyHandler = async (event) => {
                         })
                         .promise()
                         .then((t) =>
-                          stripe.paymentIntents.create({
-                            payment_method_types: ["card"],
-                            amount: Number(r.Item?.price?.N) || donationValue,
-                            currency: "usd",
-                            application_fee_amount:
-                              30 +
-                              Math.ceil(
-                                (Number(r.Item?.price?.N) || donationValue) *
-                                  0.08
-                              ),
-                            transfer_data: {
-                              destination: t.Item.stripe.S,
-                            },
-                          })
+                          ensureCustomer(email).then((customer) =>
+                            stripe.paymentIntents.create({
+                              payment_method_types: ["card"],
+                              amount: Number(r.Item?.price?.N) || donationValue,
+                              currency: "usd",
+                              application_fee_amount:
+                                30 +
+                                Math.ceil(
+                                  (Number(r.Item?.price?.N) || donationValue) *
+                                    0.08
+                                ),
+                              transfer_data: {
+                                destination: t.Item.stripe.S,
+                              },
+                              customer,
+                            })
+                          )
                         )
                         .then((s) => ({
                           statusCode: 200,
