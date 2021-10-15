@@ -392,7 +392,7 @@ const DrawerContent = ({
       .get(
         `${process.env.API_URL}/smartblocks-store?uuid=${selectedSmartBlockId}&graph=${graph}&donation=${donation}`,
         {
-          headers: { "x-roamjs-email": getCurrentUserEmail() || "" },
+          headers: { Authorization: getCurrentUserEmail() || "" },
         }
       )
       .then((r) => {

@@ -59,9 +59,13 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     open,
     donation = "0",
   } = event.queryStringParameters || {};
-  const paymentIntentId =
+  console.log(event.queryStringParameters);
+  const authorization =
     event.headers.Authorization || event.headers.authorization || "";
-  const email = event.headers["x-roamjs-email"] || "";
+  const paymentIntentId = authorization.startsWith("email:")
+    ? ""
+    : authorization;
+  const email = authorization.startsWith("email:") ? authorization : "";
   const filterTab = TAB_REGEX.test(tab) ? tab.toLowerCase() : "marketplace";
   const donationValue = (Number(donation) || 0) * 100;
   if (donationValue > 0 && donationValue < 1) {
@@ -183,7 +187,9 @@ export const handler: APIGatewayProxyHandler = async (event) => {
                                 return noUser;
                               })
                           : Promise.resolve(noUser),
-                        stripe.paymentMethods.retrieve(p.payment_method as string)
+                        stripe.paymentMethods.retrieve(
+                          p.payment_method as string
+                        ),
                       ])
                         .then(
                           ([a, c, pm]) =>
@@ -197,13 +203,17 @@ export const handler: APIGatewayProxyHandler = async (event) => {
                                   Body: {
                                     Text: {
                                       Charset: "UTF-8",
-                                      Data: `${c.name || noUser.name} just paid $${
+                                      Data: `${
+                                        c.name || noUser.name
+                                      } just paid $${
                                         p.amount / 100
                                       } for your SmartBlock workflow ${
                                         r.Item?.name?.S
                                       }!\n\n${
                                         (c.email || pm.billing_details.email) &&
-                                        `You could reach them at ${c.email || pm.billing_details.email} to say thanks!`
+                                        `You could reach them at ${
+                                          c.email || pm.billing_details.email
+                                        } to say thanks!`
                                       }`,
                                     },
                                   },
