@@ -330,7 +330,7 @@ runExtension("smartblocks", () => {
 
   const tree = getBasicTreeByParentUid(getPageUidByPageTitle(CONFIG));
   const trigger =
-    // getLegacy42Setting("SmartBlockTrigger") ||
+    getLegacy42Setting("SmartBlockTrigger") ||
     getSettingValueFromTree({
       tree,
       key: "trigger",
@@ -687,8 +687,7 @@ runExtension("smartblocks", () => {
       if (parentUid && !b.hasAttribute("data-roamjs-smartblock-button")) {
         b.setAttribute("data-roamjs-smartblock-button", "true");
         const regex = new RegExp(
-          `{{${b.textContent}:SmartBlock:(.*?)}}`
-          //`{{${b.textContent}:(?:42)?SmartBlock:(.*?)}}`
+          `{{${b.textContent}:(?:42)?SmartBlock:(.*?)}}`
         );
         const text = getTextByBlockUid(parentUid);
         const match = regex.exec(text);
