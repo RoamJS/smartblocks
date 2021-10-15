@@ -392,7 +392,7 @@ const DrawerContent = ({
       .get(
         `${process.env.API_URL}/smartblocks-store?uuid=${selectedSmartBlockId}&graph=${graph}&donation=${donation}`,
         {
-          headers: { Authorization: getCurrentUserEmail() || "" },
+          headers: { Authorization: `email:${getCurrentUserEmail() || ""}` },
         }
       )
       .then((r) => {

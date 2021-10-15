@@ -65,7 +65,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
   const paymentIntentId = authorization.startsWith("email:")
     ? ""
     : authorization;
-  const email = authorization.startsWith("email:") ? authorization : "";
+  const email = authorization.startsWith("email:") ? authorization.slice(6) : "";
   const filterTab = TAB_REGEX.test(tab) ? tab.toLowerCase() : "marketplace";
   const donationValue = (Number(donation) || 0) * 100;
   if (donationValue > 0 && donationValue < 1) {
