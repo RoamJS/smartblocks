@@ -235,7 +235,7 @@ runExtension("smartblocks", () => {
               title: "trigger",
               description:
                 "The key combination to used to pull up the smart blocks menu",
-              defaultValue: "xx",
+              defaultValue: "jj",
             },
             {
               title: "custom only",
@@ -334,7 +334,7 @@ runExtension("smartblocks", () => {
     getSettingValueFromTree({
       tree,
       key: "trigger",
-      defaultValue: "xx",
+      defaultValue: "jj",
     })
       .replace(/"/g, "")
       .replace(/\\/g, "\\\\")
