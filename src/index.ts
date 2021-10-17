@@ -329,16 +329,18 @@ runExtension("smartblocks", () => {
   });
 
   const tree = getBasicTreeByParentUid(getPageUidByPageTitle(CONFIG));
-  const trigger =
+  const trigger = (
     getLegacy42Setting("SmartBlockTrigger") ||
     getSettingValueFromTree({
       tree,
       key: "trigger",
       defaultValue: "jj",
     })
-      .replace(/"/g, "")
-      .replace(/\\/g, "\\\\")
-      .trim();
+  )
+    .replace(/"/g, "")
+    .replace(/\\/g, "\\\\")
+    .replace(/\+/g, "\\+")
+    .trim();
   const triggerRegex = new RegExp(`${trigger}$`);
   const isCustomOnly = tree.some((t) =>
     toFlexRegex("custom only").test(t.text)

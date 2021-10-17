@@ -1795,7 +1795,10 @@ const proccessBlockWithSmartness = async (
     return [
       {
         children: [],
-        text: `Block threw an error while running: ${n.text}`,
+        text: `Block threw an error while running: ${n.text.substring(
+          0,
+          n.text.length > 50 ? 47 : 50
+        )}${n.text.length > 50 ? "..." : ""}`,
       },
     ];
   }
