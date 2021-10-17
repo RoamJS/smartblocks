@@ -434,7 +434,9 @@ runExtension("smartblocks", () => {
       if (triggerRegex.test(valueToCursor)) {
         render({
           textarea,
-          triggerLength: triggerRegex.source.replace("\\\\", "\\").length - 1,
+          triggerLength:
+            triggerRegex.source.replace("\\\\", "\\").replace(/\\\+/g, "+")
+              .length - 1,
           isCustomOnly,
           dailyConfig,
         });
