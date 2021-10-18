@@ -71,8 +71,9 @@ const SmartblocksMenu = ({
         menuRef.current.children[index].querySelector(".bp3-menu-item");
       const srcName = item.getAttribute("data-name");
       const srcUid = item.getAttribute("data-uid");
-      const start = textarea.selectionStart - triggerLength;
-      const end = textarea.selectionStart;
+      const currentTextarea = document.getElementById(textarea.id) as HTMLTextAreaElement;
+      const start = currentTextarea.selectionStart - triggerLength;
+      const end = currentTextarea.selectionStart;
       onClose();
       setTimeout(() => {
         sbBomb({
@@ -147,9 +148,12 @@ const SmartblocksMenu = ({
     [menuRef, setActiveIndex, setFilter, onClose]
   );
   useEffect(() => {
-    textarea.addEventListener("keydown", keydownListener);
+    const listeningEl = !!textarea.closest(".rm-reference-item")
+      ? textarea.parentElement // Roam rerenders a new textarea in linked references on every keypress
+      : textarea;
+    listeningEl.addEventListener("keydown", keydownListener);
     return () => {
-      textarea.removeEventListener("keydown", keydownListener);
+      listeningEl.removeEventListener("keydown", keydownListener);
     };
   }, [keydownListener]);
   return (
