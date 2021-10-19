@@ -1588,8 +1588,19 @@ export const COMMANDS: {
   {
     text: "APIGET",
     help: "Sends an API request with the GET method to fetch data from a third party\n\n1. URL",
-    handler: (url = "") => {
-      return axios.get(url).then((r) => JSON.stringify(r.data));
+    handler: (url = "", field = "") => {
+      const output = (s: string | unknown) =>
+        typeof s === "undefined"
+          ? ""
+          : typeof s === "string"
+          ? s
+          : JSON.stringify(s);
+      return axios.get(url).then((r) => {
+        if (field) {
+          return output(r.data[field]);
+        }
+        return output(r.data);
+      });
     },
   },
 ];
