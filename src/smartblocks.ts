@@ -338,7 +338,9 @@ const getFormatter =
         "{path}",
         getParentUidsOfBlockUid(uid)
           .reverse()
-          .map((t, i) => (i === 0 ? `[[${getPageTitleByPageUid(t)}]]` : `((${t}))`))
+          .map((t, i) =>
+            i === 0 ? `[[${getPageTitleByPageUid(t)}]]` : `((${t}))`
+          )
           .join(" > ")
       ),
   });
@@ -368,7 +370,7 @@ export type SmartBlocksContext = {
   onBlockExit: CommandHandler;
   targetUid: string;
   ifCommand?: boolean;
-  exitBlock: "yes" | "no" | "end" | "empty";
+  exitBlock: "yes" | "no" | "end" | "empty" | "childless";
   exitWorkflow: boolean;
   variables: Record<string, string>;
   cursorPosition?: { uid: string; selection: number };
@@ -1067,6 +1069,14 @@ export const COMMANDS: {
       if (!present) {
         smartBlocksContext.exitBlock = "yes";
       }
+      return "";
+    },
+  },
+  {
+    text: "IFCHILDREN",
+    help: "Compares whether the current block produced children, and if not, skips.",
+    handler: () => {
+      smartBlocksContext.exitBlock = "childless";
       return "";
     },
   },
@@ -1780,8 +1790,8 @@ const proccessBlockWithSmartness = async (
       nextBlocks,
       currentChildren
     );
+    const oldExitBlock = smartBlocksContext.exitBlock;
     if (smartBlocksContext.exitBlock !== "no") {
-      const oldExitBlock = smartBlocksContext.exitBlock;
       smartBlocksContext.exitBlock = "no";
       if (oldExitBlock === "yes" || oldExitBlock === "end" || !props.text) {
         return [];
@@ -1792,6 +1802,10 @@ const proccessBlockWithSmartness = async (
       nodes: n.children,
       nextBlocks,
     });
+    const children = [...currentChildren, ...processedChildren];
+    if (!children.length && oldExitBlock === "childless") {
+      return [];
+    }
     const { textAlign, viewType, heading, open } = n;
     return [
       {
@@ -1800,7 +1814,7 @@ const proccessBlockWithSmartness = async (
         heading,
         open,
         ...props,
-        children: [...currentChildren, ...processedChildren],
+        children,
       },
       ...nextBlocks,
     ];
