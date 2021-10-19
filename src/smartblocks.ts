@@ -337,8 +337,8 @@ const getFormatter =
       .replace(
         "{path}",
         getParentUidsOfBlockUid(uid)
-          .map((t) => `((${t}))`)
           .reverse()
+          .map((t, i) => (i === 0 ? `[[${getPageTitleByPageUid(t)}]]` : `((${t}))`))
           .join(" > ")
       ),
   });
