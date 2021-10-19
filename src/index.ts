@@ -124,6 +124,10 @@ addStyle(`.roamjs-smartblocks-popover-target {
   width: 100%;
 }
 
+.roamjs-smartblock-menu {
+  width: 300px;
+}
+
 /* https://stripe.com/docs/connect/collect-then-transfer-guide#create-account */
 a.stripe-connect {
   background: #635bff;

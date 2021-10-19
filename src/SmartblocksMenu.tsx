@@ -173,7 +173,7 @@ const SmartblocksMenu = ({
           ulRef={menuRef}
           data-active-index={activeIndex}
           data-filter={filter}
-          style={{ width: 300 }}
+          className={'roamjs-smartblock-menu'}
         >
           {workflows.length ? (
             workflows.map((wf, i) => {
