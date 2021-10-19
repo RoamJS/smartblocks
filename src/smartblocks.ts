@@ -337,7 +337,7 @@ const getFormatter =
       .replace(
         "{path}",
         getParentUidsOfBlockUid(uid)
-          .map((t) => `((${t[0]}))`)
+          .map((t) => `((${t}))`)
           .reverse()
           .join(" > ")
       ),
