@@ -421,12 +421,12 @@ const javascriptHandler =
       .replace(/(\n)?```\s*$/, "")
       .replace(/^\s*`/, "")
       .replace(/`\s*$/, "");
-    const variables = Object.keys(smartBlocksContext.variables).filter(
-      (s) => !!s
-    );
+    const variables = Object.entries(smartBlocksContext.variables)
+      .map(([k, v]) => [k.replace(/^\d+/, ""), v])
+      .filter(([s]) => !!s);
     return Promise.resolve(
-      new fcn(...variables, code)(
-        ...variables.map((v) => smartBlocksContext.variables[v])
+      new fcn(...variables.map((v) => v[0]), code)(
+        ...variables.map((v) => v[1])
       )
     ).then((result) => {
       if (typeof result === "undefined" || result === null) {
