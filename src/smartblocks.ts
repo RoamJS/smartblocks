@@ -1116,9 +1116,12 @@ export const COMMANDS: {
   },
   {
     text: "CURRENTBLOCKREF",
-    help: "Sets a variable to the block UID for the current block\n\n1. Variable name",
-    handler: (name = "") => {
-      const ref = `((${smartBlocksContext.currentUid}))`;
+    help: "Sets a variable to the block UID for the current block\n\n1. Variable name\n\n2. Set to false for no formatting",
+    handler: (name = "", format = "true") => {
+      const ref =
+        format === "true"
+          ? `((${smartBlocksContext.currentUid}))`
+          : smartBlocksContext.currentUid;
       if (name) {
         smartBlocksContext.variables[name] = ref;
         return "";
