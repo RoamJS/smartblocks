@@ -1587,7 +1587,7 @@ export const COMMANDS: {
   },
   {
     text: "APIGET",
-    help: "Sends an API request with the GET method to fetch data from a third party\n\n1. URL",
+    help: "Sends an API request with the GET method to fetch data from a third party\n\n1. URL\n\n2. Optional field from response data",
     handler: (url = "", field = "") => {
       const output = (s: string | unknown) =>
         typeof s === "undefined"
