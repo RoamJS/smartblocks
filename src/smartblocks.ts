@@ -1967,19 +1967,22 @@ export const sbBomb = ({
                       });
                     } else {
                       const textPostProcess = getTextByBlockUid(uid);
+                      const indexDiffered = textPostProcess
+                        .split("")
+                        .findIndex(
+                          (c, i) => c !== props.introContent.charAt(i)
+                        );
                       updateBlock({
                         ...firstChild,
                         uid,
                         text: `${
-                          textPostProcess.startsWith(props.introContent)
-                            ? props.introContent
-                            : ""
+                          indexDiffered < 0
+                            ? textPostProcess
+                            : textPostProcess.slice(0, indexDiffered)
                         }${firstChild.text || ""}${
-                          textPostProcess.startsWith(props.introContent)
-                            ? textPostProcess.endsWith(props.suffix)
-                              ? props.suffix
-                              : textPostProcess.slice(end)
-                            : textPostProcess
+                          indexDiffered < 0
+                            ? ""
+                            : textPostProcess.substring(indexDiffered)
                         }`,
                       });
                       firstChild.children.forEach((node, order) =>
