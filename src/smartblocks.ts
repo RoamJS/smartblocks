@@ -2062,7 +2062,7 @@ export const sbBomb = ({
             Promise.all(smartBlocksContext.afterWorkflowMethods.map((w) => w()))
           )
           .finally(resolve),
-      1
+      10
     )
   ).finally(finish);
 };
