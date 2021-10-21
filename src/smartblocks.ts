@@ -342,6 +342,20 @@ const getFormatter =
             i === 0 ? `[[${getPageTitleByPageUid(t)}]]` : `((${t}))`
           )
           .join(" > ")
+      )
+      .replace(/{attr:([^}]*)}/, (_, name) =>
+        (
+          window.roamAlphaAPI
+            .q(
+              `[:find (pull ?b [:block/string])  :where [?r :node/title "${normalizePageTitle(
+                name
+              )}"] [?t :block/uid "${uid}"] [?b :block/refs ?r] [?b :block/page ?p] [?t :block/page ?p]]]`
+            )
+            .find((a) => new RegExp(`^${name}::`).test(a?.[0]?.string))?.[0]
+            ?.string || ""
+        )
+          .slice(name.length + 2)
+          .trim()
       ),
   });
 
