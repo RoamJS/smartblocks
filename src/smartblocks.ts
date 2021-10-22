@@ -59,6 +59,7 @@ import { ORDINAL_WORD_DICTIONARY } from "./dom";
 import { Intent, ToasterPosition } from "@blueprintjs/core";
 import { renderLoading } from "./Loading";
 import axios from "axios";
+import lodashGet from "lodash/get";
 
 export const PREDEFINED_REGEX = /#\d*-predefined/;
 const PAGE_TITLE_REGEX = /^(?:#?\[\[(.*)\]\]|#([^\s]*))$/;
@@ -347,7 +348,7 @@ const getFormatter =
         (
           window.roamAlphaAPI
             .q(
-              `[:find (pull ?b [:block/string])  :where [?r :node/title "${normalizePageTitle(
+              `[:find (pull ?b [:block/string]) :where [?r :node/title "${normalizePageTitle(
                 name
               )}"] [?t :block/uid "${uid}"] [?b :block/refs ?r] [?b :block/page ?p] [?t :block/page ?p]]]`
             )
@@ -1624,7 +1625,7 @@ export const COMMANDS: {
           : JSON.stringify(s);
       return axios.get(url).then((r) => {
         if (field) {
-          return output(r.data[field]);
+          return output(lodashGet(r.data, field));
         }
         return output(r.data);
       });
