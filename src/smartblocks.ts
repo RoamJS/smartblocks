@@ -1928,6 +1928,12 @@ export const sbBomb = ({
   variables?: Record<string, string>;
   mutableCursor?: boolean;
 }): Promise<void> => {
+  if (document.activeElement.tagName === "TEXTAREA") {
+    document.activeElement.setAttribute(
+      "roamjs-smartblocks-before-workflow",
+      "true"
+    );
+  }
   const finish = renderLoading(uid);
   resetContext({ targetUid: uid, variables });
   const childNodes = PREDEFINED_REGEX.test(srcUid)
@@ -2030,13 +2036,20 @@ export const sbBomb = ({
                         ) {
                           const { selection } =
                             smartBlocksContext.cursorPosition;
-                          setTimeout(
-                            () =>
-                              (
-                                document.activeElement as HTMLTextAreaElement
-                              ).setSelectionRange(selection, selection),
-                            1
-                          );
+                          const setPosition = (count = 0): void | number =>
+                            document.activeElement.tagName === "TEXTAREA" &&
+                            !document.activeElement.hasAttribute(
+                              "roamjs-smartblocks-before-workflow"
+                            )
+                              ? (
+                                  document.activeElement as HTMLTextAreaElement
+                                ).setSelectionRange(selection, selection)
+                              : count < 100 &&
+                                window.setTimeout(
+                                  () => setPosition(count + 1),
+                                  10
+                                );
+                          setPosition();
                         } else {
                           const { uid: blockUid, selection } =
                             smartBlocksContext.cursorPosition;
@@ -2079,7 +2092,7 @@ export const sbBomb = ({
             Promise.all(smartBlocksContext.afterWorkflowMethods.map((w) => w()))
           )
           .finally(resolve),
-      10
+      1
     )
   ).finally(finish);
 };
