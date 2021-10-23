@@ -333,6 +333,7 @@ const getFormatter =
   (format: string) =>
   ({ uid }: { uid: string }) => ({
     text: format
+      .replace("{text}", getTextByBlockUid(uid))
       .replace("{uid}", uid)
       .replace("{page}", getPageTitleByBlockUid(uid))
       .replace(
@@ -344,8 +345,8 @@ const getFormatter =
           )
           .join(" > ")
       )
-      .replace(/{attr:([^}]*)}/, (_, name) =>
-        (
+      .replace(/{attr:([^}:]*)(?::([^}]*))?}/, (_, name, format = "VALUE") => {
+        const value = (
           window.roamAlphaAPI
             .q(
               `[:find (pull ?b [:block/string]) :where [?r :node/title "${normalizePageTitle(
@@ -356,8 +357,9 @@ const getFormatter =
             ?.string || ""
         )
           .slice(name.length + 2)
-          .trim()
-      ),
+          .trim();
+        return value && format.replace("VALUE", value);
+      }),
   });
 
 const outputTodoBlocks = (
