@@ -440,9 +440,12 @@ const javascriptHandler =
       .replace(/(\n)?```\s*$/, "")
       .replace(/^\s*`/, "")
       .replace(/`\s*$/, "");
-    const variables = Object.entries(smartBlocksContext.variables)
+    const justVariables = Object.entries(smartBlocksContext.variables)
       .map(([k, v]) => [k.replace(/^\d+/, ""), v])
       .filter(([s]) => !!s);
+    const variables = smartBlocksContext.dateBasisMethod
+      ? justVariables.concat(["DATEBASIS", smartBlocksContext.dateBasisMethod])
+      : justVariables;
     return Promise.resolve(
       new fcn(...variables.map((v) => v[0]), code)(
         ...variables.map((v) => v[1])
