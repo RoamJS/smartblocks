@@ -674,8 +674,7 @@ runExtension("smartblocks", () => {
     callback: (s: HTMLSpanElement) => {
       const dataTag = s.getAttribute("data-tag");
       if (
-        (dataTag === "SmartBlock" ||
-          (dataTag === "42SmartBlock" && !window.roam42)) &&
+        (dataTag === "SmartBlock" || dataTag === "42SmartBlock") &&
         !s.hasAttribute("data-roamjs-smartblock-logo")
       ) {
         s.setAttribute("data-roamjs-smartblock-logo", "true");
