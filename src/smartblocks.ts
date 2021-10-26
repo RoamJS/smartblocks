@@ -1630,7 +1630,7 @@ export const COMMANDS: {
           : JSON.stringify(s);
       return axios.get(url).then((r) => {
         if (field) {
-          return output(lodashGet(r.data, field));
+          return output(lodashGet(r.data, field.trim()));
         }
         return output(r.data);
       });
