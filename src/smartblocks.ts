@@ -444,7 +444,7 @@ const javascriptHandler =
       .map(([k, v]) => [k.replace(/^\d+/, ""), v])
       .filter(([s]) => !!s);
     const variables = smartBlocksContext.dateBasisMethod
-      ? justVariables.concat(["DATEBASIS", smartBlocksContext.dateBasisMethod])
+      ? justVariables.concat(["DATEBASISMETHOD", smartBlocksContext.dateBasisMethod])
       : justVariables;
     return Promise.resolve(
       new fcn(...variables.map((v) => v[0]), code)(
