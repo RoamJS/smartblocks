@@ -32,6 +32,8 @@ import {
   DAILY_NOTE_PAGE_TITLE_REGEX,
   getChildrenLengthByPageUid,
   normalizePageTitle,
+  getBlockUidsReferencingBlock,
+  openBlockInSidebar,
 } from "roam-client";
 import * as chrono from "chrono-node";
 import datefnsFormat from "date-fns/format";
@@ -444,7 +446,10 @@ const javascriptHandler =
       .map(([k, v]) => [k.replace(/^\d+/, ""), v])
       .filter(([s]) => !!s);
     const variables = smartBlocksContext.dateBasisMethod
-      ? justVariables.concat(["DATEBASISMETHOD", smartBlocksContext.dateBasisMethod])
+      ? justVariables.concat([
+          "DATEBASISMETHOD",
+          smartBlocksContext.dateBasisMethod,
+        ])
       : justVariables;
     return Promise.resolve(
       new fcn(...variables.map((v) => v[0]), code)(
@@ -1463,6 +1468,36 @@ export const COMMANDS: {
         navToPage();
       }
       return "";
+    },
+  },
+  {
+    text: "OPENREFERENCESINSIDEBAR",
+    help: "Opens all of the blocks referencing a page or block in sidebar\n\n1. Page name or block ref",
+    handler: (...args) => {
+      const pageOrUidArg = args.join(",").trim();
+      const pageOrUid =
+        smartBlocksContext.variables[pageOrUidArg] || pageOrUidArg;
+      const uid =
+        getPageUidByPageTitle(extractTag(pageOrUid)) || extractRef(pageOrUid);
+      const blocks = getBlockUidsReferencingBlock(uid);
+      const windows = new Set(
+        window.roamAlphaAPI.ui.rightSidebar
+          .getWindows()
+          .filter((w) => w.type === "block")
+          .map((w) => w.type === "block" && w["block-uid"])
+      );
+      blocks.forEach(
+        (blockUid) =>
+          !windows.has(blockUid) &&
+          window.roamAlphaAPI.ui.rightSidebar.addWindow({
+            window: {
+              type: "block",
+              "block-uid": blockUid,
+            },
+          })
+      );
+      window.roamAlphaAPI.ui.rightSidebar.open();
+      return '';
     },
   },
   {
