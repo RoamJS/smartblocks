@@ -1965,7 +1965,7 @@ export const sbBomb = ({
   target: { uid: string; start?: number; end?: number; isPage?: boolean };
   variables?: Record<string, string>;
   mutableCursor?: boolean;
-}): Promise<void> => {
+}): Promise<number> => {
   if (document.activeElement.tagName === "TEXTAREA") {
     document.activeElement.setAttribute(
       "roamjs-smartblocks-before-workflow",
@@ -1991,7 +1991,7 @@ export const sbBomb = ({
     props.introContent = prefix;
     props.suffix = suffix;
   }
-  return new Promise<void>((resolve) =>
+  return new Promise<number>((resolve) =>
     setTimeout(
       () =>
         processChildren({
@@ -2001,7 +2001,7 @@ export const sbBomb = ({
           .then(resolveRefs)
           .then(
             (tree) =>
-              new Promise<void>((resolve) =>
+              new Promise<number>((resolve) =>
                 setTimeout(() => {
                   const [firstChild, ...next] = tree;
                   const numNodes = count(tree);
@@ -2122,14 +2122,13 @@ export const sbBomb = ({
                       );
                     }
                   }
-                  resolve();
+                  resolve(tree.length);
                 }, 1)
               )
           )
-          .then(() =>
-            Promise.all(smartBlocksContext.afterWorkflowMethods.map((w) => w()))
-          )
-          .finally(resolve),
+          .then((c) =>
+            Promise.all(smartBlocksContext.afterWorkflowMethods.map((w) => w())).finally(() => resolve(c))
+          ),
       1
     )
   ).finally(finish);

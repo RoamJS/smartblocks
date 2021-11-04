@@ -22,6 +22,7 @@ import {
   createBlockObserver,
   openBlock,
   getPageTitleByPageUid,
+  deleteBlock,
 } from "roam-client";
 import {
   createConfigObserver,
@@ -748,7 +749,7 @@ runExtension("smartblocks", () => {
                         start: 0,
                         end: 0,
                       },
-                    }),
+                    }).then((n) => n === 0 && deleteBlock(targetUid)),
                   1
                 );
               } else {
