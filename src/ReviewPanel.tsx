@@ -28,7 +28,7 @@ const WorkflowReviewView = ({
       }}
     >
       <h3 style={{ padding: 4, minHeight: 40 }}>
-        {label} ({version.replace(/\.json$/, "")})
+        {label} ({version})
       </h3>
       <div
         style={{
@@ -162,7 +162,11 @@ const ReviewPanel = ({ parentUid }: { parentUid: string }) => {
                 axios
                   .put(
                     `${process.env.API_URL}/smartblocks-review`,
-                    { uuid: inReview.uuid, graph: getGraph() },
+                    {
+                      uuid: inReview.uuid,
+                      graph: getGraph(),
+                      version: reviewData.newWorkflow?.version,
+                    },
                     { headers: { Authorization: token } }
                   )
                   .then(() => {
