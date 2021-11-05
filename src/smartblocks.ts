@@ -1443,7 +1443,7 @@ export const COMMANDS: {
           : uid;
       const navToPage = () => {
         setTimeout(() => {
-          window.location.assign(getRoamUrl(navUid));
+          window.roamAlphaAPI.mainWindow.openBlock({ block: { uid: navUid } });
           if (typeof blockNumberArg === "string") {
             const blockNumber =
               Number(blockNumberArg.replace(/GOTOBLOCK/, "").trim()) || 1;
@@ -1497,7 +1497,7 @@ export const COMMANDS: {
           })
       );
       window.roamAlphaAPI.ui.rightSidebar.open();
-      return '';
+      return "";
     },
   },
   {
@@ -2060,9 +2060,9 @@ export const sbBomb = ({
                   }
                   if (smartBlocksContext.focusOnBlock) {
                     setTimeout(() => {
-                      window.location.assign(
-                        getRoamUrl(smartBlocksContext.focusOnBlock)
-                      );
+                      window.roamAlphaAPI.mainWindow.openBlock({
+                        block: { uid: smartBlocksContext.focusOnBlock },
+                      });
                     }, 1000);
                   } else if (typeof mutableCursor === "boolean") {
                     if (mutableCursor) {
@@ -2127,7 +2127,9 @@ export const sbBomb = ({
               )
           )
           .then((c) =>
-            Promise.all(smartBlocksContext.afterWorkflowMethods.map((w) => w())).finally(() => resolve(c))
+            Promise.all(
+              smartBlocksContext.afterWorkflowMethods.map((w) => w())
+            ).finally(() => resolve(c))
           ),
       1
     )

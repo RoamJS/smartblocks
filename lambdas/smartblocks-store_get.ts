@@ -85,10 +85,14 @@ export const handler: APIGatewayProxyHandler = async (event) => {
         })
         .promise()
         .then((r) =>
-          r.Item?.status?.S !== "LIVE"
+          !(
+            r.Item?.status?.S === "LIVE" ||
+            (r.Item?.status?.S === "UNDER REVIEW" && !!r.Item?.workflow?.S)
+          )
             ? {
                 statusCode: 400,
                 body: `Invalid id ${uuid} doesn't represent a LIVE SmartBlock Workflow`,
+                headers,
               }
             : !!open
             ? dynamo

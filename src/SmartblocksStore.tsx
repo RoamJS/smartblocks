@@ -378,7 +378,7 @@ const DrawerContent = ({
           createBlock({ node, order, parentUid: uid })
         );
         setTimeout(() => {
-          window.location.assign(getRoamUrl(uid));
+          window.roamAlphaAPI.mainWindow.openBlock({ block: { uid } });
           onClose();
         }, 1000);
       }, 1);
