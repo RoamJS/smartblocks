@@ -1443,7 +1443,9 @@ export const COMMANDS: {
           : uid;
       const navToPage = () => {
         setTimeout(() => {
-          window.roamAlphaAPI.mainWindow.openBlock({ block: { uid: navUid } });
+          window.roamAlphaAPI.ui.mainWindow.openBlock({
+            block: { uid: navUid },
+          });
           if (typeof blockNumberArg === "string") {
             const blockNumber =
               Number(blockNumberArg.replace(/GOTOBLOCK/, "").trim()) || 1;
@@ -2060,7 +2062,7 @@ export const sbBomb = ({
                   }
                   if (smartBlocksContext.focusOnBlock) {
                     setTimeout(() => {
-                      window.roamAlphaAPI.mainWindow.openBlock({
+                      window.roamAlphaAPI.ui.mainWindow.openBlock({
                         block: { uid: smartBlocksContext.focusOnBlock },
                       });
                     }, 1000);
