@@ -1,10 +1,14 @@
 import { APIGatewayProxyHandler } from "aws-lambda";
-import { dynamo, headers, validToken } from "./common";
+import { dynamo, headers, s3, validToken } from "./common";
 
 const REVIEWERS = ["dvargas92495"];
 
 export const handler: APIGatewayProxyHandler = async (event) => {
-  const { graph = "", uuid = "" } = JSON.parse(event.body || "{}");
+  const {
+    graph = "",
+    uuid = "",
+    version = "",
+  } = JSON.parse(event.body || "{}");
   if (!uuid) {
     return {
       statusCode: 400,
@@ -35,28 +39,44 @@ export const handler: APIGatewayProxyHandler = async (event) => {
             statusCode: 401,
             body: `Only valid reviewers can approve`,
           }
-        : dynamo
-            .updateItem({
-              TableName: "RoamJSSmartBlocks",
-              Key: {
-                uuid: { S: uuid },
-              },
-              UpdateExpression: "SET #s = :s",
-              ExpressionAttributeNames: {
-                "#s": "status",
-              },
-              ExpressionAttributeValues: {
-                ":s": { S: "LIVE" },
-              },
+        : s3
+            .listObjectsV2({
+              Bucket: "roamjs-smartblocks",
+              Prefix: `${uuid}/`,
+              Delimiter: "/",
             })
             .promise()
-            .then(() => ({
-              statusCode: 200,
-              body: JSON.stringify({
-                success: true,
-              }),
-              headers,
-            }))
+            .then((o) => o.Contents.reverse()[0].Key)
+            .then((workflow) =>
+              workflow !== version
+                ? {
+                    statusCode: 409,
+                    body: "New version was uploaded, review again.",
+                    headers,
+                  }
+                : dynamo
+                    .updateItem({
+                      TableName: "RoamJSSmartBlocks",
+                      Key: {
+                        uuid: { S: uuid },
+                      },
+                      UpdateExpression: "SET #s = :s",
+                      ExpressionAttributeNames: {
+                        "#s": "status",
+                      },
+                      ExpressionAttributeValues: {
+                        ":s": { S: "LIVE" },
+                      },
+                    })
+                    .promise()
+                    .then(() => ({
+                      statusCode: 200,
+                      body: JSON.stringify({
+                        success: true,
+                      }),
+                      headers,
+                    }))
+            )
     )
     .catch((e) => ({
       statusCode: 500,

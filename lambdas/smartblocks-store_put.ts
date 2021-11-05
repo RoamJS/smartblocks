@@ -64,7 +64,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
         };
       }
       const version = format(new Date(), "yyyy-MM-dd-hh-mm-ss");
-      const putItem = (existingDisplayName: string) =>
+      const putItem = (existingDisplayName: string, previousWorkflow = '') =>
         s3
           .upload({
             Bucket: "roamjs-smartblocks",
@@ -105,7 +105,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
                   img: { S: img.replace(/^!\[.*?\]\(/, "").replace(/\)$/, "") },
                   author: { S: author },
                   description: { S: description },
-                  workflow: { S: version },
+                  workflow: { S: requiresReview ? previousWorkflow : version },
                   status: { S: requiresReview ? "UNDER REVIEW" : "LIVE" },
                 },
               })
@@ -153,7 +153,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
           .promise()
           .then((r) =>
             validToken(event, r.Item)
-              ? putItem(r.Item.description?.S)
+              ? putItem(r.Item.description?.S, r.Item?.workflow?.S)
               : {
                   statusCode: 401,
                   body: `Token unauthorized for updating workflow ${existingWorkflow.name.S}`,

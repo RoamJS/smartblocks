@@ -41,17 +41,20 @@ export const handler: APIGatewayProxyHandler = async (event) => {
                 .promise()
                 .then((o) =>
                   Promise.all(
-                    o.Contents.slice(-2)
-                      .reverse()
-                      .map(({ Key }) =>
-                        s3
-                          .getObject({ Bucket: "roamjs-smartblocks", Key })
-                          .promise()
-                          .then((b) => ({
-                            version: Key.substring(i.Item.uuid.S.length + 1),
-                            workflow: b.Body.toString(),
-                          }))
-                      )
+                    [
+                      o.Contents.reverse()[0].Key,
+                      ...(i.Item?.workflow?.S
+                        ? [`${i.Item.uuid.S}/${i.Item.workflow.S}`]
+                        : []),
+                    ].map((Key) =>
+                      s3
+                        .getObject({ Bucket: "roamjs-smartblocks", Key })
+                        .promise()
+                        .then((b) => ({
+                          version: Key.substring(i.Item.uuid.S.length + 1),
+                          workflow: b.Body.toString(),
+                        }))
+                    )
                   )
                 )
                 .then(([newWorkflow, oldWorkflow]) => ({
