@@ -46,7 +46,11 @@ export const handler: APIGatewayProxyHandler = async (event) => {
               Delimiter: "/",
             })
             .promise()
-            .then((o) => o.Contents.reverse()[0].Key)
+            .then((o) =>
+              o.Contents.reverse()[0]
+                .Key.replace(new RegExp(`^${uuid}/`), "")
+                .replace(/\.json$/, "")
+            )
             .then((workflow) =>
               workflow !== version
                 ? {
@@ -63,7 +67,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
                       UpdateExpression: "SET #s = :s, #w = :w",
                       ExpressionAttributeNames: {
                         "#s": "status",
-                        "#w": "workflow"
+                        "#w": "workflow",
                       },
                       ExpressionAttributeValues: {
                         ":s": { S: "LIVE" },
