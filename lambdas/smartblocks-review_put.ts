@@ -60,12 +60,14 @@ export const handler: APIGatewayProxyHandler = async (event) => {
                       Key: {
                         uuid: { S: uuid },
                       },
-                      UpdateExpression: "SET #s = :s",
+                      UpdateExpression: "SET #s = :s, #w = :w",
                       ExpressionAttributeNames: {
                         "#s": "status",
+                        "#w": "workflow"
                       },
                       ExpressionAttributeValues: {
                         ":s": { S: "LIVE" },
+                        ":w": { S: version },
                       },
                     })
                     .promise()
