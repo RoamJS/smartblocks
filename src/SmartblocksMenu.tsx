@@ -27,6 +27,7 @@ import fuzzy from "fuzzy";
 import { getSettingValueFromTree, setInputSetting } from "roamjs-components";
 import { isMobile } from "react-device-detect";
 import axios from "axios";
+import { getTextByBlockUid } from "roam-client/lib/queries";
 
 type Props = {
   textarea: HTMLTextAreaElement;
@@ -34,6 +35,14 @@ type Props = {
   isCustomOnly: boolean;
   dailyConfig?: RoamBasicNode;
 };
+
+// The block doesn't always have the trigger saved, causing weird race condition errors
+const waitForBlock = (uid: string, text: string): Promise<void> =>
+  getTextByBlockUid(uid) === text
+    ? Promise.resolve()
+    : new Promise((resolve) =>
+        setTimeout(() => resolve(waitForBlock(uid, text)), 10)
+      );
 
 const SmartblocksMenu = ({
   onClose,
@@ -71,43 +80,47 @@ const SmartblocksMenu = ({
         menuRef.current.children[index].querySelector(".bp3-menu-item");
       const srcName = item.getAttribute("data-name");
       const srcUid = item.getAttribute("data-uid");
-      const currentTextarea = document.getElementById(textarea.id) as HTMLTextAreaElement;
+      const currentTextarea = document.getElementById(
+        textarea.id
+      ) as HTMLTextAreaElement;
       const start = currentTextarea.selectionStart - triggerLength;
       const end = currentTextarea.selectionStart;
-      onClose();
-      setTimeout(() => {
-        sbBomb({
-          srcUid,
-          target: {
-            uid: blockUid,
-            start,
-            end,
-          },
-          mutableCursor: !srcName.includes("<%NOCURSOR%>"),
-        }).then(() => {
-          if (dailyConfig) {
-            const dailyWorkflowName = getSettingValueFromTree({
-              tree: dailyConfig.children,
-              key: "workflow name",
-              defaultValue: "Daily",
-            });
-            if (dailyWorkflowName === srcName) {
-              const title = getPageTitleByBlockUid(blockUid);
-              if (DAILY_NOTE_PAGE_REGEX.test(title)) {
-                const newDate = getPageUidByPageTitle(title);
-                const uuid = getSettingValueFromTree({
-                  tree: dailyConfig.children,
-                  key: "latest",
-                });
-                axios.put(`${process.env.API_URL}/smartblocks-daily`, {
-                  newDate,
-                  uuid,
-                });
+      waitForBlock(blockUid, textarea.value).then(() => {
+        onClose();
+        setTimeout(() => {
+          sbBomb({
+            srcUid,
+            target: {
+              uid: blockUid,
+              start,
+              end,
+            },
+            mutableCursor: !srcName.includes("<%NOCURSOR%>"),
+          }).then(() => {
+            if (dailyConfig) {
+              const dailyWorkflowName = getSettingValueFromTree({
+                tree: dailyConfig.children,
+                key: "workflow name",
+                defaultValue: "Daily",
+              });
+              if (dailyWorkflowName === srcName) {
+                const title = getPageTitleByBlockUid(blockUid);
+                if (DAILY_NOTE_PAGE_REGEX.test(title)) {
+                  const newDate = getPageUidByPageTitle(title);
+                  const uuid = getSettingValueFromTree({
+                    tree: dailyConfig.children,
+                    key: "latest",
+                  });
+                  axios.put(`${process.env.API_URL}/smartblocks-daily`, {
+                    newDate,
+                    uuid,
+                  });
+                }
               }
             }
-          }
-        });
-      }, 10);
+          });
+        }, 10);
+      });
     },
     [menuRef, blockUid, onClose, triggerLength, textarea]
   );
@@ -173,7 +186,7 @@ const SmartblocksMenu = ({
           ulRef={menuRef}
           data-active-index={activeIndex}
           data-filter={filter}
-          className={'roamjs-smartblock-menu'}
+          className={"roamjs-smartblock-menu"}
         >
           {workflows.length ? (
             workflows.map((wf, i) => {

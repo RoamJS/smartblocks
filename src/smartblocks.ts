@@ -22,7 +22,6 @@ import {
   BLOCK_REF_REGEX,
   getCurrentUserDisplayName,
   openBlock,
-  getRoamUrl,
   getBlockUidAndTextIncludingText,
   getDisplayNameByUid,
   getCurrentUserUid,

@@ -80,7 +80,9 @@ addStyle(`.roamjs-smartblocks-popover-target {
   box-sizing: border-box;
   padding: 4px;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 12px;   
+  border: 1px solid #10161a26;
+  background: white;
 }
 
 .roamjs-smartblocks-store-item:hover {
@@ -96,6 +98,10 @@ addStyle(`.roamjs-smartblocks-popover-target {
 
 .roamjs-smartblocks-store-tabs .bp3-tab-list {
   justify-content: space-around;
+}
+
+.roamjs-smartblocks-store-tabs {
+  height: 84px;
 }
 
 .roamjs-smartblock-hotkey-block {
