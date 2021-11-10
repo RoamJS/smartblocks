@@ -745,9 +745,20 @@ export const COMMANDS: {
     text: "TODOUNDATED",
     help: "Returns a list of block refs of TODOs with no date\n\n1. Max # blocks\n\n2. Format of output.\n\n3. optional filter values",
     handler: (...args) => {
-      const blocks = getBlockUidsAndTextsReferencingPage("TODO");
+      const blocks = window.roamAlphaAPI
+        .q(
+          `[:find (pull ?r [:block/uid :block/string]) (pull ?t [:node/title]) :where [?p :node/title "TODO"] [?r :block/refs ?p] [?r :block/page ?t]]`
+        )
+        .map(([{ uid, string }, { title }]: Record<string, string>[]) => ({
+          uid,
+          text: string,
+          title,
+        }));
       const todos = blocks
-        .filter(({ text }) => !DAILY_REF_REGEX.test(text))
+        .filter(
+          ({ text, title }) =>
+            !DAILY_REF_REGEX.test(text) && !DAILY_REF_REGEX.test(title)
+        )
         .sort(({ text: a }, { text: b }) => a.localeCompare(b));
       return outputTodoBlocks(todos, ...args);
     },

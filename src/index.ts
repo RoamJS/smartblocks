@@ -700,6 +700,7 @@ runExtension("smartblocks", () => {
       const parentUid = getBlockUidFromTarget(b);
       if (parentUid && !b.hasAttribute("data-roamjs-smartblock-button")) {
         b.setAttribute("data-roamjs-smartblock-button", "true");
+        // We include textcontent here bc there could be multiple smartblocks in a block
         const regex = new RegExp(
           `{{${b.textContent}:(?:42)?SmartBlock:(.*?)}}`
         );
