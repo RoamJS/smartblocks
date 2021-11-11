@@ -421,14 +421,14 @@ runExtension("smartblocks", () => {
         );
       }
     }
-    return sbBomb({
+    return new Promise(resolve => setTimeout(() => sbBomb({
       srcUid,
       target: {
         uid: targetUid,
         isPage: !!(targetName || getPageTitleByPageUid(targetUid)),
       },
       variables,
-    });
+    }).then(resolve), 10));
   };
 
   document.addEventListener("input", (e) => {
