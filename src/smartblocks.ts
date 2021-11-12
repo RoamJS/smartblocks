@@ -1120,9 +1120,9 @@ export const COMMANDS: {
     help: "Returns a variable\n\n1. Variable name",
     handler: (name = "") => {
       if (!name) return "--> Variable name required for GET <--";
-      return (
-        smartBlocksContext.variables[name] || `--> Variable ${name} not SET <--`
-      );
+      return typeof smartBlocksContext.variables[name] === "undefined"
+        ? `--> Variable ${name} not SET <--`
+        : smartBlocksContext.variables[name];
     },
   },
   {
