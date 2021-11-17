@@ -332,11 +332,11 @@ export const getCleanCustomWorkflows = (workflows = getCustomWorkflows()) =>
 
 const getFormatter =
   (format: string) =>
-  ({ uid }: { uid: string }) => ({
+  ({ uid, text, title }: { uid: string; text?: string; title?: string }) => ({
     text: format
-      .replace("{text}", getTextByBlockUid(uid))
+      .replace("{text}", text || getTextByBlockUid(uid))
       .replace("{uid}", uid)
-      .replace("{page}", getPageTitleByBlockUid(uid))
+      .replace("{page}", title || getPageTitleByBlockUid(uid))
       .replace(
         "{path}",
         getParentUidsOfBlockUid(uid)
@@ -942,11 +942,23 @@ export const COMMANDS: {
           : new Date(9999, 11, 31);
       const limit = Number(limitArg);
       const title = extractTag(titleArg);
-      const results = getBlockUidsAndTextsReferencingPage(title)
-        .filter(({ text, uid }) => {
+      const results = window.roamAlphaAPI
+        .q(
+          `[:find (pull ?r [:block/uid :block/string]) (pull ?t [:node/title]) :where [?p :node/title "${normalizePageTitle(
+            title
+          )}"] [?r :block/refs ?p] [?r :block/page ?t]]`
+        )
+        .map(
+          ([{ string: text, uid }, { title }]: Record<string, string>[]) => ({
+            text,
+            uid,
+            title,
+          })
+        )
+        .filter(({ text, title }) => {
           const ref =
             DAILY_REF_REGEX.exec(text)?.[1] ||
-            DAILY_NOTE_PAGE_TITLE_REGEX.exec(getPageTitleByBlockUid(uid))?.[0];
+            DAILY_NOTE_PAGE_TITLE_REGEX.exec(title)?.[0];
           if (ref) {
             const d = parseRoamDate(ref);
             return !undated && !isBefore(d, start) && !isAfter(d, end);
