@@ -749,11 +749,16 @@ export const COMMANDS: {
         .q(
           `[:find (pull ?r [:block/uid :block/string]) (pull ?t [:node/title]) :where [?p :node/title "TODO"] [?r :block/refs ?p] [?r :block/page ?t]]`
         )
-        .map(([{ uid, string }, { title }]: Record<string, string>[]) => ({
-          uid,
-          text: string,
-          title,
-        }));
+        .map(
+          ([
+            { uid, string },
+            p, // could be null
+          ]: Record<string, string>[]) => ({
+            uid,
+            text: string,
+            title: p.title,
+          })
+        );
       const todos = blocks
         .filter(
           ({ text, title }) =>
