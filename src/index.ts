@@ -522,6 +522,7 @@ runExtension("smartblocks", () => {
               start: textarea.selectionStart - k.length,
               end: textarea.selectionStart,
             },
+            mutableCursor: true,
           });
         }
       }
@@ -557,6 +558,7 @@ runExtension("smartblocks", () => {
                 start,
                 end: start,
               },
+              mutableCursor: true,
             });
           }, 1);
         }

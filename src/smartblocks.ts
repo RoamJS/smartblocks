@@ -1989,13 +1989,15 @@ export const sbBomb = ({
   target: { uid, start = 0, end = start, isPage = false },
   variables = {},
   mutableCursor,
+  clicked = false,
 }: {
   srcUid: string;
   target: { uid: string; start?: number; end?: number; isPage?: boolean };
   variables?: Record<string, string>;
   mutableCursor?: boolean;
+  clicked?: boolean;
 }): Promise<number> => {
-  if (document.activeElement.tagName === "TEXTAREA") {
+  if (clicked && document.activeElement.tagName === "TEXTAREA") {
     document.activeElement.setAttribute(
       "roamjs-smartblocks-before-workflow",
       "true"
@@ -2116,7 +2118,7 @@ export const sbBomb = ({
                                   () => setPosition(count + 1),
                                   10
                                 );
-                          setPosition();
+                          setTimeout(setPosition, 10);
                         } else {
                           const { uid: blockUid, selection } =
                             smartBlocksContext.cursorPosition;

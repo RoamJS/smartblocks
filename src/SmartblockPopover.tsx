@@ -16,7 +16,6 @@ import {
   getBlockUidsReferencingBlock,
   getCurrentPageUid,
   getDisplayNameByUid,
-  getFirstChildTextByBlockUid,
   getFirstChildUidByBlockUid,
   getGraph,
   getPageUidByPageTitle,

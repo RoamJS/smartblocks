@@ -75,7 +75,7 @@ const SmartblocksMenu = ({
   );
   const [activeIndex, setActiveIndex] = useState(0);
   const onSelect = useCallback(
-    (index) => {
+    (index, clicked = false) => {
       const item =
         menuRef.current.children[index].querySelector(".bp3-menu-item");
       const srcName = item.getAttribute("data-name");
@@ -96,6 +96,7 @@ const SmartblocksMenu = ({
               end,
             },
             mutableCursor: !srcName.includes("<%NOCURSOR%>"),
+            clicked,
           }).then(() => {
             if (dailyConfig) {
               const dailyWorkflowName = getSettingValueFromTree({
@@ -216,7 +217,7 @@ const SmartblocksMenu = ({
                   }
                   active={i === activeIndex}
                   onMouseEnter={() => setActiveIndex(i)}
-                  onClick={() => onSelect(i)}
+                  onClick={() => onSelect(i, true)}
                 />
               );
             })
