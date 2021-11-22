@@ -751,7 +751,7 @@ export const COMMANDS: {
         )
         .map(
           ([
-            { uid, string },
+            { uid, string = "" },
             p, // could be null
           ]: Record<string, string>[]) => ({
             uid,
