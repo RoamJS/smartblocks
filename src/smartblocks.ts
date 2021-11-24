@@ -765,7 +765,7 @@ export const COMMANDS: {
       const todos = blocks
         .filter(
           ({ text, title }) =>
-            !DAILY_REF_REGEX.test(text) && !DAILY_REF_REGEX.test(title)
+            !DAILY_REF_REGEX.test(text) && !DAILY_NOTE_PAGE_TITLE_REGEX.test(title)
         )
         .sort(({ text: a }, { text: b }) => a.localeCompare(b));
       return outputTodoBlocks(todos, ...args);
