@@ -387,6 +387,7 @@ export type CommandHandler = (
 export type SmartBlocksContext = {
   onBlockExit: CommandHandler;
   targetUid: string;
+  triggerUid: string;
   ifCommand?: boolean;
   exitBlock: "yes" | "no" | "end" | "empty" | "childless";
   exitWorkflow: boolean;
@@ -413,9 +414,11 @@ export const smartBlocksContext: SmartBlocksContext = {
   unindent: new Set(),
   refMapping: {},
   afterWorkflowMethods: [],
+  triggerUid: "",
 };
 const resetContext = (context: Partial<SmartBlocksContext>) => {
   smartBlocksContext.onBlockExit = context.onBlockExit || (() => "");
+  smartBlocksContext.triggerUid = context.triggerUid || context.targetUid || "";
   smartBlocksContext.targetUid = context.targetUid || "";
   smartBlocksContext.ifCommand = context.ifCommand || undefined;
   smartBlocksContext.exitBlock = context.exitBlock || "no";
@@ -1174,6 +1177,21 @@ export const COMMANDS: {
         selection: smartBlocksContext.currentContent.length,
       };
       return "";
+    },
+  },
+  {
+    text: "TRIGGERREF",
+    help: "Sets a variable to the block UID for the block that triggered the workflow\n\n1. Variable name\n\n2. Set to false for no formatting",
+    handler: (name = "", format = "true") => {
+      const ref =
+        format === "true"
+          ? `((${smartBlocksContext.triggerUid}))`
+          : smartBlocksContext.triggerUid;
+      if (name) {
+        smartBlocksContext.variables[name] = ref;
+        return "";
+      }
+      return ref;
     },
   },
   {
@@ -1990,12 +2008,14 @@ export const sbBomb = ({
   variables = {},
   mutableCursor,
   clicked = false,
+  triggerUid = uid,
 }: {
   srcUid: string;
   target: { uid: string; start?: number; end?: number; isPage?: boolean };
   variables?: Record<string, string>;
   mutableCursor?: boolean;
   clicked?: boolean;
+  triggerUid?: string;
 }): Promise<number> => {
   if (clicked && document.activeElement.tagName === "TEXTAREA") {
     document.activeElement.setAttribute(
@@ -2004,7 +2024,7 @@ export const sbBomb = ({
     );
   }
   const finish = renderLoading(uid);
-  resetContext({ targetUid: uid, variables });
+  resetContext({ targetUid: uid, variables, triggerUid });
   const childNodes = PREDEFINED_REGEX.test(srcUid)
     ? predefinedChildrenByUid[srcUid]
     : getFullTreeByParentUid(srcUid).children;

@@ -743,6 +743,7 @@ runExtension("smartblocks", () => {
                 mutableCursor: !(
                   workflows.find((w) => w.uid === srcUid)?.name || ""
                 ).includes("<%NOCURSOR%>"),
+                triggerUid: parentUid
               };
               if (keepButton) {
                 const targetUid = createBlock({
