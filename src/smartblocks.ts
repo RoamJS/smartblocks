@@ -33,6 +33,7 @@ import {
   normalizePageTitle,
   getBlockUidsReferencingBlock,
   openBlockInSidebar,
+  getBasicTreeByParentUid,
 } from "roam-client";
 import * as chrono from "chrono-node";
 import datefnsFormat from "date-fns/format";
@@ -92,6 +93,51 @@ const ORDINAL_REGEX = new RegExp(
   "i"
 );
 const customDateNlp = new chrono.Chrono();
+const DAYS_OFFSET = { 'sunday': 0, 'sun': 0, 'monday': 1, 'mon': 1,'tuesday': 2, 'tues':2, 'tue':2, 'wednesday': 3, 'wed': 3,
+    'thursday': 4, 'thurs':4, 'thur': 4, 'thu': 4,'friday': 5, 'fri': 5,'saturday': 6, 'sat': 6};
+const UPCOMING_PATTERN = new RegExp('(\\W|^)' +
+      '(?:(?:\\,|\\(|\\（)\\s*)?' +
+      '(?:on\\s*?)?' +
+      'upcoming\\s*' +
+      '(' + Object.keys(DAYS_OFFSET).join('|') + ')' +
+      '(?=\\W|$)', 'i');
+// https://github.com/wanasit/chrono/blob/d8da3c840c50c959a62a0840c9a627f39bc765df/src/parsers/en/ENWeekdayParser.js
+customDateNlp.parsers.unshift(
+  {
+    pattern: () => UPCOMING_PATTERN,
+    extract: (context, match) => {
+      const index = match.index + match[1].length;
+      const text = match[0].substr(match[1].length, match[0].length - match[1].length);
+      const result = context.createParsingResult(
+          index,
+          text,
+      );
+
+      const dayOfWeek = match[2].toLowerCase();
+      const offset = DAYS_OFFSET[dayOfWeek as keyof typeof DAYS_OFFSET];
+      if(offset === undefined) {
+          return null;
+      }
+
+      const startMoment = context.refDate;
+      const refOffset = startMoment.getDay();
+      result.start.assign('weekday', offset);
+      if (offset <= refOffset) {
+        startMoment.setDate(offset + 7 + startMoment.getDate() - refOffset);
+        result.start.assign('day', startMoment.getDate());
+        result.start.assign('month', startMoment.getMonth() + 1);
+        result.start.assign('year', startMoment.getFullYear());
+      } else {
+        startMoment.setDate(offset + startMoment.getDate() - refOffset);
+        result.start.imply('day', startMoment.getDate());
+        result.start.imply('month', startMoment.getMonth() + 1);
+        result.start.imply('year', startMoment.getFullYear());
+      }
+
+      return result;
+  },
+  }
+)
 customDateNlp.parsers.push(
   {
     pattern: () => /\b((start|end) )?of\b/i,
@@ -542,7 +588,7 @@ export const COMMANDS: {
       const minutes = dt.getMinutes();
       const ampm = hours >= 12 ? "PM" : "AM";
       const hoursAm = hours % 12 || 12;
-      var strTime =
+      const strTime =
         hoursAm.toString().padStart(2, "0") +
         ":" +
         minutes.toString().padStart(2, "0") +
@@ -1718,6 +1764,15 @@ export const COMMANDS: {
       });
     },
   },
+  {
+    text: "CHILDREN",
+    help: "Gets the block tree nested under the input block reference\n\n1. Block reference",
+    handler: (text) => {
+      const normText = smartBlocksContext.variables[text] || text;
+      const uid = extractRef(normText);
+      return getBasicTreeByParentUid(uid);
+    }
+  }
 ];
 export const handlerByCommand = Object.fromEntries(
   COMMANDS.map(({ text, help, ...rest }) => [text, rest])
