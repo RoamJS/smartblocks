@@ -32,7 +32,6 @@ import {
   getChildrenLengthByPageUid,
   normalizePageTitle,
   getBlockUidsReferencingBlock,
-  openBlockInSidebar,
   getBasicTreeByParentUid,
 } from "roam-client";
 import * as chrono from "chrono-node";
@@ -524,6 +523,11 @@ const javascriptHandler =
       }
     });
   };
+
+const stripUids = ({uid, children, ...rest}: InputTextNode): InputTextNode => ({
+  ...rest,
+  children: children.map(stripUids)
+})
 
 export const COMMANDS: {
   text: string;
@@ -1770,7 +1774,7 @@ export const COMMANDS: {
     handler: (text) => {
       const normText = smartBlocksContext.variables[text] || text;
       const uid = extractRef(normText);
-      return getBasicTreeByParentUid(uid);
+      return getBasicTreeByParentUid(uid).map(stripUids);
     }
   }
 ];
