@@ -49,7 +49,7 @@ const HotKeyPanel =
     return (
       <>
         {keys.map((key) => (
-          <div key={key.uid} style={{ display: "flex" }}>
+          <div key={key.uid} style={{ display: "flex", alignItems: "center" }}>
             <Label>
               Hot Key
               <InputGroup
@@ -167,4 +167,3 @@ export default HotKeyPanel;
 function deleteBlock(uid: string) {
   throw new Error("Function not implemented.");
 }
-
