@@ -116,7 +116,7 @@ const HotKeyPanel =
             </Label>
             <Button
               icon={"trash"}
-              style={{ width: 84 }}
+              style={{ width: 32, height: 32 }}
               minimal
               onClick={() => {
                 setKeys(keys.filter((k) => k.uid !== key.uid));
@@ -124,6 +124,7 @@ const HotKeyPanel =
                   smartblockHotKeys.uidToMapping[key.uid]
                 ];
                 delete smartblockHotKeys.uidToMapping[key.uid];
+                deleteBlock(key.uid);
               }}
             />
           </div>
@@ -163,3 +164,7 @@ const HotKeyPanel =
   };
 
 export default HotKeyPanel;
+function deleteBlock(uid: string) {
+  throw new Error("Function not implemented.");
+}
+
