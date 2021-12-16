@@ -92,51 +92,71 @@ const ORDINAL_REGEX = new RegExp(
   "i"
 );
 const customDateNlp = new chrono.Chrono();
-const DAYS_OFFSET = { 'sunday': 0, 'sun': 0, 'monday': 1, 'mon': 1,'tuesday': 2, 'tues':2, 'tue':2, 'wednesday': 3, 'wed': 3,
-    'thursday': 4, 'thurs':4, 'thur': 4, 'thu': 4,'friday': 5, 'fri': 5,'saturday': 6, 'sat': 6};
-const UPCOMING_PATTERN = new RegExp('(\\W|^)' +
-      '(?:(?:\\,|\\(|\\（)\\s*)?' +
-      '(?:on\\s*?)?' +
-      'upcoming\\s*' +
-      '(' + Object.keys(DAYS_OFFSET).join('|') + ')' +
-      '(?=\\W|$)', 'i');
+const DAYS_OFFSET = {
+  sunday: 0,
+  sun: 0,
+  monday: 1,
+  mon: 1,
+  tuesday: 2,
+  tues: 2,
+  tue: 2,
+  wednesday: 3,
+  wed: 3,
+  thursday: 4,
+  thurs: 4,
+  thur: 4,
+  thu: 4,
+  friday: 5,
+  fri: 5,
+  saturday: 6,
+  sat: 6,
+};
+const UPCOMING_PATTERN = new RegExp(
+  "(\\W|^)" +
+    "(?:(?:\\,|\\(|\\（)\\s*)?" +
+    "(?:on\\s*?)?" +
+    "upcoming\\s*" +
+    "(" +
+    Object.keys(DAYS_OFFSET).join("|") +
+    ")" +
+    "(?=\\W|$)",
+  "i"
+);
 // https://github.com/wanasit/chrono/blob/d8da3c840c50c959a62a0840c9a627f39bc765df/src/parsers/en/ENWeekdayParser.js
-customDateNlp.parsers.unshift(
-  {
-    pattern: () => UPCOMING_PATTERN,
-    extract: (context, match) => {
-      const index = match.index + match[1].length;
-      const text = match[0].substr(match[1].length, match[0].length - match[1].length);
-      const result = context.createParsingResult(
-          index,
-          text,
-      );
+customDateNlp.parsers.unshift({
+  pattern: () => UPCOMING_PATTERN,
+  extract: (context, match) => {
+    const index = match.index + match[1].length;
+    const text = match[0].substr(
+      match[1].length,
+      match[0].length - match[1].length
+    );
+    const result = context.createParsingResult(index, text);
 
-      const dayOfWeek = match[2].toLowerCase();
-      const offset = DAYS_OFFSET[dayOfWeek as keyof typeof DAYS_OFFSET];
-      if(offset === undefined) {
-          return null;
-      }
+    const dayOfWeek = match[2].toLowerCase();
+    const offset = DAYS_OFFSET[dayOfWeek as keyof typeof DAYS_OFFSET];
+    if (offset === undefined) {
+      return null;
+    }
 
-      const startMoment = context.refDate;
-      const refOffset = startMoment.getDay();
-      result.start.assign('weekday', offset);
-      if (offset <= refOffset) {
-        startMoment.setDate(offset + 7 + startMoment.getDate() - refOffset);
-        result.start.assign('day', startMoment.getDate());
-        result.start.assign('month', startMoment.getMonth() + 1);
-        result.start.assign('year', startMoment.getFullYear());
-      } else {
-        startMoment.setDate(offset + startMoment.getDate() - refOffset);
-        result.start.imply('day', startMoment.getDate());
-        result.start.imply('month', startMoment.getMonth() + 1);
-        result.start.imply('year', startMoment.getFullYear());
-      }
+    const startMoment = context.refDate;
+    const refOffset = startMoment.getDay();
+    result.start.assign("weekday", offset);
+    if (offset <= refOffset) {
+      startMoment.setDate(offset + 7 + startMoment.getDate() - refOffset);
+      result.start.assign("day", startMoment.getDate());
+      result.start.assign("month", startMoment.getMonth() + 1);
+      result.start.assign("year", startMoment.getFullYear());
+    } else {
+      startMoment.setDate(offset + startMoment.getDate() - refOffset);
+      result.start.imply("day", startMoment.getDate());
+      result.start.imply("month", startMoment.getMonth() + 1);
+      result.start.imply("year", startMoment.getFullYear());
+    }
 
-      return result;
+    return result;
   },
-  }
-)
+});
 customDateNlp.parsers.push(
   {
     pattern: () => /\b((start|end) )?of\b/i,
@@ -524,10 +544,14 @@ const javascriptHandler =
     });
   };
 
-const stripUids = ({uid, children, ...rest}: InputTextNode): InputTextNode => ({
+const stripUids = ({
+  uid,
+  children,
+  ...rest
+}: InputTextNode): InputTextNode => ({
   ...rest,
-  children: children.map(stripUids)
-})
+  children: children.map(stripUids),
+});
 
 export const COMMANDS: {
   text: string;
@@ -707,9 +731,8 @@ export const COMMANDS: {
     help: "Returns a list of block refs of TODOs that are Overdue\n\n1. Max # blocks\n\n2. Format of output.\n\n3. optional filter values",
     handler: (...args) => {
       const blocks = getBlockUidsAndTextsReferencingPage("TODO");
-      const yesterday = subDays(
-        customDateNlp.parseDate("today", getDateBasisDate()),
-        1
+      const today = startOfDay(
+        customDateNlp.parseDate("today", getDateBasisDate())
       );
       const todos = blocks
         .filter(({ text }) => DAILY_REF_REGEX.test(text))
@@ -718,7 +741,7 @@ export const COMMANDS: {
           uid,
           date: parseRoamDate(DAILY_REF_REGEX.exec(text)[1]),
         }))
-        .filter(({ date }) => isBefore(date, yesterday))
+        .filter(({ date }) => isBefore(date, today))
         .sort(({ date: a }, { date: b }) => a.valueOf() - b.valueOf());
       return outputTodoBlocks(todos, ...args);
     },
@@ -728,9 +751,8 @@ export const COMMANDS: {
     help: "Returns a list of block refs of TODOs that are Overdue including DNP TODOs\n\n1. Max # blocks\n\n2. Format of output.\n\n3. optional filter values",
     handler: (...args) => {
       const blocks = getBlockUidsAndTextsReferencingPage("TODO");
-      const yesterday = subDays(
-        customDateNlp.parseDate("today", getDateBasisDate()),
-        1
+      const today = startOfDay(
+        customDateNlp.parseDate("today", getDateBasisDate())
       );
       const todos = blocks
         .map(({ text, uid }) => ({
@@ -746,7 +768,7 @@ export const COMMANDS: {
           uid,
           date: parseRoamDate(date),
         }))
-        .filter(({ date }) => isBefore(date, yesterday))
+        .filter(({ date }) => isBefore(date, today))
         .sort(({ date: a }, { date: b }) => a.valueOf() - b.valueOf());
       return outputTodoBlocks(todos, ...args);
     },
@@ -815,7 +837,8 @@ export const COMMANDS: {
       const todos = blocks
         .filter(
           ({ text, title }) =>
-            !DAILY_REF_REGEX.test(text) && !DAILY_NOTE_PAGE_TITLE_REGEX.test(title)
+            !DAILY_REF_REGEX.test(text) &&
+            !DAILY_NOTE_PAGE_TITLE_REGEX.test(title)
         )
         .sort(({ text: a }, { text: b }) => a.localeCompare(b));
       return outputTodoBlocks(todos, ...args);
@@ -1775,8 +1798,8 @@ export const COMMANDS: {
       const normText = smartBlocksContext.variables[text] || text;
       const uid = extractRef(normText);
       return getBasicTreeByParentUid(uid).map(stripUids);
-    }
-  }
+    },
+  },
 ];
 export const handlerByCommand = Object.fromEntries(
   COMMANDS.map(({ text, help, ...rest }) => [text, rest])
