@@ -1,14 +1,12 @@
 import { Button, Intent, Spinner, SpinnerSize } from "@blueprintjs/core";
 import axios from "axios";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  getFirstChildTextByBlockUid,
-  getGraph,
-  getShallowTreeByParentUid,
-  localStorageGet,
-  localStorageSet,
-} from "roam-client";
-import { toFlexRegex } from "roamjs-components";
+import getFirstChildTextByBlockUid from "roamjs-components/queries/getFirstChildTextByBlockUid";
+import getGraph from "roamjs-components/util/getGraph";
+import getShallowTreeByParentUid from "roamjs-components/queries/getShallowTreeByParentUid";
+import localStorageGet from "roamjs-components/util/localStorageGet";
+import localStorageSet from "roamjs-components/util/localStorageSet";
+import toFlexRegex from "roamjs-components/util/toFlexRegex";
 
 const width = 600;
 const height = 525;

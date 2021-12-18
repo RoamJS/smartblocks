@@ -22,28 +22,22 @@ import React, {
   useRef,
   useState,
 } from "react";
-import {
-  createOverlayRender,
-  Description,
-  getSettingValueFromTree,
-  getSubTree,
-  renderToast,
-} from "roamjs-components";
 import axios from "axios";
-import {
-  createBlock,
-  deleteBlock,
-  getBasicTreeByParentUid,
-  getCurrentUserDisplayName,
-  getCurrentUserEmail,
-  getCurrentUserUid,
-  getDisplayNameByUid,
-  getGraph,
-  getPageUidByPageTitle,
-  getRoamUrl,
-  getShallowTreeByParentUid,
-  InputTextNode,
-} from "roam-client";
+import createOverlayRender from "roamjs-components/util/createOverlayRender";
+import getSettingValueFromTree from "roamjs-components/util/getSettingValueFromTree";
+import getSubTree from "roamjs-components/util/getSubTree";
+import { render as renderToast } from "roamjs-components/components/Toast";
+import createBlock from "roamjs-components/writes/createBlock";
+import deleteBlock from "roamjs-components/writes/deleteBlock";
+import getBasicTreeByParentUid from "roamjs-components/queries/getBasicTreeByParentUid";
+import getCurrentUserDisplayName from "roamjs-components/queries/getCurrentUserDisplayName";
+import getCurrentUserEmail from "roamjs-components/queries/getCurrentUserEmail";
+import getCurrentUserUid from "roamjs-components/queries/getCurrentUserUid";
+import getDisplayNameByUid from "roamjs-components/queries/getDisplayNameByUid";
+import getGraph from "roamjs-components/util/getGraph";
+import getPageUidByPageTitle from "roamjs-components/queries/getPageUidByPageTitle";
+import getShallowTreeByParentUid from "roamjs-components/queries/getShallowTreeByParentUid";
+import { InputTextNode } from "roamjs-components/types";
 import Markdown from "markdown-to-jsx";
 import {
   Elements,

@@ -8,8 +8,9 @@ import {
 } from "@blueprintjs/core";
 import axios from "axios";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { getBasicTreeByParentUid, getGraph } from "roam-client";
-import { getSettingValueFromTree } from "roamjs-components";
+import getBasicTreeByParentUid from "roamjs-components/queries/getBasicTreeByParentUid";
+import getGraph from "roamjs-components/util/getGraph";
+import getSettingValueFromTree from "roamjs-components/util/getSettingValueFromTree";
 
 type WorkflowReview = { version?: string; workflow?: string };
 

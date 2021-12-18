@@ -1,39 +1,35 @@
-import {
-  DAILY_NOTE_PAGE_REGEX,
-  getTreeByBlockUid,
-  getOrderByBlockUid,
-  getParentUidByBlockUid,
-  updateBlock,
-  createBlock,
-  getTextByBlockUid,
-  InputTextNode,
-  toRoamDate,
-  getBlockUidsAndTextsReferencingPage,
-  getBlockUidsWithParentUid,
-  createTagRegex,
-  getAllBlockUids,
-  getAllPageNames,
-  extractRef,
-  extractTag,
-  getPageUidByPageTitle,
-  getPageTitleByBlockUid,
-  parseRoamDate,
-  getParentUidsOfBlockUid,
-  BLOCK_REF_REGEX,
-  getCurrentUserDisplayName,
-  openBlock,
-  getBlockUidAndTextIncludingText,
-  getDisplayNameByUid,
-  getCurrentUserUid,
-  getPageTitleByPageUid,
-  createPage,
-  getFullTreeByParentUid,
-  DAILY_NOTE_PAGE_TITLE_REGEX,
-  getChildrenLengthByPageUid,
-  normalizePageTitle,
-  getBlockUidsReferencingBlock,
-  getBasicTreeByParentUid,
-} from "roam-client";
+import { DAILY_NOTE_PAGE_REGEX, DAILY_NOTE_PAGE_TITLE_REGEX } from "roamjs-components/date/constants";
+import getOrderByBlockUid from "roamjs-components/queries/getOrderByBlockUid";
+import getParentUidByBlockUid from "roamjs-components/queries/getParentUidByBlockUid";
+import updateBlock from "roamjs-components/writes/updateBlock";
+import createBlock from "roamjs-components/writes/createBlock";
+import getTextByBlockUid from "roamjs-components/queries/getTextByBlockUid";
+import {InputTextNode} from "roamjs-components/types";
+import toRoamDate from "roamjs-components/date/toRoamDate";
+import getBlockUidsAndTextsReferencingPage from "roamjs-components/queries/getBlockUidsAndTextsReferencingPage";
+import getBlockUidsWithParentUid from "roamjs-components/queries/getBlockUidsWithParentUid";
+import createTagRegex from "roamjs-components/util/createTagRegex";
+import getAllBlockUids from "roamjs-components/queries/getAllBlockUids";
+import getAllPageNames from "roamjs-components/queries/getAllPageNames";
+import extractRef from "roamjs-components/util/extractRef";
+import extractTag from "roamjs-components/util/extractTag";
+import getPageUidByPageTitle from "roamjs-components/queries/getPageUidByPageTitle";
+import getPageTitleByBlockUid from "roamjs-components/queries/getPageTitleByBlockUid";
+import parseRoamDate from "roamjs-components/date/parseRoamDate";
+import getParentUidsOfBlockUid from "roamjs-components/queries/getParentUidsOfBlockUid";
+import {BLOCK_REF_REGEX} from "roamjs-components/dom/constants";
+import getCurrentUserDisplayName from "roamjs-components/queries/getCurrentUserDisplayName";
+import openBlock from "roamjs-components/dom/openBlock";
+import getBlockUidAndTextIncludingText from "roamjs-components/queries/getBlockUidAndTextIncludingText";
+import getDisplayNameByUid from "roamjs-components/queries/getDisplayNameByUid";
+import getCurrentUserUid from "roamjs-components/queries/getCurrentUserUid";
+import getPageTitleByPageUid from "roamjs-components/queries/getPageTitleByPageUid";
+import createPage from "roamjs-components/writes/createPage";
+import getFullTreeByParentUid from "roamjs-components/queries/getFullTreeByParentUid";
+import getChildrenLengthByPageUid from "roamjs-components/queries/getChildrenLengthByPageUid";
+import normalizePageTitle from "roamjs-components/queries/normalizePageTitle";
+import getBlockUidsReferencingBlock from "roamjs-components/queries/getBlockUidsReferencingBlock";
+import getBasicTreeByParentUid from "roamjs-components/queries/getBasicTreeByParentUid";
 import * as chrono from "chrono-node";
 import datefnsFormat from "date-fns/format";
 import addDays from "date-fns/addDays";
@@ -54,7 +50,7 @@ import endOfYear from "date-fns/endOfYear";
 import differenceInDays from "date-fns/differenceInDays";
 import XRegExp from "xregexp";
 import { renderPrompt } from "./Prompt";
-import { renderToast } from "roamjs-components";
+import { render as renderToast } from "roamjs-components/components/Toast";
 import { ParsingComponents } from "chrono-node/dist/results";
 import { ORDINAL_WORD_DICTIONARY } from "./dom";
 import { Intent, ToasterPosition } from "@blueprintjs/core";
@@ -1475,7 +1471,7 @@ export const COMMANDS: {
             return "";
           });
         }
-        const nodes = getTreeByBlockUid(srcUid).children;
+        const nodes = getFullTreeByParentUid(srcUid).children;
         return processChildren({
           nodes,
           introUid: smartBlocksContext.currentUid,

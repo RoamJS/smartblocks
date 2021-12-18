@@ -6,13 +6,13 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { extractRef, extractTag, getTextByBlockUid } from "roam-client";
-import {
-  BlockInput,
-  createOverlayRender,
-  MenuItemSelect,
-  PageInput,
-} from "roamjs-components";
+import extractRef from "roamjs-components/util/extractRef";
+import extractTag from "roamjs-components/util/extractRef";
+import getTextByBlockUid from "roamjs-components/queries/getTextByBlockUid";
+import BlockInput from 'roamjs-components/components/BlockInput';
+import createOverlayRender from 'roamjs-components/util/createOverlayRender';
+import MenuItemSelect from 'roamjs-components/components/MenuItemSelect';
+import PageInput from 'roamjs-components/components/PageInput';
 
 type Props = {
   display?: string;

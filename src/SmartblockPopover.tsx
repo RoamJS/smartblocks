@@ -8,29 +8,24 @@ import {
 import axios from "axios";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import ReactDOM from "react-dom";
-import {
-  createBlock,
-  deleteBlock,
-  getBasicTreeByParentUid,
-  getBlockUidFromTarget,
-  getBlockUidsReferencingBlock,
-  getCurrentPageUid,
-  getDisplayNameByUid,
-  getFirstChildUidByBlockUid,
-  getGraph,
-  getPageUidByPageTitle,
-  getShallowTreeByParentUid,
-  getTreeByBlockUid,
-  InputTextNode,
-  TreeNode,
-  updateBlock,
-} from "roam-client";
-import {
-  getSettingValueFromTree,
-  renderToast,
-  toFlexRegex,
-  useSubTree,
-} from "roamjs-components";
+import createBlock from "roamjs-components/writes/createBlock";
+import deleteBlock from "roamjs-components/writes/deleteBlock";
+import getBasicTreeByParentUid from "roamjs-components/queries/getBasicTreeByParentUid";
+import getBlockUidFromTarget from "roamjs-components/dom/getBlockUidFromTarget";
+import getBlockUidsReferencingBlock from "roamjs-components/queries/getBlockUidsReferencingBlock";
+import getCurrentPageUid from "roamjs-components/dom/getCurrentPageUid";
+import getDisplayNameByUid from "roamjs-components/queries/getDisplayNameByUid";
+import getFirstChildUidByBlockUid from "roamjs-components/queries/getFirstChildUidByBlockUid";
+import getGraph from "roamjs-components/util/getGraph";
+import getPageUidByPageTitle from "roamjs-components/queries/getPageUidByPageTitle";
+import getShallowTreeByParentUid from "roamjs-components/queries/getShallowTreeByParentUid";
+import getFullTreeByParentUid from "roamjs-components/queries/getFullTreeByParentUid";
+import { InputTextNode, TreeNode } from "roamjs-components/types";
+import updateBlock from "roamjs-components/writes/updateBlock";
+import getSettingValueFromTree from "roamjs-components/util/getSettingValueFromTree";
+import { render as renderToast } from "roamjs-components/components/Toast";
+import toFlexRegex from "roamjs-components/util/toFlexRegex";
+import useSubTree from "roamjs-components/hooks/useSubTree";
 import lego from "./img/lego3blocks.png";
 import { HIDE_REGEX } from "./smartblocks";
 
@@ -143,7 +138,7 @@ const Content = ({
         token={token}
         setError={setError}
         onClick={() => {
-          const { text, children } = getTreeByBlockUid(blockUid);
+          const { text, children } = getFullTreeByParentUid(blockUid);
           return axios
             .put(
               `${process.env.API_URL}/smartblocks-store`,

@@ -7,13 +7,12 @@ import React, {
   useState,
 } from "react";
 import ReactDOM from "react-dom";
-import {
-  DAILY_NOTE_PAGE_REGEX,
-  getPageTitleByBlockUid,
-  getPageUidByPageTitle,
-  getUids,
-  RoamBasicNode,
-} from "roam-client";
+import { DAILY_NOTE_PAGE_REGEX } from "roamjs-components/date/constants";
+import getPageTitleByBlockUid from "roamjs-components/queries/getPageTitleByBlockUid";
+import getPageUidByPageTitle from "roamjs-components/queries/getPageUidByPageTitle";
+import getUids from "roamjs-components/dom/getUids";
+import getTextByBlockUid from "roamjs-components/queries/getTextByBlockUid";
+import { RoamBasicNode } from "roamjs-components/types";
 import { getCoords } from "./dom";
 import lego from "./img/lego3blocks.png";
 import gear from "./img/gear.png";
@@ -24,10 +23,9 @@ import {
   sbBomb,
 } from "./smartblocks";
 import fuzzy from "fuzzy";
-import { getSettingValueFromTree, setInputSetting } from "roamjs-components";
+import getSettingValueFromTree from "roamjs-components/util/getSettingValueFromTree";
 import { isMobile } from "react-device-detect";
 import axios from "axios";
-import { getTextByBlockUid } from "roam-client/lib/queries";
 
 type Props = {
   textarea: HTMLTextAreaElement;

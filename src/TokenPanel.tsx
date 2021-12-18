@@ -7,13 +7,11 @@ import {
 } from "@blueprintjs/core";
 import axios from "axios";
 import React, { useState } from "react";
-import {
-  createBlock,
-  getFirstChildTextByBlockUid,
-  getFirstChildUidByBlockUid,
-  getGraph,
-  updateBlock,
-} from "roam-client";
+import createBlock from "roamjs-components/writes/createBlock";
+import getFirstChildTextByBlockUid from "roamjs-components/queries/getFirstChildTextByBlockUid";
+import getFirstChildUidByBlockUid from "roamjs-components/queries/getFirstChildUidByBlockUid";
+import getGraph from "roamjs-components/util/getGraph";
+import updateBlock from "roamjs-components/writes/updateBlock";
 
 const TokenPanel = ({
   uid,

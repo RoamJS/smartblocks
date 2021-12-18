@@ -1,12 +1,10 @@
 import { Button, InputGroup, Intent, Label } from "@blueprintjs/core";
 import React, { useMemo, useState } from "react";
-import {
-  createBlock,
-  getBasicTreeByParentUid,
-  getFirstChildUidByBlockUid,
-  updateBlock,
-} from "roam-client";
-import { MenuItemSelect } from "roamjs-components";
+import createBlock from "roamjs-components/writes/createBlock";
+import getBasicTreeByParentUid from "roamjs-components/queries/getBasicTreeByParentUid";
+import getFirstChildUidByBlockUid from "roamjs-components/queries/getFirstChildUidByBlockUid";
+import updateBlock from "roamjs-components/writes/updateBlock";
+import MenuItemSelect from "roamjs-components/components/MenuItemSelect";
 import { getCleanCustomWorkflows } from "./smartblocks";
 
 export type SmartblockHotKeys = {

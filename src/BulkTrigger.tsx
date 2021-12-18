@@ -12,24 +12,23 @@ import {
   SpinnerSize,
 } from "@blueprintjs/core";
 import React, { useCallback, useMemo, useRef, useState } from "react";
-import {
-  createBlock,
-  getChildrenLengthByPageUid,
-  getPageUidByPageTitle,
-} from "roam-client";
-import {
-  createOverlayRender,
-  PageInput,
-  useArrowKeyDown,
-} from "roamjs-components";
+import createBlock from "roamjs-components/writes/createBlock";
+import getChildrenLengthByPageUid from "roamjs-components/queries/getChildrenLengthByPageUid";
+import getPageUidByPageTitle from "roamjs-components/queries/getPageUidByPageTitle";
+import createOverlayRender from "roamjs-components/util/createOverlayRender";
+import PageInput from "roamjs-components/components/PageInput";
+import useArrowKeyDown from "roamjs-components/hooks/useArrowKeyDown";
 import { getVisibleCustomWorkflows, sbBomb } from "./smartblocks";
 import fuzzy from "fuzzy";
 
 type Props = {
   initialLocations: string[];
-}
+};
 
-const BulkTrigger = ({ onClose, initialLocations }: { onClose: () => void } & Props) => {
+const BulkTrigger = ({
+  onClose,
+  initialLocations,
+}: { onClose: () => void } & Props) => {
   const allWorkflows = useMemo(() => getVisibleCustomWorkflows(), []);
   const workflowNameByUid = useMemo(
     () => Object.fromEntries(allWorkflows.map(({ uid, name }) => [uid, name])),

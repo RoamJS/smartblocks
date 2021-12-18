@@ -1,38 +1,34 @@
-import {
-  toConfig,
-  runExtension,
-  getBlockUidsAndTextsReferencingPage,
-  addStyle,
-  toRoamDateUid,
-  createPage,
-  toRoamDate,
-  createBlock,
-  getPageUidByPageTitle,
-  getShallowTreeByParentUid,
-  createHTMLObserver,
-  getBlockUidFromTarget,
-  getTextByBlockUid,
-  updateBlock,
-  parseRoamDateUid,
-  getBasicTreeByParentUid,
-  getUids,
-  getCurrentPageUid,
-  getDisplayNameByUid,
-  getCurrentUserUid,
-  createBlockObserver,
-  openBlock,
-  getPageTitleByPageUid,
-  deleteBlock,
-} from "roam-client";
-import {
-  createConfigObserver,
-  getSettingValueFromTree,
-  getSubTree,
-  renderCursorMenu,
-  renderToast,
-  setInputSetting,
-  toFlexRegex,
-} from "roamjs-components";
+import toConfigPageName from "roamjs-components/util/toConfigPageName";
+import runExtension from "roamjs-components/util/runExtension";
+import getBlockUidsAndTextsReferencingPage from "roamjs-components/queries/getBlockUidsAndTextsReferencingPage";
+import addStyle from "roamjs-components/dom/addStyle";
+import toRoamDateUid from "roamjs-components/date/toRoamDateUid";
+import createPage from "roamjs-components/writes/createPage";
+import toRoamDate from "roamjs-components/date/toRoamDate";
+import createBlock from "roamjs-components/writes/createBlock";
+import getPageUidByPageTitle from "roamjs-components/queries/getPageUidByPageTitle";
+import getShallowTreeByParentUid from "roamjs-components/queries/getShallowTreeByParentUid";
+import createHTMLObserver from "roamjs-components/dom/createHTMLObserver";
+import getBlockUidFromTarget from "roamjs-components/dom/getBlockUidFromTarget";
+import getTextByBlockUid from "roamjs-components/queries/getTextByBlockUid";
+import updateBlock from "roamjs-components/writes/updateBlock";
+import parseRoamDateUid from "roamjs-components/date/parseRoamDateUid";
+import getBasicTreeByParentUid from "roamjs-components/queries/getBasicTreeByParentUid";
+import getUids from "roamjs-components/dom/getUids";
+import getCurrentPageUid from "roamjs-components/dom/getCurrentPageUid";
+import getDisplayNameByUid from "roamjs-components/queries/getDisplayNameByUid";
+import getCurrentUserUid from "roamjs-components/queries/getCurrentUserUid";
+import createBlockObserver from "roamjs-components/dom/createBlockObserver";
+import openBlock from "roamjs-components/dom/openBlock";
+import getPageTitleByPageUid from "roamjs-components/queries/getPageTitleByPageUid";
+import deleteBlock from "roamjs-components/writes/deleteBlock";
+import { createConfigObserver } from "roamjs-components/components/ConfigPage";
+import getSettingValueFromTree from "roamjs-components/util/getSettingValueFromTree";
+import getSubTree from "roamjs-components/util/getSubTree";
+import { render as renderCursorMenu } from "roamjs-components/components/CursorMenu";
+import { render as renderToast } from "roamjs-components/components/Toast";
+import setInputSetting from "roamjs-components/util/setInputSetting";
+import toFlexRegex from "roamjs-components/util/toFlexRegex";
 import addDays from "date-fns/addDays";
 import addHours from "date-fns/addHours";
 import addMinutes from "date-fns/addMinutes";
@@ -226,7 +222,7 @@ const getLegacy42Setting = (name: string) => {
 };
 
 const ID = "smartblocks";
-const CONFIG = toConfig(ID);
+const CONFIG = toConfigPageName(ID);
 const COMMAND_ENTRY_REGEX = /<%$/;
 const smartblockHotKeys: SmartblockHotKeys = {
   uidToMapping: {},
@@ -421,14 +417,20 @@ runExtension("smartblocks", () => {
         );
       }
     }
-    return new Promise(resolve => setTimeout(() => sbBomb({
-      srcUid,
-      target: {
-        uid: targetUid,
-        isPage: !!(targetName || getPageTitleByPageUid(targetUid)),
-      },
-      variables,
-    }).then(resolve), 10));
+    return new Promise((resolve) =>
+      setTimeout(
+        () =>
+          sbBomb({
+            srcUid,
+            target: {
+              uid: targetUid,
+              isPage: !!(targetName || getPageTitleByPageUid(targetUid)),
+            },
+            variables,
+          }).then(resolve),
+        10
+      )
+    );
   };
 
   document.addEventListener("input", (e) => {
@@ -743,7 +745,7 @@ runExtension("smartblocks", () => {
                 mutableCursor: !(
                   workflows.find((w) => w.uid === srcUid)?.name || ""
                 ).includes("<%NOCURSOR%>"),
-                triggerUid: parentUid
+                triggerUid: parentUid,
               };
               if (keepButton) {
                 const targetUid = createBlock({
