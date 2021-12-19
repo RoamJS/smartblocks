@@ -180,6 +180,7 @@ const SmartblocksMenu = ({
         flip: { enabled: false },
         preventOverflow: { enabled: false },
       }}
+      autoFocus={false}
       content={
         <Menu
           ulRef={menuRef}
