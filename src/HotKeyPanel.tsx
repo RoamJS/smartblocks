@@ -5,6 +5,7 @@ import getBasicTreeByParentUid from "roamjs-components/queries/getBasicTreeByPar
 import getFirstChildUidByBlockUid from "roamjs-components/queries/getFirstChildUidByBlockUid";
 import updateBlock from "roamjs-components/writes/updateBlock";
 import MenuItemSelect from "roamjs-components/components/MenuItemSelect";
+import deleteBlock from "roamjs-components/writes/deleteBlock";
 import { getCleanCustomWorkflows } from "./smartblocks";
 
 export type SmartblockHotKeys = {
@@ -165,6 +166,3 @@ const HotKeyPanel =
   };
 
 export default HotKeyPanel;
-function deleteBlock(uid: string) {
-  throw new Error("Function not implemented.");
-}
