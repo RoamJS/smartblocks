@@ -203,26 +203,21 @@ const BulkTrigger = ({
               setError("");
               const promises = locations.flatMap((loc) => {
                 const pageUid = getPageUidByPageTitle(loc);
-                return workflows.map((srcUid) => () => {
+                return workflows.map((srcUid) => async () => {
                   const order = getChildrenLengthByPageUid(pageUid);
-                  const targetUid = createBlock({
+                  return createBlock({
                     node: { text: "" },
                     parentUid: pageUid,
                     order,
-                  });
-                  return new Promise((resolve) =>
-                    setTimeout(
-                      () =>
-                        sbBomb({
-                          srcUid,
-                          target: {
-                            uid: targetUid,
-                            start: 0,
-                            end: 0,
-                          },
-                        }).then(() => setTimeout(resolve, 1)),
-                      1
-                    )
+                  }).then((targetUid) =>
+                    sbBomb({
+                      srcUid,
+                      target: {
+                        uid: targetUid,
+                        start: 0,
+                        end: 0,
+                      },
+                    })
                   );
                 });
               });

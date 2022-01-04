@@ -27,9 +27,12 @@ const HotKeyPanel =
       []
     );
     const uid = useMemo(
-      () =>
-        inputUid ||
-        createBlock({ node: { text: "hot keys" }, parentUid, order: 4 }),
+      () => {
+        if (inputUid) return inputUid;
+        const newUid = window.roamAlphaAPI.util.generateUID();
+        createBlock({ node: { text: "hot keys", uid: newUid }, parentUid, order: 4 })
+        return newUid;
+      },
       [inputUid]
     );
     const [keys, setKeys] = useState(() =>
@@ -133,10 +136,10 @@ const HotKeyPanel =
           rightIcon={"plus"}
           minimal
           style={{ marginTop: 8 }}
-          onClick={() => {
+          onClick={async () => {
             const randomWorkflow =
               workflows[Math.floor(Math.random() * workflows.length)];
-            const valueUid = createBlock({
+            const valueUid = await createBlock({
               parentUid: uid,
               order: keys.length,
               node: {

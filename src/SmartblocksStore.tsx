@@ -351,31 +351,27 @@ const DrawerContent = ({
     workflows,
   ]);
   const installWorkflow = useCallback(
-    (workflow: string) => {
+    async (workflow: string) => {
       const children = JSON.parse(workflow) as InputTextNode[];
       const selectedName = selectedSmartBlock.name
         .replace(/<%[A-Z]+%>/g, "")
         .trim();
       const uid =
         workflows.find(({ name }) => name === selectedName)?.uid ||
-        createBlock({
+        (await createBlock({
           node: {
             text: `#SmartBlock ${selectedSmartBlock.name}`,
           },
           parentUid,
-        });
-      setTimeout(() => {
-        getShallowTreeByParentUid(uid).forEach(({ uid: child }) =>
-          deleteBlock(child)
-        );
-        children.forEach((node, order) =>
-          createBlock({ node, order, parentUid: uid })
-        );
-        setTimeout(() => {
-          window.roamAlphaAPI.ui.mainWindow.openBlock({ block: { uid } });
-          onClose();
-        }, 1000);
-      }, 1);
+        }));
+      await getShallowTreeByParentUid(uid).map(({ uid: child }) => () =>
+        deleteBlock(child)
+      ).reduce((p,c) => p.then(()=> c()), Promise.resolve());
+      await children.map((node, order) => () =>
+        createBlock({ node, order, parentUid: uid })
+      ).reduce((p,c) => p.then(()=> c()), Promise.resolve());
+      await window.roamAlphaAPI.ui.mainWindow.openBlock({ block: { uid } });
+      onClose();
     },
     [selectedSmartBlock, onClose]
   );
@@ -394,7 +390,7 @@ const DrawerContent = ({
           setPaymentSecret(r.data.secret);
           setLoading(false);
         } else if (r.data.workflow) {
-          installWorkflow(r.data.workflow);
+          return installWorkflow(r.data.workflow);
         } else {
           throw new Error("Returned empty response");
         }
@@ -474,9 +470,9 @@ const DrawerContent = ({
                           } SmartBlock!`,
                         });
                         if (updateable || !installed) {
-                          installWorkflow(r.data.workflow);
+                          return installWorkflow(r.data.workflow);
                         } else {
-                          onClose();
+                          return onClose();
                         }
                       })
                       .catch((e) => {

@@ -50,38 +50,36 @@ const TokenPanel = ({
         <Button
           intent={Intent.PRIMARY}
           text={"Generate Token"}
-          onClick={() => {
+          onClick={async () => {
             setLoading(true);
             setError("");
-            setTimeout(() => {
-              const tokenUid =
-                uid ||
-                createBlock({
-                  node: { text: "token" },
-                  parentUid,
-                });
-              const oldToken = getFirstChildTextByBlockUid(tokenUid) || "";
-              axios
-                .put(
-                  `${process.env.API_URL}/smartblocks-token`,
-                  { graph: getGraph() },
-                  { headers: { Authorization: oldToken } }
-                )
-                .then((r) => {
-                  const oldUid = getFirstChildUidByBlockUid(tokenUid);
-                  if (oldUid) {
-                    updateBlock({ uid: oldUid, text: r.data.token });
-                  } else {
-                    createBlock({
-                      node: { text: r.data.token },
-                      parentUid: tokenUid,
-                    });
-                  }
-                  setToken(r.data.token);
-                })
-                .catch((e) => setError(e.response?.data || e.message))
-                .finally(() => setLoading(false));
-            });
+            const tokenUid =
+              uid ||
+              await createBlock({
+                node: { text: "token" },
+                parentUid,
+              });
+            const oldToken = getFirstChildTextByBlockUid(tokenUid) || "";
+            axios
+              .put(
+                `${process.env.API_URL}/smartblocks-token`,
+                { graph: getGraph() },
+                { headers: { Authorization: oldToken } }
+              )
+              .then((r) => {
+                const oldUid = getFirstChildUidByBlockUid(tokenUid);
+                if (oldUid) {
+                  updateBlock({ uid: oldUid, text: r.data.token });
+                } else {
+                  createBlock({
+                    node: { text: r.data.token },
+                    parentUid: tokenUid,
+                  });
+                }
+                setToken(r.data.token);
+              })
+              .catch((e) => setError(e.response?.data || e.message))
+              .finally(() => setLoading(false));
           }}
         />
         {loading && <Spinner size={SpinnerSize.SMALL} />}

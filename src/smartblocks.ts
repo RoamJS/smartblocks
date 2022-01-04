@@ -1,10 +1,13 @@
-import { DAILY_NOTE_PAGE_REGEX, DAILY_NOTE_PAGE_TITLE_REGEX } from "roamjs-components/date/constants";
+import {
+  DAILY_NOTE_PAGE_REGEX,
+  DAILY_NOTE_PAGE_TITLE_REGEX,
+} from "roamjs-components/date/constants";
 import getOrderByBlockUid from "roamjs-components/queries/getOrderByBlockUid";
 import getParentUidByBlockUid from "roamjs-components/queries/getParentUidByBlockUid";
 import updateBlock from "roamjs-components/writes/updateBlock";
 import createBlock from "roamjs-components/writes/createBlock";
 import getTextByBlockUid from "roamjs-components/queries/getTextByBlockUid";
-import {InputTextNode} from "roamjs-components/types";
+import { InputTextNode } from "roamjs-components/types";
 import toRoamDate from "roamjs-components/date/toRoamDate";
 import getBlockUidsAndTextsReferencingPage from "roamjs-components/queries/getBlockUidsAndTextsReferencingPage";
 import getBlockUidsWithParentUid from "roamjs-components/queries/getBlockUidsWithParentUid";
@@ -17,7 +20,7 @@ import getPageUidByPageTitle from "roamjs-components/queries/getPageUidByPageTit
 import getPageTitleByBlockUid from "roamjs-components/queries/getPageTitleByBlockUid";
 import parseRoamDate from "roamjs-components/date/parseRoamDate";
 import getParentUidsOfBlockUid from "roamjs-components/queries/getParentUidsOfBlockUid";
-import {BLOCK_REF_REGEX} from "roamjs-components/dom/constants";
+import { BLOCK_REF_REGEX } from "roamjs-components/dom/constants";
 import getCurrentUserDisplayName from "roamjs-components/queries/getCurrentUserDisplayName";
 import openBlock from "roamjs-components/dom/openBlock";
 import getBlockUidAndTextIncludingText from "roamjs-components/queries/getBlockUidAndTextIncludingText";
@@ -57,6 +60,8 @@ import { Intent, ToasterPosition } from "@blueprintjs/core";
 import { renderLoading } from "./Loading";
 import axios from "axios";
 import lodashGet from "lodash/get";
+import getUids from "roamjs-components/dom/getUids";
+import getCurrentPageUid from "roamjs-components/dom/getCurrentPageUid";
 
 export const PREDEFINED_REGEX = /#\d*-predefined/;
 const PAGE_TITLE_REGEX = /^(?:#?\[\[(.*)\]\]|#([^\s]*))$/;
@@ -1459,16 +1464,19 @@ export const COMMANDS: {
       if (srcUid) {
         if (pageName.length) {
           const title = extractTag(pageName.join(","));
-          const targetUid =
-            getPageUidByPageTitle(title) || createPage({ title });
-          const parentContext = { ...smartBlocksContext };
-          return sbBomb({
-            srcUid,
-            target: { uid: targetUid, isPage: true },
-            variables: smartBlocksContext.variables,
-          }).then(() => {
-            resetContext(parentContext);
-            return "";
+          const targetUid = getPageUidByPageTitle(title);
+          return (
+            targetUid ? Promise.resolve(targetUid) : createPage({ title })
+          ).then((targetUid) => {
+            const parentContext = { ...smartBlocksContext };
+            return sbBomb({
+              srcUid,
+              target: { uid: targetUid, isPage: true },
+              variables: smartBlocksContext.variables,
+            }).then(() => {
+              resetContext(parentContext);
+              return "";
+            });
           });
         }
         const nodes = getFullTreeByParentUid(srcUid).children;
@@ -1549,41 +1557,49 @@ export const COMMANDS: {
       const refsToCreate = new Set(
         Object.values(smartBlocksContext.refMapping)
       );
-      const navUid =
+      return (
         !getPageTitleByPageUid(uid) &&
         !getTextByBlockUid(uid) &&
         !refsToCreate.has(uid)
           ? createPage({ title: pageOrUid })
-          : uid;
-      const navToPage = () => {
-        setTimeout(() => {
-          window.roamAlphaAPI.ui.mainWindow.openBlock({
-            block: { uid: navUid },
-          });
-          if (typeof blockNumberArg === "string") {
-            const blockNumber =
-              Number(blockNumberArg.replace(/GOTOBLOCK/, "").trim()) || 1;
-            setTimeout(() => {
-              const blocks = Array.from(
-                document.querySelectorAll(
-                  ".roam-article .rm-level-0 .rm-block-text"
-                )
-              );
-              const index =
-                blockNumber > 0 ? blockNumber - 1 : blocks.length + blockNumber;
-              if (index >= 0 && index < blocks.length) {
-                openBlock(blocks[index].id);
+          : Promise.resolve(uid)
+      ).then((navUid) => {
+        const navToPage = () =>
+          window.roamAlphaAPI.ui.mainWindow
+            .openBlock({
+              block: { uid: navUid },
+            })
+            .then(() => {
+              if (typeof blockNumberArg === "string") {
+                const blockNumber =
+                  Number(blockNumberArg.replace(/GOTOBLOCK/, "").trim()) || 1;
+                const blocks = Array.from(
+                  document.querySelectorAll<HTMLDivElement>(
+                    ".roam-article .rm-level-0 .rm-block-text"
+                  )
+                );
+                const index =
+                  blockNumber > 0
+                    ? blockNumber - 1
+                    : blocks.length + blockNumber;
+                if (index >= 0 && index < blocks.length) {
+                  const { blockUid } = getUids(blocks[index]);
+                  window.roamAlphaAPI.ui.setBlockFocusAndSelection({
+                    location: {
+                      "block-uid": blockUid,
+                      "window-id": `${getCurrentUserUid()}-body-outline-${getCurrentPageUid()}`,
+                    },
+                  });
+                }
               }
-            }, 500);
-          }
-        }, 500);
-      };
-      if (refsToCreate.has(navUid)) {
-        smartBlocksContext.afterWorkflowMethods.push(navToPage);
-      } else {
-        navToPage();
-      }
-      return "";
+            });
+        if (refsToCreate.has(navUid)) {
+          smartBlocksContext.afterWorkflowMethods.push(navToPage);
+          return;
+        } else {
+          return navToPage().then(() => "");
+        }
+      });
     },
   },
   {
@@ -1635,47 +1651,55 @@ export const COMMANDS: {
       const refsToCreate = new Set(
         Object.values(smartBlocksContext.refMapping)
       );
-      const navUid =
+      return (
         !getPageTitleByPageUid(uid) &&
         !getTextByBlockUid(uid) &&
         !refsToCreate.has(uid)
           ? createPage({ title: pageOrUid })
-          : uid;
-      const openInSidebar = () => {
-        setTimeout(() => {
-          window.roamAlphaAPI.ui.rightSidebar.open();
-          if (/GRAPH/.test(afterNavArg)) {
-            window.roamAlphaAPI.ui.rightSidebar.addWindow({
-              window: { type: "graph", "block-uid": navUid },
-            });
-          } else if (/GOTOBLOCK/.test(afterNavArg)) {
-            const blockNumber =
-              Number(afterNavArg.replace(/GOTOBLOCK/, "").trim()) || 1;
-            setTimeout(() => {
+          : Promise.resolve(uid)
+      ).then((navUid) => {
+        const openInSidebar = () =>
+          window.roamAlphaAPI.ui.rightSidebar.open().then(() => {
+            if (/GRAPH/.test(afterNavArg)) {
+              return window.roamAlphaAPI.ui.rightSidebar.addWindow({
+                window: { type: "graph", "block-uid": navUid },
+              });
+            } else if (/GOTOBLOCK/.test(afterNavArg)) {
+              const blockNumber =
+                Number(afterNavArg.replace(/GOTOBLOCK/, "").trim()) || 1;
               const blocks = Array.from(
-                document.querySelectorAll(
+                document.querySelectorAll<HTMLDivElement>(
                   ".sidebar-content>div:first-child .rm-block-text"
                 )
               );
               const index =
                 blockNumber > 0 ? blockNumber - 1 : blocks.length + blockNumber;
               if (index >= 0 && index < blocks.length) {
-                openBlock(blocks[index].id);
+                const { blockUid } = getUids(blocks[index]);
+                const windowId =
+                  window.roamAlphaAPI.ui.rightSidebar.getWindows()[0][
+                    "window-id"
+                  ];
+                return window.roamAlphaAPI.ui.setBlockFocusAndSelection({
+                  location: {
+                    "window-id": windowId,
+                    "block-uid": blockUid,
+                  },
+                });
               }
-            }, 500);
-          } else {
-            window.roamAlphaAPI.ui.rightSidebar.addWindow({
-              window: { type: "block", "block-uid": navUid },
-            });
-          }
-        }, 500);
-      };
-      if (refsToCreate.has(navUid)) {
-        smartBlocksContext.afterWorkflowMethods.push(openInSidebar);
-      } else {
-        openInSidebar();
-      }
-      return "";
+            } else {
+              return window.roamAlphaAPI.ui.rightSidebar.addWindow({
+                window: { type: "block", "block-uid": navUid },
+              });
+            }
+          });
+        if (refsToCreate.has(navUid)) {
+          smartBlocksContext.afterWorkflowMethods.push(openInSidebar);
+        } else {
+          openInSidebar();
+        }
+        return "";
+      });
     },
   },
   {
@@ -1702,38 +1726,14 @@ export const COMMANDS: {
       const state = Number(stateArg) || 1;
       const leftButton = document.querySelector(".rm-open-left-sidebar-btn");
       switch (state) {
-        case 1: //open left
-          if (leftButton) {
-            leftButton.dispatchEvent(
-              new MouseEvent("mouseover", {
-                view: window,
-                bubbles: true,
-                cancelable: true,
-                buttons: 1,
-              })
-            );
-            setTimeout(async () => {
-              document
-                .querySelector<HTMLSpanElement>(".rm-open-left-sidebar-btn")
-                .click();
-            }, 100);
-          }
-          return "";
-        case 2: //close left
-          if (!leftButton) {
-            document
-              .querySelector<HTMLSpanElement>(
-                ".roam-sidebar-content .bp3-icon-menu-closed"
-              )
-              .click();
-          }
-          return "";
+        case 1:
+          return window.roamAlphaAPI.ui.leftSidebar.open().then(() => "");
+        case 2:
+          return window.roamAlphaAPI.ui.leftSidebar.close().then(() => "");
         case 3:
-          window.roamAlphaAPI.ui.rightSidebar.open();
-          return "";
+          return window.roamAlphaAPI.ui.rightSidebar.open().then(() => "");
         case 4:
-          window.roamAlphaAPI.ui.rightSidebar.close();
-          return "";
+          return window.roamAlphaAPI.ui.rightSidebar.close().then(() => "");
         default:
           return `Invalid Sidebar State: ${stateArg}`;
       }
@@ -1751,8 +1751,10 @@ export const COMMANDS: {
         ? new RegExp(reg.slice(1, -1), flags)
         : new RegExp(reg, flags);
       if (blockText) {
-        updateBlock({ uid, text: blockText.replace(regex, normOut) });
-        return new Promise((resolve) => setTimeout(() => resolve(""), 1));
+        return updateBlock({
+          uid,
+          text: blockText.replace(regex, normOut),
+        }).then(() => "");
       }
       return normText.replace(regex, normOut);
     },
@@ -2080,27 +2082,19 @@ const resolveRefs = (nodes: InputTextNode[]): InputTextNode[] =>
 const count = (t: InputTextNode[]): number =>
   t.map((c) => count(c.children) + 1).reduce((p, c) => p + c, 0);
 
-export const sbBomb = ({
+export const sbBomb = async ({
   srcUid,
   target: { uid, start = 0, end = start, isPage = false },
   variables = {},
   mutableCursor,
-  clicked = false,
   triggerUid = uid,
 }: {
   srcUid: string;
   target: { uid: string; start?: number; end?: number; isPage?: boolean };
   variables?: Record<string, string>;
   mutableCursor?: boolean;
-  clicked?: boolean;
   triggerUid?: string;
 }): Promise<number> => {
-  if (clicked && document.activeElement.tagName === "TEXTAREA") {
-    document.activeElement.setAttribute(
-      "roamjs-smartblocks-before-workflow",
-      "true"
-    );
-  }
   const finish = renderLoading(uid);
   resetContext({ targetUid: uid, variables, triggerUid });
   const childNodes = PREDEFINED_REGEX.test(srcUid)
@@ -2112,7 +2106,7 @@ export const sbBomb = ({
     const originalText = getTextByBlockUid(uid);
     const prefix = originalText.substring(0, start);
     const suffix = originalText.substring(end);
-    updateBlock({
+    await updateBlock({
       uid,
       text: `${prefix}${suffix}`,
     });
@@ -2120,147 +2114,94 @@ export const sbBomb = ({
     props.introContent = prefix;
     props.suffix = suffix;
   }
-  return new Promise<number>((resolve) =>
-    setTimeout(
-      () =>
-        processChildren({
-          nodes: childNodes,
-          ...props,
-        })
-          .then(resolveRefs)
-          .then(
-            (tree) =>
-              new Promise<number>((resolve) =>
-                setTimeout(() => {
-                  const [firstChild, ...next] = tree;
-                  const numNodes = count(tree);
-                  if (numNodes >= 300) {
-                    renderToast({
-                      intent: Intent.WARNING,
-                      id: "smartblocks-limit",
-                      content:
-                        "This workflow outputs more than 300 blocks which is Roam's limit. Reach out to support@roamjs.com if this applies to you",
-                    });
-                  }
-                  if (firstChild) {
-                    const startingOrder = isPage
-                      ? getChildrenLengthByPageUid(uid)
-                      : getOrderByBlockUid(uid);
-                    const parentUid = isPage
-                      ? uid
-                      : getParentUidByBlockUid(uid);
-                    if (isPage) {
-                      createBlock({
-                        node: firstChild,
-                        parentUid,
-                        order: startingOrder,
-                      });
-                    } else {
-                      const textPostProcess = getTextByBlockUid(uid);
-                      const indexDiffered = textPostProcess
-                        .split("")
-                        .findIndex(
-                          (c, i) => c !== props.introContent.charAt(i)
-                        );
-                      updateBlock({
-                        ...firstChild,
-                        uid,
-                        text: `${
-                          indexDiffered < 0
-                            ? textPostProcess
-                            : textPostProcess.slice(0, indexDiffered)
-                        }${firstChild.text || ""}${
-                          indexDiffered < 0
-                            ? ""
-                            : textPostProcess.substring(indexDiffered)
-                        }`,
-                      });
-                      firstChild.children.forEach((node, order) =>
-                        createBlock({ order, parentUid: uid, node })
-                      );
-                    }
-                    next.forEach((node, i) =>
-                      createBlock({
-                        parentUid,
-                        order: startingOrder + 1 + i,
-                        node,
-                      })
-                    );
-                  }
-                  if (smartBlocksContext.focusOnBlock) {
-                    setTimeout(() => {
-                      window.roamAlphaAPI.ui.mainWindow.openBlock({
-                        block: { uid: smartBlocksContext.focusOnBlock },
-                      });
-                    }, 1000);
-                  } else if (typeof mutableCursor === "boolean") {
-                    if (mutableCursor) {
-                      if (smartBlocksContext.cursorPosition) {
-                        if (
-                          smartBlocksContext.cursorPosition.uid === uid &&
-                          document.activeElement.tagName === "TEXTAREA" &&
-                          document.activeElement.id.endsWith(uid)
-                        ) {
-                          const { selection } =
-                            smartBlocksContext.cursorPosition;
-                          const setPosition = (count = 0): void | number =>
-                            document.activeElement.tagName === "TEXTAREA" &&
-                            !document.activeElement.hasAttribute(
-                              "roamjs-smartblocks-before-workflow"
-                            )
-                              ? (
-                                  document.activeElement as HTMLTextAreaElement
-                                ).setSelectionRange(selection, selection)
-                              : count < 100 &&
-                                window.setTimeout(
-                                  () => setPosition(count + 1),
-                                  10
-                                );
-                          setTimeout(setPosition, 10);
-                        } else {
-                          const { uid: blockUid, selection } =
-                            smartBlocksContext.cursorPosition;
-                          setTimeout(() => {
-                            const el = Array.from(
-                              document.body.querySelectorAll<HTMLElement>(
-                                "div.roam-block"
-                              )
-                            )
-                              .concat(
-                                Array.from(
-                                  document.body.querySelectorAll<HTMLElement>(
-                                    "textarea"
-                                  )
-                                )
-                              )
-                              .find((d) => d.id.endsWith(blockUid));
-                            if (el) {
-                              setTimeout(() => openBlock(el.id, selection), 1);
-                            }
-                          }, 10);
-                        }
-                      }
-                    } else {
-                      setTimeout(
-                        () =>
-                          document.activeElement.tagName === "TEXTAREA" &&
-                          (
-                            document.activeElement as HTMLTextAreaElement
-                          ).blur(),
-                        1
-                      );
-                    }
-                  }
-                  resolve(tree.length);
-                }, 1)
-              )
+  return processChildren({
+    nodes: childNodes,
+    ...props,
+  })
+    .then(resolveRefs)
+    .then(async (tree) => {
+      const [firstChild, ...next] = tree;
+      const numNodes = count(tree);
+      if (numNodes >= 300) {
+        renderToast({
+          intent: Intent.WARNING,
+          id: "smartblocks-limit",
+          content:
+            "This workflow outputs more than 300 blocks which is Roam's limit. Reach out to support@roamjs.com if this applies to you",
+        });
+      }
+      if (firstChild) {
+        const startingOrder = isPage
+          ? getChildrenLengthByPageUid(uid)
+          : getOrderByBlockUid(uid);
+        const parentUid = isPage ? uid : getParentUidByBlockUid(uid);
+        if (isPage) {
+          await createBlock({
+            node: firstChild,
+            parentUid,
+            order: startingOrder,
+          });
+        } else {
+          const textPostProcess = getTextByBlockUid(uid);
+          const indexDiffered = textPostProcess
+            .split("")
+            .findIndex((c, i) => c !== props.introContent.charAt(i));
+          await updateBlock({
+            ...firstChild,
+            uid,
+            text: `${
+              indexDiffered < 0
+                ? textPostProcess
+                : textPostProcess.slice(0, indexDiffered)
+            }${firstChild.text || ""}${
+              indexDiffered < 0 ? "" : textPostProcess.substring(indexDiffered)
+            }`,
+          });
+          await firstChild.children
+            .map(
+              (node, order) => () =>
+                createBlock({ order, parentUid: uid, node })
+            )
+            .reduce((p, c) => p.then(() => c()), Promise.resolve());
+        }
+        await next
+          .map(
+            (node, i) => () =>
+              createBlock({
+                parentUid,
+                order: startingOrder + 1 + i,
+                node,
+              })
           )
-          .then((c) =>
-            Promise.all(
-              smartBlocksContext.afterWorkflowMethods.map((w) => w())
-            ).finally(() => resolve(c))
-          ),
-      1
+          .reduce((p, c) => p.then(() => c()), Promise.resolve());
+      }
+      if (smartBlocksContext.focusOnBlock) {
+        await window.roamAlphaAPI.ui.mainWindow.openBlock({
+          block: { uid: smartBlocksContext.focusOnBlock },
+        });
+      } else if (typeof mutableCursor === "boolean") {
+        if (mutableCursor) {
+          if (smartBlocksContext.cursorPosition) {
+            const { uid: blockUid, selection } =
+              smartBlocksContext.cursorPosition;
+            await window.roamAlphaAPI.ui.setBlockFocusAndSelection({
+              location: {
+                "block-uid": blockUid,
+                "window-id": `${getCurrentUserUid()}-body-outline-${getCurrentPageUid()}`,
+              },
+              selection: { start: selection },
+            });
+          }
+        } else if (document.activeElement.tagName === "TEXTAREA") {
+          (document.activeElement as HTMLTextAreaElement).blur();
+        }
+      }
+      return tree.length;
+    })
+    .then((c) =>
+      Promise.all(smartBlocksContext.afterWorkflowMethods.map((w) => w()))
+        .catch((e) => console.error(e))
+        .then(() => c)
     )
-  ).finally(finish);
+    .finally(finish);
 };

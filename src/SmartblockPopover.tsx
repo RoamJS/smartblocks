@@ -158,48 +158,42 @@ const Content = ({
               },
               { headers: { Authorization: token } }
             )
-            .then((r) => {
+            .then(async (r) => {
               const ref = `((${blockUid}))`;
               const refUid =
                 publishChildren.find((t) => t.text.trim() === ref)?.uid ||
-                createBlock({
+                (await createBlock({
                   node: { text: ref },
                   parentUid: publishUid,
                   order: 1,
+                }));
+              const uuidUid =
+                getShallowTreeByParentUid(refUid).find((t) =>
+                  toFlexRegex("uuid").test(t.text)
+                )?.uid ||
+                (await createBlock({
+                  node: { text: "uuid" },
+                  parentUid: refUid,
+                }));
+              const valueUid = getFirstChildUidByBlockUid(uuidUid);
+              if (valueUid) {
+                await updateBlock({ text: r.data.uuid, uid: valueUid });
+              } else {
+                await createBlock({
+                  node: { text: r.data.uuid },
+                  parentUid: uuidUid,
                 });
-              setTimeout(() => {
-                const uuidUid =
-                  getShallowTreeByParentUid(refUid).find((t) =>
-                    toFlexRegex("uuid").test(t.text)
-                  )?.uid ||
-                  createBlock({
-                    node: { text: "uuid" },
-                    parentUid: refUid,
-                  });
-                setTimeout(() => {
-                  const valueUid = getFirstChildUidByBlockUid(uuidUid);
-                  if (valueUid) {
-                    updateBlock({ text: r.data.uuid, uid: valueUid });
-                  } else {
-                    createBlock({
-                      node: { text: r.data.uuid },
-                      parentUid: uuidUid,
-                    });
-                  }
-                  onClose();
-                  renderToast({
-                    id: "roamjs-smartblock-publish-success",
-                    content: `Successfully published workflow to the SmartBlocks Store!${
-                      r.data.requiresReview
-                        ? "\n\nBecause your workflow contains custom JavaScript, it will first undergo review by RoamJS before going live."
-                        : ""
-                    }`,
-                    intent: r.data.requiresReview
-                      ? Intent.WARNING
-                      : Intent.SUCCESS,
-                  });
-                }, 1);
-              }, 1);
+              }
+              onClose();
+              renderToast({
+                id: "roamjs-smartblock-publish-success",
+                content: `Successfully published workflow to the SmartBlocks Store!${
+                  r.data.requiresReview
+                    ? "\n\nBecause your workflow contains custom JavaScript, it will first undergo review by RoamJS before going live."
+                    : ""
+                }`,
+                intent: r.data.requiresReview ? Intent.WARNING : Intent.SUCCESS,
+              });
             });
         }}
       />

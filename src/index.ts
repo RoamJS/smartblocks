@@ -440,6 +440,7 @@ runExtension("smartblocks", () => {
       target.classList.contains("rm-block-input")
     ) {
       const textarea = target as HTMLTextAreaElement;
+      const location = window.roamAlphaAPI.ui.getFocusedBlock();
       const valueToCursor = textarea.value.substring(
         0,
         textarea.selectionStart
@@ -476,36 +477,25 @@ runExtension("smartblocks", () => {
               help,
             })),
           ]),
-          onItemSelect: (item) => {
+          onItemSelect: async (item) => {
             const { blockUid } = getUids(textarea);
             const suffix = textarea.value.substring(textarea.selectionStart);
             const newPrefix = `${valueToCursor.slice(0, -2)}<%${item.text}%>`;
-            setTimeout(() => {
-              updateBlock({
-                uid: blockUid,
-                text: `${newPrefix}${suffix}`,
-              });
-              renderToast({
-                intent: Intent.PRIMARY,
-                id: "smartblocks-command-help",
-                content: `###### ${item.text}\n\n${item.help}`,
-                position: "bottom-right",
-                timeout: 10000,
-              });
-              setTimeout(() => {
-                const newBlock = document.getElementById(textarea.id) as
-                  | HTMLTextAreaElement
-                  | HTMLDivElement;
-                if (newBlock.tagName === "DIV") {
-                  openBlock(textarea.id, newPrefix.length - 2);
-                } else {
-                  (newBlock as HTMLTextAreaElement).setSelectionRange(
-                    newPrefix.length - 2,
-                    newPrefix.length - 2
-                  );
-                }
-              });
-            }, 1);
+            await updateBlock({
+              uid: blockUid,
+              text: `${newPrefix}${suffix}`,
+            });
+            renderToast({
+              intent: Intent.PRIMARY,
+              id: "smartblocks-command-help",
+              content: `###### ${item.text}\n\n${item.help}`,
+              position: "bottom-right",
+              timeout: 10000,
+            });
+            window.roamAlphaAPI.ui.setBlockFocusAndSelection({
+              location,
+              selection: { start: newPrefix.length - 2 },
+            });
           },
           textarea,
         });
@@ -533,7 +523,7 @@ runExtension("smartblocks", () => {
 
   const appRoot = document.querySelector<HTMLDivElement>(".roam-app");
   if (appRoot) {
-    appRoot.addEventListener("keydown", (e) => {
+    appRoot.addEventListener("keydown", async (e) => {
       const modifiers = new Set();
       if (e.altKey) modifiers.add("alt");
       if (e.shiftKey) modifiers.add("shift");
@@ -550,19 +540,20 @@ runExtension("smartblocks", () => {
           e.stopPropagation();
           const target =
             window.roamAlphaAPI.ui.getFocusedBlock()?.["block-uid"] ||
-            createBlock({ node: { text: "" }, parentUid: getCurrentPageUid() });
-          setTimeout(() => {
-            const start = getTextByBlockUid(target).length;
-            sbBomb({
-              srcUid,
-              target: {
-                uid: target,
-                start,
-                end: start,
-              },
-              mutableCursor: true,
-            });
-          }, 1);
+            (await createBlock({
+              node: { text: "" },
+              parentUid: getCurrentPageUid(),
+            }));
+          const start = getTextByBlockUid(target).length;
+          sbBomb({
+            srcUid,
+            target: {
+              uid: target,
+              start,
+              end: start,
+            },
+            mutableCursor: true,
+          });
         }
       }
     });
@@ -653,12 +644,15 @@ runExtension("smartblocks", () => {
 
   window.roamAlphaAPI.ui.commandPalette.addCommand({
     label: "Open SmartBlocks Store",
-    callback: () => {
+    callback: async () => {
       const pageUid = getPageUidByPageTitle(CONFIG);
       const tree = getShallowTreeByParentUid(pageUid);
       const parentUid =
         tree?.find((t) => toFlexRegex("workflows").test(t.text))?.uid ||
-        createBlock({ parentUid: pageUid, node: { text: "workflows" } });
+        (await createBlock({
+          parentUid: pageUid,
+          node: { text: "workflows" },
+        }));
       renderStore({ parentUid });
     },
   });
@@ -748,21 +742,18 @@ runExtension("smartblocks", () => {
                 triggerUid: parentUid,
               };
               if (keepButton) {
-                const targetUid = createBlock({
+                createBlock({
                   node: { text: "" },
                   parentUid,
-                });
-                setTimeout(
-                  () =>
-                    sbBomb({
-                      ...props,
-                      target: {
-                        uid: targetUid,
-                        start: 0,
-                        end: 0,
-                      },
-                    }).then((n) => n === 0 && deleteBlock(targetUid)),
-                  1
+                }).then((targetUid) =>
+                  sbBomb({
+                    ...props,
+                    target: {
+                      uid: targetUid,
+                      start: 0,
+                      end: 0,
+                    },
+                  }).then((n) => n === 0 && deleteBlock(targetUid))
                 );
               } else {
                 updateBlock({
@@ -770,18 +761,15 @@ runExtension("smartblocks", () => {
                   text: `${text.substring(0, index)}${text.substring(
                     index + full.length
                   )}`,
-                });
-                setTimeout(
-                  () =>
-                    sbBomb({
-                      ...props,
-                      target: {
-                        uid: parentUid,
-                        start: index,
-                        end: index,
-                      },
-                    }),
-                  1
+                }).then(() =>
+                  sbBomb({
+                    ...props,
+                    target: {
+                      uid: parentUid,
+                      start: index,
+                      end: index,
+                    },
+                  })
                 );
               }
             }

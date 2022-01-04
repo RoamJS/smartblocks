@@ -94,7 +94,6 @@ const SmartblocksMenu = ({
               end,
             },
             mutableCursor: !srcName.includes("<%NOCURSOR%>"),
-            clicked,
           }).then(() => {
             if (dailyConfig) {
               const dailyWorkflowName = getSettingValueFromTree({
