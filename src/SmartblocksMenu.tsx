@@ -49,7 +49,10 @@ const SmartblocksMenu = ({
   isCustomOnly,
   dailyConfig,
 }: { onClose: () => void } & Props) => {
-  const blockUid = useMemo(() => getUids(textarea).blockUid, [textarea]);
+  const { ["block-uid"]: blockUid, ["window-id"]: windowId } = useMemo(
+    () => window.roamAlphaAPI.ui.getFocusedBlock(),
+    []
+  );
   const menuRef = useRef<HTMLUListElement>(null);
   const [filter, setFilter] = useState("");
   const initialWorkflows = useMemo(() => {
@@ -92,6 +95,7 @@ const SmartblocksMenu = ({
               uid: blockUid,
               start,
               end,
+              windowId,
             },
             mutableCursor: !srcName.includes("<%NOCURSOR%>"),
           }).then(() => {

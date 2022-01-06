@@ -70,6 +70,12 @@ const DAILY_REF_REGEX = new RegExp(
 );
 const getDateFromText = (s: string) =>
   parseRoamDate(DAILY_REF_REGEX.exec(s)?.[1]);
+const getPageUidByBlockUid = (blockUid: string): string =>
+  (
+    window.roamAlphaAPI.q(
+      `[:find (pull ?p [:block/uid]) :where [?e :block/uid "${blockUid}"] [?e :block/page ?p]]`
+    )?.[0]?.[0] as { uid?: string }
+  )?.uid || "";
 
 const getDateBasisDate = () => {
   if (smartBlocksContext.dateBasisMethod === "DNP") {
@@ -1587,7 +1593,9 @@ export const COMMANDS: {
                   window.roamAlphaAPI.ui.setBlockFocusAndSelection({
                     location: {
                       "block-uid": blockUid,
-                      "window-id": `${getCurrentUserUid()}-body-outline-${getCurrentPageUid()}`,
+                      "window-id": `${getCurrentUserUid()}-body-outline-${getPageUidByBlockUid(
+                        blockUid
+                      )}`,
                     },
                   });
                 }
@@ -2084,13 +2092,19 @@ const count = (t: InputTextNode[]): number =>
 
 export const sbBomb = async ({
   srcUid,
-  target: { uid, start = 0, end = start, isPage = false },
+  target: { uid, start = 0, end = start, isPage = false, windowId },
   variables = {},
   mutableCursor,
   triggerUid = uid,
 }: {
   srcUid: string;
-  target: { uid: string; start?: number; end?: number; isPage?: boolean };
+  target: {
+    uid: string;
+    start?: number;
+    end?: number;
+    isPage?: boolean;
+    windowId?: string;
+  };
   variables?: Record<string, string>;
   mutableCursor?: boolean;
   triggerUid?: string;
@@ -2187,7 +2201,9 @@ export const sbBomb = async ({
             await window.roamAlphaAPI.ui.setBlockFocusAndSelection({
               location: {
                 "block-uid": blockUid,
-                "window-id": `${getCurrentUserUid()}-body-outline-${getCurrentPageUid()}`,
+                "window-id": windowId || `${getCurrentUserUid()}-body-outline-${getPageUidByBlockUid(
+                  blockUid
+                )}`,
               },
               selection: { start: selection },
             });
