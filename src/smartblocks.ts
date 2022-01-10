@@ -2160,34 +2160,34 @@ export const sbBomb = async ({
           const indexDiffered = textPostProcess
             .split("")
             .findIndex((c, i) => c !== props.introContent.charAt(i));
-          await updateBlock({
-            ...firstChild,
-            uid,
-            text: `${
-              indexDiffered < 0
-                ? textPostProcess
-                : textPostProcess.slice(0, indexDiffered)
-            }${firstChild.text || ""}${
-              indexDiffered < 0 ? "" : textPostProcess.substring(indexDiffered)
-            }`,
-          });
-          await firstChild.children
-            .map(
-              (node, order) => () =>
-                createBlock({ order, parentUid: uid, node })
-            )
-            .reduce((p, c) => p.then(() => c()), Promise.resolve());
+          await Promise.all([
+            updateBlock({
+              ...firstChild,
+              uid,
+              text: `${
+                indexDiffered < 0
+                  ? textPostProcess
+                  : textPostProcess.slice(0, indexDiffered)
+              }${firstChild.text || ""}${
+                indexDiffered < 0
+                  ? ""
+                  : textPostProcess.substring(indexDiffered)
+              }`,
+            }),
+            ...firstChild.children.map((node, order) =>
+              createBlock({ order, parentUid: uid, node })
+            ),
+          ]);
         }
-        await next
-          .map(
-            (node, i) => () =>
-              createBlock({
-                parentUid,
-                order: startingOrder + 1 + i,
-                node,
-              })
+        await Promise.all(
+          next.map((node, i) =>
+            createBlock({
+              parentUid,
+              order: startingOrder + 1 + i,
+              node,
+            })
           )
-          .reduce((p, c) => p.then(() => c()), Promise.resolve());
+        );
       }
       if (smartBlocksContext.focusOnBlock) {
         await window.roamAlphaAPI.ui.mainWindow.openBlock({
@@ -2201,9 +2201,11 @@ export const sbBomb = async ({
             await window.roamAlphaAPI.ui.setBlockFocusAndSelection({
               location: {
                 "block-uid": blockUid,
-                "window-id": windowId || `${getCurrentUserUid()}-body-outline-${getPageUidByBlockUid(
-                  blockUid
-                )}`,
+                "window-id":
+                  windowId ||
+                  `${getCurrentUserUid()}-body-outline-${getPageUidByBlockUid(
+                    blockUid
+                  )}`,
               },
               selection: { start: selection },
             });
