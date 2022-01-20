@@ -1,6 +1,5 @@
 import { APIGatewayProxyHandler } from "aws-lambda";
 import { DynamoDB } from "aws-sdk";
-import axios from "axios";
 import type Stripe from "stripe";
 import { v4 } from "uuid";
 import { s3, dynamo, headers, stripe, ses } from "./common";

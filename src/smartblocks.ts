@@ -2198,7 +2198,8 @@ export const sbBomb = async ({
           if (smartBlocksContext.cursorPosition) {
             const { uid: blockUid, selection } =
               smartBlocksContext.cursorPosition;
-            await window.roamAlphaAPI.ui.setBlockFocusAndSelection({
+            // There's a bug with this setter below where the promise doesn't resolve
+            window.roamAlphaAPI.ui.setBlockFocusAndSelection({
               location: {
                 "block-uid": blockUid,
                 "window-id":
