@@ -9,10 +9,10 @@ import React, {
 import extractRef from "roamjs-components/util/extractRef";
 import extractTag from "roamjs-components/util/extractRef";
 import getTextByBlockUid from "roamjs-components/queries/getTextByBlockUid";
-import BlockInput from 'roamjs-components/components/BlockInput';
-import createOverlayRender from 'roamjs-components/util/createOverlayRender';
-import MenuItemSelect from 'roamjs-components/components/MenuItemSelect';
-import PageInput from 'roamjs-components/components/PageInput';
+import BlockInput from "roamjs-components/components/BlockInput";
+import createOverlayRender from "roamjs-components/util/createOverlayRender";
+import MenuItemSelect from "roamjs-components/components/MenuItemSelect";
+import PageInput from "roamjs-components/components/PageInput";
 
 type Props = {
   display?: string;
@@ -56,8 +56,8 @@ const Prompt = ({
   const [loaded, setLoaded] = useState(false);
   const resolveAndClose = useCallback(
     (s: string) => {
-      resolve(isPageInput && s ? `[[${s}]]` : s);
       onClose();
+      setTimeout(() => resolve(isPageInput && s ? `[[${s}]]` : s), 1);
     },
     [resolve, onClose]
   );
@@ -101,7 +101,7 @@ const Prompt = ({
     >
       <H3>SmartBlocks Input</H3>
       <div className={Classes.ALERT_BODY} ref={contentRef}>
-        <Label style={{whiteSpace: 'pre'}}>
+        <Label style={{ whiteSpace: "pre" }}>
           {formattedDisplay}
           {isBlockInput ? (
             <BlockInput
