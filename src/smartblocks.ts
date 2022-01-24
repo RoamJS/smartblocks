@@ -1717,6 +1717,12 @@ export const COMMANDS: {
       const count = Number(numberArg) || 0;
       const windows = window.roamAlphaAPI.ui.rightSidebar.getWindows();
       if (count <= 0) {
+        windows.forEach((w) =>
+          window.roamAlphaAPI.ui.rightSidebar.removeWindow({
+            // @ts-ignore broken api
+            window: w,
+          })
+        );
         window.roamAlphaAPI.ui.rightSidebar.close();
       } else if (count <= windows.length) {
         window.roamAlphaAPI.ui.rightSidebar.removeWindow({
