@@ -2166,24 +2166,22 @@ export const sbBomb = async ({
           const indexDiffered = textPostProcess
             .split("")
             .findIndex((c, i) => c !== props.introContent.charAt(i));
-          await Promise.all([
-            updateBlock({
-              ...firstChild,
-              uid,
-              text: `${
-                indexDiffered < 0
-                  ? textPostProcess
-                  : textPostProcess.slice(0, indexDiffered)
-              }${firstChild.text || ""}${
-                indexDiffered < 0
-                  ? ""
-                  : textPostProcess.substring(indexDiffered)
-              }`,
-            }),
-            ...firstChild.children.map((node, order) =>
+          await updateBlock({
+            ...firstChild,
+            uid,
+            text: `${
+              indexDiffered < 0
+                ? textPostProcess
+                : textPostProcess.slice(0, indexDiffered)
+            }${firstChild.text || ""}${
+              indexDiffered < 0 ? "" : textPostProcess.substring(indexDiffered)
+            }`,
+          });
+          await Promise.all(
+            firstChild.children.map((node, order) =>
               createBlock({ order, parentUid: uid, node })
-            ),
-          ]);
+            )
+          );
         }
         await Promise.all(
           next.map((node, i) =>
