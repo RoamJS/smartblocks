@@ -82,9 +82,12 @@ const getDateBasisDate = () => {
     const title =
       getPageTitleByBlockUid(smartBlocksContext.targetUid) ||
       getPageTitleByPageUid(smartBlocksContext.targetUid);
-    return DAILY_NOTE_PAGE_REGEX.test(title)
+    const dnp = DAILY_NOTE_PAGE_REGEX.test(title)
       ? parseRoamDate(title)
       : new Date();
+    dnp.setHours(new Date().getHours());
+    dnp.setMinutes(new Date().getMinutes());
+    return dnp;
   } else if (smartBlocksContext.dateBasisMethod) {
     return new Date(smartBlocksContext.dateBasisMethod);
   } else {
