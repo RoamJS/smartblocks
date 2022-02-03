@@ -101,7 +101,7 @@ const Prompt = ({
     >
       <H3>SmartBlocks Input</H3>
       <div className={Classes.ALERT_BODY} ref={contentRef}>
-        <Label style={{ whiteSpace: "pre" }}>
+        <Label style={{ whiteSpace: "pre-wrap" }}>
           {formattedDisplay}
           {isBlockInput ? (
             <BlockInput
