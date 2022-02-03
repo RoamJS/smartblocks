@@ -1495,11 +1495,7 @@ export const COMMANDS: {
           introContent: smartBlocksContext.currentContent,
         });
       } else {
-        renderToast({
-          id: "roamjs-smartblocks-warning",
-          content: `${inputName.trim()} is not a valid Roam42 SmartBlock`,
-        });
-        return `---- SmartBlock:  **${inputName.trim()}**  does not exist. ----`;
+        return inputName.trim();
       }
     },
   },
