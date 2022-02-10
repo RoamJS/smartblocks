@@ -443,16 +443,18 @@ const outputTodoBlocks = (
   limit = "20",
   format = "(({uid}))",
   ...search: string[]
-) =>
-  blocks
+) => {
+  const outputtedBlocks = blocks
     .filter(({ text }) => !/{{(\[\[)?query(\]\])?/.test(text))
     .filter(({ text }) =>
       search.every((s) =>
         /^-/.test(s) ? !text.includes(s.substring(1)) : text.includes(s)
       )
-    )
-    .slice(0, Number(limit))
-    .map(getFormatter(format));
+    );
+  const limitArg = Number(limit);
+  if (limitArg === -1) return `${outputtedBlocks.length}`;
+  return outputtedBlocks.slice(0, Number(limit)).map(getFormatter(format));
+};
 
 type CommandOutput = string | string[] | InputTextNode[];
 export type CommandHandler = (
@@ -523,10 +525,9 @@ const javascriptHandler =
       .map(([k, v]) => [k.replace(/^\d+/, ""), v])
       .filter(([s]) => !!s);
     const variables = smartBlocksContext.dateBasisMethod
-      ? justVariables.concat([[
-          "DATEBASISMETHOD",
-          smartBlocksContext.dateBasisMethod,
-        ]])
+      ? justVariables.concat([
+          ["DATEBASISMETHOD", smartBlocksContext.dateBasisMethod],
+        ])
       : justVariables;
     return Promise.resolve(
       new fcn(...variables.map((v) => v[0]), code)(
