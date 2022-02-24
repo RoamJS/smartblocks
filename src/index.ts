@@ -229,8 +229,8 @@ const smartblockHotKeys: SmartblockHotKeys = {
   mappingToBlock: {},
 };
 const COLORS = ["darkblue", "darkred", "darkgreen", "darkgoldenrod"];
-runExtension("smartblocks", () => {
-  createConfigObserver({
+runExtension("smartblocks", async () => {
+  const { pageUid } = await createConfigObserver({
     title: CONFIG,
     config: {
       tabs: [
@@ -335,7 +335,7 @@ runExtension("smartblocks", () => {
     },
   });
 
-  const tree = getBasicTreeByParentUid(getPageUidByPageTitle(CONFIG));
+  const tree = getBasicTreeByParentUid(pageUid);
   const trigger = (
     getLegacy42Setting("SmartBlockTrigger") ||
     getSettingValueFromTree({
@@ -557,8 +557,6 @@ runExtension("smartblocks", () => {
         }
       }
     });
-  } else {
-    console.error("boooo");
   }
 
   const runDaily = () => {
@@ -591,12 +589,10 @@ runExtension("smartblocks", () => {
             uuid: latest.length < 36 ? undefined : latest,
           })
           .then((r) => {
-            const latestDate =
-              latest.length < 36
-                ? parseRoamDateUid(latest)
-                : r.data.oldDate
-                ? parseRoamDateUid(r.data.oldDate)
-                : new Date(1970, 0, 1);
+            const latestUid = latest || r.data.oldDate;
+            const latestDate = latestUid
+              ? parseRoamDateUid(latestUid)
+              : new Date(1970, 0, 1);
             if (isBefore(startOfDay(latestDate), startOfDay(today))) {
               const dailyWorkflowName = getSettingValueFromTree({
                 tree: dailyChildren,
@@ -617,13 +613,18 @@ runExtension("smartblocks", () => {
                   1
                 );
               } else {
-                createBlock({
-                  node: {
-                    text: `RoamJS Error: Daily SmartBlocks enabled, but couldn't find SmartBlock Workflow named "${dailyWorkflowName}"`,
-                  },
-                  parentUid: todayUid,
+                renderToast({
+                  id: "smartblocks-error",
+                  content: `RoamJS Error: Daily SmartBlocks enabled, but couldn't find SmartBlock Workflow named "${dailyWorkflowName}"`,
+                  intent: Intent.DANGER,
                 });
               }
+            } else {
+              renderToast({
+                id: "smartblocks-info",
+                content: `Smartblocks: No need to run daily workflow on ${todayUid}. Last run on ${latestUid}.`,
+                intent: Intent.PRIMARY,
+              });
             }
             if (latest.length < 36) {
               setInputSetting({
@@ -636,11 +637,17 @@ runExtension("smartblocks", () => {
             const ms = differenceInMilliseconds(addDays(triggerTime, 1), today);
             setTimeout(runDaily, ms + 1000);
           })
-          .catch(() => "");
+          .catch((e) =>
+            renderToast({
+              id: "smartblocks-error",
+              content: `Smartblocks Daily Workflow Error: ${e.message}`,
+              intent: Intent.DANGER,
+            })
+          );
       }
     }
   };
-  setTimeout(runDaily, 5000);
+  runDaily();
 
   window.roamAlphaAPI.ui.commandPalette.addCommand({
     label: "Open SmartBlocks Store",
