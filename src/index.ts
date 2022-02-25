@@ -589,7 +589,7 @@ runExtension("smartblocks", async () => {
             uuid: latest.length < 36 ? undefined : latest,
           })
           .then((r) => {
-            const latestUid = latest || r.data.oldDate;
+            const latestUid = r.data.oldDate || latest;
             const latestDate = latestUid
               ? parseRoamDateUid(latestUid)
               : new Date(1970, 0, 1);
