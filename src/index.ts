@@ -572,6 +572,7 @@ runExtension("smartblocks", async () => {
         key: "latest",
         defaultValue: "01-01-1970",
       });
+      const debug = !!getSubTree({ tree: dailyChildren, key: "debug" }).uid;
       const [hours, minutes] = time.split(":").map((s) => Number(s));
       const today = new Date();
       const triggerTime = addMinutes(
@@ -619,7 +620,7 @@ runExtension("smartblocks", async () => {
                   intent: Intent.DANGER,
                 });
               }
-            } else {
+            } else if (debug) {
               renderToast({
                 id: "smartblocks-info",
                 content: `Smartblocks: No need to run daily workflow on ${todayUid}. Last run on ${latestUid}.`,
