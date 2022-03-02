@@ -32,9 +32,11 @@ import toFlexRegex from "roamjs-components/util/toFlexRegex";
 import addDays from "date-fns/addDays";
 import addHours from "date-fns/addHours";
 import addMinutes from "date-fns/addMinutes";
+import addSeconds from "date-fns/addSeconds";
 import startOfDay from "date-fns/startOfDay";
 import isBefore from "date-fns/isBefore";
 import differenceInMilliseconds from "date-fns/differenceInMilliseconds";
+import dateFnsFormat from "date-fns/format";
 import { render } from "./SmartblocksMenu";
 import { render as renderStore } from "./SmartblocksStore";
 import { render as renderPopover } from "./SmartblockPopover";
@@ -57,6 +59,7 @@ import { Intent } from "@blueprintjs/core";
 import HotKeyPanel, { SmartblockHotKeys } from "./HotKeyPanel";
 import XRegExp from "xregexp";
 import axios from "axios";
+import React from "react";
 
 addStyle(`.roamjs-smartblocks-popover-target {
   display:inline-block;
@@ -229,6 +232,7 @@ const smartblockHotKeys: SmartblockHotKeys = {
   mappingToBlock: {},
 };
 const COLORS = ["darkblue", "darkred", "darkgreen", "darkgoldenrod"];
+const nextDailyRun: { current: string } = { current: "Unscheduled" };
 runExtension("smartblocks", async () => {
   const { pageUid } = await createConfigObserver({
     title: CONFIG,
@@ -288,6 +292,15 @@ runExtension("smartblocks", async () => {
               title: "time",
               description:
                 "The time (24hr format) when the daily workflow is triggered each day.",
+            },
+            {
+              type: "custom",
+              title: "scheduled",
+              description:
+                "Tells you when the next Daily Smartblock is currently scheduled to fire",
+              options: {
+                component: () => React.createElement("p", {}, {}),
+              },
             },
           ],
           toggleable: true,
@@ -635,8 +648,13 @@ runExtension("smartblocks", async () => {
                 index: 2,
               });
             }
-            const ms = differenceInMilliseconds(addDays(triggerTime, 1), today);
-            setTimeout(runDaily, ms + 1000);
+            const nextRun = addSeconds(addDays(triggerTime, 1), 1);
+            const ms = differenceInMilliseconds(nextRun, today);
+            setTimeout(runDaily, ms);
+            nextDailyRun.current = `Next Daily SmartBlock scheduled to run at ${dateFnsFormat(
+              nextRun,
+              "yyyy-MM-dd mm:hh:ss a"
+            )}`;
           })
           .catch((e) =>
             renderToast({
