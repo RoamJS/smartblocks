@@ -1533,6 +1533,11 @@ export const COMMANDS: {
     },
   },
   {
+    text: "ATTRIBUTE",
+    help: "Returns the arguments as a Roam attribute, so that your workflow definition doesn't create a reference.",
+    handler: (...args: string[]) => `${args.join(",")}::`,
+  },
+  {
     text: "HASHTAG",
     help: "Returns the arguments as a Roam hashtag, so that your workflow definition doesn't create a reference.",
     handler: (...args: string[]) => {
