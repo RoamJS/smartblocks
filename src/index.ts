@@ -654,7 +654,7 @@ runExtension("smartblocks", async () => {
             setTimeout(runDaily, ms);
             nextDailyRun.current = `Next Daily SmartBlock scheduled to run at ${dateFnsFormat(
               nextRun,
-              "yyyy-MM-dd mm:hh:ss a"
+              "yyyy-MM-dd hh:mm:ss a"
             )}`;
           })
           .catch((e) =>
