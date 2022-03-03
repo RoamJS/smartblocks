@@ -299,7 +299,8 @@ runExtension("smartblocks", async () => {
               description:
                 "Tells you when the next Daily Smartblock is currently scheduled to fire",
               options: {
-                component: () => React.createElement("p", {}, {}),
+                component: () =>
+                  React.createElement("p", {}, nextDailyRun.current),
               },
             },
           ],
