@@ -61,7 +61,7 @@ import { renderLoading } from "./Loading";
 import axios from "axios";
 import lodashGet from "lodash/get";
 import getUids from "roamjs-components/dom/getUids";
-import getCurrentPageUid from "roamjs-components/dom/getCurrentPageUid";
+import getAttributeValueByBlockAndName from "roamjs-components/queries/getAttributeValueByBlockAndName";
 
 export const PREDEFINED_REGEX = /#\d*-predefined/;
 const PAGE_TITLE_REGEX = /^(?:#?\[\[(.*)\]\]|#([^\s]*))$/;
@@ -93,6 +93,11 @@ const getDateBasisDate = () => {
   } else {
     return new Date();
   }
+};
+
+const getUidFromParentArg = (arg: string) => {
+  const pageOrUid = smartBlocksContext.variables[arg] || arg;
+  return getPageUidByPageTitle(extractTag(pageOrUid)) || extractRef(pageOrUid);
 };
 
 const ORDINAL_REGEX = new RegExp(
@@ -1538,6 +1543,14 @@ export const COMMANDS: {
     handler: (...args: string[]) => `${args.join(",")}::`,
   },
   {
+    text: "GETATTRIBUTE",
+    help: "Returns the attribute value nested under the input block with a given input name.\n\n1. Page name or block ref\n\n2. A behavior to perform after navigating.",
+    handler: (block, name) => {
+      const uid = getUidFromParentArg(block);
+      return getAttributeValueByBlockAndName({ uid, name });
+    },
+  },
+  {
     text: "HASHTAG",
     help: "Returns the arguments as a Roam hashtag, so that your workflow definition doesn't create a reference.",
     handler: (...args: string[]) => {
@@ -1561,10 +1574,7 @@ export const COMMANDS: {
       const pageOrUidArg = (blockNumberArg ? args.slice(0, -1) : args)
         .join(",")
         .trim();
-      const pageOrUid =
-        smartBlocksContext.variables[pageOrUidArg] || pageOrUidArg;
-      const uid =
-        getPageUidByPageTitle(extractTag(pageOrUid)) || extractRef(pageOrUid);
+      const uid = getUidFromParentArg(pageOrUidArg);
       const refsToCreate = new Set(
         Object.values(smartBlocksContext.refMapping)
       );
@@ -1572,7 +1582,9 @@ export const COMMANDS: {
         !getPageTitleByPageUid(uid) &&
         !getTextByBlockUid(uid) &&
         !refsToCreate.has(uid)
-          ? createPage({ title: pageOrUid })
+          ? createPage({
+              title: smartBlocksContext.variables[pageOrUidArg] || pageOrUidArg,
+            })
           : Promise.resolve(uid)
       ).then((navUid) => {
         const navToPage = () =>
