@@ -596,7 +596,21 @@ runExtension("smartblocks", async () => {
       if (isBefore(today, triggerTime)) {
         const ms = differenceInMilliseconds(triggerTime, today);
         setTimeout(runDaily, ms + 1000);
+        if (debug) {
+          renderToast({
+            id: "smartblocks-info",
+            content: `Smartblocks: Still need to run the Smartblock later today at: ${dateFnsFormat(triggerTime, 'hh:mm:ss a')}`,
+            intent: Intent.PRIMARY,
+          });
+        }
       } else {
+        if (debug) {
+          renderToast({
+            id: "smartblocks-info",
+            content: `Smartblocks: It's after your trigger time, checking to see if we should run today...`,
+            intent: Intent.PRIMARY,
+          });
+        }
         const todayUid = toRoamDateUid(today);
         axios
           .put(`${process.env.API_URL}/smartblocks-daily`, {
@@ -618,14 +632,19 @@ runExtension("smartblocks", async () => {
                 ({ name }) => name === dailyWorkflowName
               )?.uid;
               if (srcUid) {
-                createPage({ title: toRoamDate(today) });
-                setTimeout(
+                if (debug) {
+                  renderToast({
+                    id: "smartblocks-info",
+                    content: `Smartblocks: About to run Daily SmartBlock: ${dailyWorkflowName}!`,
+                    intent: Intent.PRIMARY,
+                  });
+                }
+                createPage({ title: toRoamDate(today) }).then(
                   () =>
                     sbBomb({
                       srcUid,
                       target: { uid: todayUid, isPage: true },
-                    }),
-                  1
+                    })
                 );
               } else {
                 renderToast({
