@@ -68,8 +68,13 @@ const PAGE_TITLE_REGEX = /^(?:#?\[\[(.*)\]\]|#([^\s]*))$/;
 const DAILY_REF_REGEX = new RegExp(
   `#?\\[\\[(${DAILY_NOTE_PAGE_REGEX.source})\\]\\]`
 );
-const getDateFromText = (s: string) =>
-  parseRoamDate(DAILY_REF_REGEX.exec(s)?.[1]);
+const getDateFromBlock = (args:{text: string, title:string}) => {
+  const fromText = DAILY_REF_REGEX.exec(args.text)?.[1];
+  if (fromText) return parseRoamDate(fromText);
+  const fromTitle = DAILY_NOTE_PAGE_TITLE_REGEX.exec(args.title)?.[0];
+  if (fromTitle) return parseRoamDate(fromTitle);
+  return new Date('');
+}
 const getPageUidByBlockUid = (blockUid: string): string =>
   (
     window.roamAlphaAPI.q(
@@ -1077,11 +1082,11 @@ export const COMMANDS: {
             ? (a, b) => a.text.localeCompare(b.text)
             : sort === "DESC"
             ? (a, b) =>
-                getDateFromText(b.text).valueOf() -
-                getDateFromText(a.text).valueOf()
+                getDateFromBlock(b).valueOf() -
+                getDateFromBlock(a).valueOf()
             : (a, b) =>
-                getDateFromText(a.text).valueOf() -
-                getDateFromText(b.text).valueOf()
+                getDateFromBlock(a).valueOf() -
+                getDateFromBlock(b).valueOf()
         )
         .slice(0, limit)
         .map(getFormatter(format));
