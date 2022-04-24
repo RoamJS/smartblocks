@@ -1,5 +1,12 @@
 import { APIGatewayProxyHandler } from "aws-lambda";
-import { s3, dynamo, headers, validToken } from "./common";
+import {
+  s3,
+  dynamo,
+  headers,
+  validToken,
+  fromStatus,
+  toStatus,
+} from "./common";
 
 const REVIEWERS = ["dvargas92495"];
 
@@ -12,7 +19,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     })
     .promise()
     .then((r) =>
-      r.Item?.status?.S !== "USER"
+      fromStatus(r.Item?.status?.S) !== "USER"
         ? {
             statusCode: 400,
             body: `Invalid id ${graph} doesn't represent a User`,
@@ -51,7 +58,9 @@ export const handler: APIGatewayProxyHandler = async (event) => {
                         .getObject({ Bucket: "roamjs-smartblocks", Key })
                         .promise()
                         .then((b) => ({
-                          version: Key.substring(i.Item.uuid.S.length + 1).replace(/\.json$/, ""),
+                          version: Key.substring(
+                            i.Item.uuid.S.length + 1
+                          ).replace(/\.json$/, ""),
                           workflow: b.Body.toString(),
                         }))
                     )
@@ -75,7 +84,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
                     "#s": "status",
                   },
                   ExpressionAttributeValues: {
-                    ":s": { S: "UNDER REVIEW" },
+                    ":s": { S: toStatus("UNDER REVIEW") },
                   },
                   KeyConditionExpression: "#s = :s",
                 })
@@ -90,7 +99,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
                     "#a": "author",
                   },
                   ExpressionAttributeValues: {
-                    ":s": { S: "UNDER REVIEW" },
+                    ":s": { S: toStatus("UNDER REVIEW") },
                     ":a": { S: graph },
                   },
                   KeyConditionExpression: "#a = :a AND #s = :s",

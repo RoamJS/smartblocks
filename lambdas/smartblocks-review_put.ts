@@ -1,5 +1,12 @@
 import { APIGatewayProxyHandler } from "aws-lambda";
-import { dynamo, headers, s3, validToken } from "./common";
+import {
+  dynamo,
+  fromStatus,
+  headers,
+  s3,
+  toStatus,
+  validToken,
+} from "./common";
 
 const REVIEWERS = ["dvargas92495"];
 
@@ -23,7 +30,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     })
     .promise()
     .then((r) =>
-      r.Item?.status?.S !== "USER"
+      fromStatus(r.Item?.status?.S) !== "USER"
         ? {
             statusCode: 400,
             body: `Invalid id ${graph} doesn't represent a User`,
@@ -70,7 +77,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
                         "#w": "workflow",
                       },
                       ExpressionAttributeValues: {
-                        ":s": { S: "LIVE" },
+                        ":s": { S: toStatus("LIVE") },
                         ":w": { S: version },
                       },
                     })

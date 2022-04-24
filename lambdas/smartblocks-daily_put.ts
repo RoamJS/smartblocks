@@ -1,5 +1,5 @@
 import { APIGatewayProxyHandler } from "aws-lambda";
-import { dynamo, headers } from "./common";
+import { dynamo, headers, toStatus } from "./common";
 import { v4 } from "uuid";
 
 export const handler: APIGatewayProxyHandler = async (event) => {
@@ -25,7 +25,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
           Item: {
             uuid: { S: uuid },
             name: { S: newDate },
-            status: { S: "DAILY" },
+            status: { S: toStatus("DAILY") },
           },
         })
         .promise()

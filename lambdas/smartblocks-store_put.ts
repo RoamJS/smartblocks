@@ -1,7 +1,7 @@
 import { APIGatewayProxyHandler } from "aws-lambda";
 import { v4 } from "uuid";
 import format from "date-fns/format";
-import { headers, dynamo, s3, ses, validToken } from "./common";
+import { headers, dynamo, s3, ses, validToken, fromStatus, toStatus } from "./common";
 
 export const handler: APIGatewayProxyHandler = async (event) => {
   const {
@@ -55,7 +55,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     })
     .promise()
     .then((r) => {
-      const existingWorkflow = r.Items.find((i) => i.status.S !== "USER");
+      const existingWorkflow = r.Items.find((i) => fromStatus(i.status.S) !== "USER");
       if (existingWorkflow && existingWorkflow?.uuid?.S !== uuid) {
         return {
           statusCode: 400,
@@ -106,7 +106,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
                   author: { S: author },
                   description: { S: description },
                   workflow: { S: requiresReview ? previousWorkflow : version },
-                  status: { S: requiresReview ? "UNDER REVIEW" : "LIVE" },
+                  status: { S: toStatus(requiresReview ? "UNDER REVIEW" : "LIVE") },
                 },
               })
               .promise()
@@ -189,7 +189,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
                       "#a": "author",
                     },
                     ExpressionAttributeValues: {
-                      ":s": { S: "LIVE" },
+                      ":s": { S: toStatus("LIVE") },
                       ":a": { S: author },
                     },
                     KeyConditionExpression: "#a = :a AND #s = :s",

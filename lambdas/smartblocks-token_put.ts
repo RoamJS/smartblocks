@@ -1,13 +1,13 @@
 import { APIGatewayProxyHandler } from "aws-lambda";
 import randomstring from "randomstring";
-import { dynamo, headers, validToken } from "./common";
+import { dynamo, fromStatus, headers, toStatus, validToken } from "./common";
 import sha256 from "crypto-js/sha256";
 
 export const handler: APIGatewayProxyHandler = async (event) => {
   const { graph } = JSON.parse(event.body) as {
     graph: string;
   };
-  return dynamo 
+  return dynamo
     .getItem({
       TableName: "RoamJSSmartBlocks",
       Key: {
@@ -19,7 +19,8 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     .promise()
     .then((r) => {
       if (
-       (!r.Item || r.Item?.status?.S === "USER") && validToken(event, r.Item)
+        (!r.Item || fromStatus(r.Item?.status?.S) === "USER") &&
+        validToken(event, r.Item)
       ) {
         const newToken = randomstring.generate();
         return dynamo
@@ -28,7 +29,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
             Item: {
               uuid: { S: graph },
               name: { S: graph },
-              status: { S: "USER" },
+              status: { S: toStatus("USER") },
               token: { S: sha256(newToken).toString() },
             },
           })

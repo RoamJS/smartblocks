@@ -1,6 +1,6 @@
 import { Button, Intent, Spinner, SpinnerSize } from "@blueprintjs/core";
 import axios from "axios";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import getFirstChildTextByBlockUid from "roamjs-components/queries/getFirstChildTextByBlockUid";
 import getGraph from "roamjs-components/util/getGraph";
 import getShallowTreeByParentUid from "roamjs-components/queries/getShallowTreeByParentUid";
@@ -27,8 +27,8 @@ const StripePanel = ({ parentUid }: { uid?: string; parentUid: string }) => {
   const opts = useMemo(() => ({ headers: { Authorization: token } }), [token]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const intervalListenerRef = useRef(0);
   const pollStripeAccount = useCallback(() => {
-    let intervalListener = 0;
     const connectInterval = () => {
       axios
         .post(
@@ -42,15 +42,15 @@ const StripePanel = ({ parentUid }: { uid?: string; parentUid: string }) => {
             localStorageSet("stripe", "true");
             setShowRetry(false);
             setLoading(false);
-            window.clearTimeout(intervalListener);
+            window.clearTimeout(intervalListenerRef.current);
           } else {
             setShowRetry(true);
-            intervalListener = window.setTimeout(connectInterval, 1000);
+            intervalListenerRef.current = window.setTimeout(connectInterval, 1000);
           }
         })
         .catch((e) => {
           if (e.response?.status !== 400) {
-            intervalListener = window.setTimeout(connectInterval, 1000);
+            intervalListenerRef.current = window.setTimeout(connectInterval, 1000);
           } else {
             setLoading(false);
           }
@@ -59,7 +59,7 @@ const StripePanel = ({ parentUid }: { uid?: string; parentUid: string }) => {
     };
     setLoading(true);
     connectInterval();
-  }, [setConnected, setLoading, opts, setShowRetry]);
+  }, [setConnected, setLoading, opts, setShowRetry, intervalListenerRef]);
   const stripeConnectOnClick = useCallback(
     (e: React.MouseEvent) => {
       e.preventDefault();
@@ -117,7 +117,8 @@ const StripePanel = ({ parentUid }: { uid?: string; parentUid: string }) => {
     if (!connected && token) {
       pollStripeAccount();
     }
-  }, [connected, token, pollStripeAccount]);
+    return () => window.clearTimeout(intervalListenerRef.current);
+  }, [connected, token, pollStripeAccount, intervalListenerRef]);
   return (
     <>
       <div

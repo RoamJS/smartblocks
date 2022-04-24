@@ -51,7 +51,7 @@ const ApiButton = ({
   return (
     <div style={{ display: "flex", alignItems: "center", width: 216 }}>
       <Button
-        disabled={!token}
+        disabled={!token || loading}
         text={text}
         intent={intent}
         style={{ margin: "4px 16px 4px 0", width: 176 }}

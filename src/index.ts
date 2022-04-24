@@ -193,16 +193,9 @@ a.stripe-connect.disabled {
 
 /* https://stripe.com/docs/connect/collect-then-transfer-guide?platform=web#accept-payment */
 .StripeElement {
-  height: 40px;
-  padding: 10px 12px;
   width: 100%;
   color: #32325d;
-  background-color: white;
   border: 1px solid transparent;
-  border-radius: 4px;
-  box-shadow: 0 1px 3px 0 #e6ebf1;
-  -webkit-transition: box-shadow 150ms ease;
-  transition: box-shadow 150ms ease;
 }
 .StripeElement--focus {
   box-shadow: 0 1px 3px 0 #cfd7df;
@@ -506,7 +499,7 @@ runExtension("smartblocks", async () => {
               position: "bottom-right",
               timeout: 10000,
             });
-            window.roamAlphaAPI.ui.setBlockFocusAndSelection({
+            await window.roamAlphaAPI.ui.setBlockFocusAndSelection({
               location,
               selection: { start: newPrefix.length - 2 },
             });

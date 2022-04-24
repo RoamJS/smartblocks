@@ -34,3 +34,7 @@ export const validToken = (
     event.headers.Authorization || event.headers.authorization || "";
   return sha256(clientToken).toString() === storedToken;
 };
+
+export const toStatus = (s: string) =>
+  process.env.NODE_ENV === "development" ? `${s} DEV` : s;
+export const fromStatus = (s = "") => s.replace(/ DEV$/, "");

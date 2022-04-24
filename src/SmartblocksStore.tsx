@@ -41,7 +41,7 @@ import { InputTextNode } from "roamjs-components/types";
 import Markdown from "markdown-to-jsx";
 import {
   Elements,
-  CardElement,
+  PaymentElement,
   useElements,
   useStripe,
 } from "@stripe/react-stripe-js";
@@ -136,14 +136,14 @@ const Thumbnail = ({ src = lego }: { src?: string }): React.ReactElement => {
 };
 
 const StripeCheckout = ({
-  secret,
+  payment,
   setLoading,
   setError,
   onSuccess,
   loading,
   isDonation,
 }: {
-  secret: string;
+  payment: { secret: string; id: string };
   setLoading: (f: boolean) => void;
   setError: (m: string) => void;
   onSuccess: (id: string) => void;
@@ -154,59 +154,32 @@ const StripeCheckout = ({
   const elements = useElements();
   const handleSubmit = useCallback(() => {
     setLoading(true);
-    const name = getCurrentUserDisplayName();
     stripe
-      .confirmCardPayment(secret, {
-        payment_method: {
-          card: elements.getElement(CardElement),
-          billing_details: {
-            ...(name ? { name } : {}),
-            email: getCurrentUserEmail(),
-          },
-        },
+      .confirmPayment({
+        elements,
+        redirect: "if_required",
       })
       .then((s) => {
         if (s.error) {
           throw new Error(s.error.message);
         } else {
-          onSuccess(s.paymentIntent.id);
+          onSuccess(payment.id);
         }
       })
       .catch((e) => {
         setLoading(false);
         setError(e.message);
       });
-  }, [stripe, setLoading, secret]);
+  }, [stripe, setLoading]);
   return (
     <div
       style={{
         flexGrow: 1,
-        background: "#eeeeee",
-        padding: 4,
-        borderRadius: 4,
       }}
     >
       <Label>
-        Card Details
-        <CardElement
-          options={{
-            style: {
-              base: {
-                color: "#32325d",
-                fontFamily: '"Helvetica Neue", Helvetica, sans-serif',
-                fontSmoothing: "antialiased",
-                fontSize: "16px",
-                "::placeholder": {
-                  color: "#aab7c4",
-                },
-              },
-              invalid: {
-                color: "#fa755a",
-                iconColor: "#fa755a",
-              },
-            },
-          }}
-        />
+        Payment Details
+        <PaymentElement />
       </Label>
       <Button
         style={{ margin: "16px 0" }}
@@ -260,7 +233,7 @@ const DrawerContent = ({
     () => smartblocks.find(({ uuid }) => uuid === selectedSmartBlockId),
     [selectedSmartBlockId, smartblocks]
   );
-  const [paymentSecret, setPaymentSecret] = useState("");
+  const [payment, setPayment] = useState<{ id: string; secret: string }>();
   useEffect(() => {
     if (!selectedSmartBlockId) {
       setLoading(true);
@@ -364,12 +337,18 @@ const DrawerContent = ({
           },
           parentUid,
         }));
-      await getShallowTreeByParentUid(uid).map(({ uid: child }) => () =>
-        deleteBlock(child)
-      ).reduce((p,c) => p.then(()=> c()), Promise.resolve());
-      await children.map((node, order) => () =>
-        createBlock({ node, order, parentUid: uid })
-      ).reduce((p,c) => p.then(()=> c()), Promise.resolve());
+      await getShallowTreeByParentUid(uid)
+        .map(
+          ({ uid: child }) =>
+            () =>
+              deleteBlock(child)
+        )
+        .reduce((p, c) => p.then(() => c()), Promise.resolve());
+      await children
+        .map(
+          (node, order) => () => createBlock({ node, order, parentUid: uid })
+        )
+        .reduce((p, c) => p.then(() => c()), Promise.resolve());
       await window.roamAlphaAPI.ui.mainWindow.openBlock({ block: { uid } });
       onClose();
     },
@@ -387,7 +366,7 @@ const DrawerContent = ({
       )
       .then((r) => {
         if (r.data.secret) {
-          setPaymentSecret(r.data.secret);
+          setPayment(r.data);
           setLoading(false);
         } else if (r.data.workflow) {
           return installWorkflow(r.data.workflow);
@@ -446,10 +425,13 @@ const DrawerContent = ({
               alignItems: "center",
             }}
           >
-            {paymentSecret ? (
-              <Elements stripe={stripePromise}>
+            {payment ? (
+              <Elements
+                stripe={stripePromise}
+                options={{ clientSecret: payment.secret }}
+              >
                 <StripeCheckout
-                  secret={paymentSecret}
+                  payment={payment}
                   isDonation={!!donation}
                   onSuccess={(id: string) =>
                     axios
@@ -549,7 +531,7 @@ const DrawerContent = ({
         icon={"arrow-left"}
         onClick={() => {
           setSelectedSmartBlockId("");
-          setPaymentSecret("");
+          setPayment(undefined);
         }}
         minimal
         style={{ position: "absolute", top: 8, right: 8 }}

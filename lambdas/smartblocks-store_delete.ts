@@ -1,5 +1,5 @@
 import { APIGatewayProxyHandler } from "aws-lambda";
-import { headers, dynamo, validToken } from "./common";
+import { headers, dynamo, validToken, toStatus } from "./common";
 
 export const handler: APIGatewayProxyHandler = async (event) => {
   const { uuid = "", graph = "" } = event.queryStringParameters || {};
@@ -40,7 +40,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
                   "#n": "name",
                 },
                 ExpressionAttributeValues: {
-                  ":s": { S: "INSTALLED" },
+                  ":s": { S: toStatus("INSTALLED") },
                   ":n": { S: uuid },
                 },
                 KeyConditionExpression: "#n = :n AND #s = :s",

@@ -2,7 +2,7 @@ import { APIGatewayProxyHandler } from "aws-lambda";
 import { DynamoDB } from "aws-sdk";
 import type Stripe from "stripe";
 import { v4 } from "uuid";
-import { s3, dynamo, headers, stripe, ses } from "./common";
+import { s3, dynamo, headers, stripe, ses, toStatus, fromStatus } from "./common";
 
 const getWorkflow = (item: DynamoDB.AttributeMap, graph: string) =>
   s3
@@ -20,7 +20,7 @@ const getWorkflow = (item: DynamoDB.AttributeMap, graph: string) =>
             name: { S: item.uuid.S },
             author: { S: graph },
             workflow: { S: item.workflow.S },
-            status: { S: "INSTALLED" },
+            status: { S: toStatus("INSTALLED") },
           },
         })
         .promise()
@@ -85,8 +85,8 @@ export const handler: APIGatewayProxyHandler = async (event) => {
         .promise()
         .then((r) =>
           !(
-            r.Item?.status?.S === "LIVE" ||
-            (r.Item?.status?.S === "UNDER REVIEW" && !!r.Item?.workflow?.S)
+            fromStatus(r.Item?.status?.S) === "LIVE" ||
+            (fromStatus(r.Item?.status?.S) === "UNDER REVIEW" && !!r.Item?.workflow?.S)
           )
             ? {
                 statusCode: 400,
@@ -103,7 +103,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
                     "#n": "name",
                   },
                   ExpressionAttributeValues: {
-                    ":s": { S: "INSTALLED" },
+                    ":s": { S: toStatus("INSTALLED") },
                     ":n": { S: uuid },
                   },
                   KeyConditionExpression: "#n = :n AND #s = :s",
@@ -272,7 +272,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
                         .then((t) =>
                           ensureCustomer(email).then((customer) =>
                             stripe.paymentIntents.create({
-                              payment_method_types: ["card"],
+                              automatic_payment_methods: { enabled: true },
                               amount: Number(r.Item?.price?.N) || donationValue,
                               currency: "usd",
                               application_fee_amount:
@@ -290,7 +290,10 @@ export const handler: APIGatewayProxyHandler = async (event) => {
                         )
                         .then((s) => ({
                           statusCode: 200,
-                          body: JSON.stringify({ secret: s.client_secret }),
+                          body: JSON.stringify({
+                            secret: s.client_secret,
+                            id: s.id,
+                          }),
                           headers,
                         }))
                 )
@@ -314,7 +317,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
                   "#a": "author",
                 },
                 ExpressionAttributeValues: {
-                  ":s": { S: "INSTALLED" },
+                  ":s": { S: toStatus("INSTALLED") },
                   ":a": { S: graph },
                 },
                 KeyConditionExpression: "#a = :a AND #s = :s",
@@ -357,7 +360,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
                     "#a": "author",
                   },
                   ExpressionAttributeValues: {
-                    ":s": { S: "LIVE" },
+                    ":s": { S: toStatus("LIVE") },
                     ":a": { S: graph },
                   },
                   KeyConditionExpression: "#a = :a AND #s = :s",
@@ -373,7 +376,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
                     "#a": "author",
                   },
                   ExpressionAttributeValues: {
-                    ":s": { S: "UNDER REVIEW" },
+                    ":s": { S: toStatus("UNDER REVIEW") },
                     ":a": { S: graph },
                   },
                   KeyConditionExpression: "#a = :a AND #s = :s",
@@ -390,7 +393,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
                     "#s": "status",
                   },
                   ExpressionAttributeValues: {
-                    ":s": { S: "LIVE" },
+                    ":s": { S: toStatus("LIVE") },
                   },
                   KeyConditionExpression: "#s = :s",
                 })
@@ -404,7 +407,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
                     "#s": "status",
                   },
                   ExpressionAttributeValues: {
-                    ":s": { S: "UNDER REVIEW" },
+                    ":s": { S: toStatus("UNDER REVIEW") },
                   },
                   KeyConditionExpression: "#s = :s",
                 })
@@ -419,7 +422,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
               "#s": "status",
             },
             ExpressionAttributeValues: {
-              ":s": { S: "USER" },
+              ":s": { S: toStatus("USER") },
             },
             KeyConditionExpression: "#s = :s",
           })
