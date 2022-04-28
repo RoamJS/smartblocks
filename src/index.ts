@@ -19,7 +19,6 @@ import getCurrentPageUid from "roamjs-components/dom/getCurrentPageUid";
 import getDisplayNameByUid from "roamjs-components/queries/getDisplayNameByUid";
 import getCurrentUserUid from "roamjs-components/queries/getCurrentUserUid";
 import createBlockObserver from "roamjs-components/dom/createBlockObserver";
-import openBlock from "roamjs-components/dom/openBlock";
 import getPageTitleByPageUid from "roamjs-components/queries/getPageTitleByPageUid";
 import deleteBlock from "roamjs-components/writes/deleteBlock";
 import { createConfigObserver } from "roamjs-components/components/ConfigPage";
@@ -592,7 +591,10 @@ runExtension("smartblocks", async () => {
         if (debug) {
           renderToast({
             id: "smartblocks-info",
-            content: `Smartblocks: Still need to run the Smartblock later today at: ${dateFnsFormat(triggerTime, 'hh:mm:ss a')}`,
+            content: `Smartblocks: Still need to run the Smartblock later today at: ${dateFnsFormat(
+              triggerTime,
+              "hh:mm:ss a"
+            )}`,
             intent: Intent.PRIMARY,
           });
         }
@@ -632,12 +634,11 @@ runExtension("smartblocks", async () => {
                     intent: Intent.PRIMARY,
                   });
                 }
-                createPage({ title: toRoamDate(today) }).then(
-                  () =>
-                    sbBomb({
-                      srcUid,
-                      target: { uid: todayUid, isPage: true },
-                    })
+                createPage({ title: toRoamDate(today) }).then(() =>
+                  sbBomb({
+                    srcUid,
+                    target: { uid: todayUid, isPage: true },
+                  })
                 );
               } else {
                 renderToast({
@@ -772,6 +773,8 @@ runExtension("smartblocks", async () => {
                 variables["RemoveButton"] === "false" ||
                 variables["42RemoveButton"] === "false";
 
+              const clearBlock = variables["Clear"] === "true";
+
               const props = {
                 srcUid,
                 variables,
@@ -797,9 +800,11 @@ runExtension("smartblocks", async () => {
               } else {
                 updateBlock({
                   uid: parentUid,
-                  text: `${text.substring(0, index)}${text.substring(
-                    index + full.length
-                  )}`,
+                  text: clearBlock
+                    ? ""
+                    : `${text.substring(0, index)}${text.substring(
+                        index + full.length
+                      )}`,
                 }).then(() =>
                   sbBomb({
                     ...props,
