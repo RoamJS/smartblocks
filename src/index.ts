@@ -372,71 +372,76 @@ runExtension("smartblocks", async () => {
   );
   const customCommands: { text: string; help: string }[] = [];
 
-  window.roamjs.extension.smartblocks = {};
-  window.roamjs.extension.smartblocks.registerCommand = ({
-    text,
-    help = `Description for ${text}`,
-    handler,
-  }: {
-    text: string;
-    help?: string;
-    handler: (
-      c: Pick<SmartBlocksContext, "targetUid" | "variables">
-    ) => CommandHandler;
-  }) => {
-    handlerByCommand[text] = { handler: handler(smartBlocksContext) };
-    customCommands.push({ text, help });
-  };
   Object.keys(window.roamjs.extension).forEach((text) => {
     if (window.roamjs.extension[text].registerSmartBlocksCommand) {
-      window.roamjs.extension[text].registerSmartBlocksCommand();
+      (
+        window.roamjs.extension[text] as {
+          registerSmartBlocksCommand: () => void;
+        }
+      ).registerSmartBlocksCommand();
       delete window.roamjs.extension[text];
     }
   });
-  window.roamjs.extension.smartblocks.triggerSmartblock = ({
-    srcName,
-    srcUid = getCleanCustomWorkflows().find(({ name }) => name === srcName)
-      ?.uid,
-    targetName,
-    targetUid = getPageUidByPageTitle(targetName),
-    variables,
-  }: {
-    srcName?: string;
-    srcUid?: string;
-    targetName?: string;
-    targetUid?: string;
-    variables?: Record<string, string>;
-  }) => {
-    if (!srcUid) {
-      if (srcName) {
-        throw new Error(`Could not find workflow with name ${srcName}`);
-      } else {
-        throw new Error("Either the `srcName` or `srcUid` input is required");
+  window.roamjs.extension.smartblocks = {
+    registerCommand: ({
+      text,
+      help = `Description for ${text}`,
+      handler,
+    }: {
+      text: string;
+      help?: string;
+      handler: (
+        c: Pick<SmartBlocksContext, "targetUid" | "variables">
+      ) => CommandHandler;
+    }) => {
+      handlerByCommand[text] = { handler: handler(smartBlocksContext) };
+      customCommands.push({ text, help });
+    },
+    triggerSmartblock: ({
+      srcName,
+      srcUid = getCleanCustomWorkflows().find(({ name }) => name === srcName)
+        ?.uid,
+      targetName,
+      targetUid = getPageUidByPageTitle(targetName),
+      variables,
+    }: {
+      srcName?: string;
+      srcUid?: string;
+      targetName?: string;
+      targetUid?: string;
+      variables?: Record<string, string>;
+    }) => {
+      if (!srcUid) {
+        if (srcName) {
+          throw new Error(`Could not find workflow with name ${srcName}`);
+        } else {
+          throw new Error("Either the `srcName` or `srcUid` input is required");
+        }
       }
-    }
-    if (!targetUid) {
-      if (targetName) {
-        throw new Error(`Could not find page with name ${targetName}`);
-      } else {
-        throw new Error(
-          "Either the `targetName` or `targetUid` input is required"
-        );
+      if (!targetUid) {
+        if (targetName) {
+          throw new Error(`Could not find page with name ${targetName}`);
+        } else {
+          throw new Error(
+            "Either the `targetName` or `targetUid` input is required"
+          );
+        }
       }
-    }
-    return new Promise((resolve) =>
-      setTimeout(
-        () =>
-          sbBomb({
-            srcUid,
-            target: {
-              uid: targetUid,
-              isPage: !!(targetName || getPageTitleByPageUid(targetUid)),
-            },
-            variables,
-          }).then(resolve),
-        10
-      )
-    );
+      return new Promise((resolve) =>
+        setTimeout(
+          () =>
+            sbBomb({
+              srcUid,
+              target: {
+                uid: targetUid,
+                isPage: !!(targetName || getPageTitleByPageUid(targetUid)),
+              },
+              variables,
+            }).then(resolve),
+          10
+        )
+      );
+    },
   };
 
   document.addEventListener("input", (e) => {
