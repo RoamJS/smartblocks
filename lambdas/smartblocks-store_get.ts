@@ -193,7 +193,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
                         email: "",
                       };
                       return Promise.all([
-                        stripe.accounts.retrieve(
+                        oldStripe.accounts.retrieve(
                           p.transfer_data.destination as string
                         ),
                         p.customer

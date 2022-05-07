@@ -50,6 +50,7 @@ import { getCleanCustomWorkflows } from "./smartblocks";
 import lego from "./img/lego3blocks.png";
 
 const stripePromise = loadStripe(process.env.STRIPE_PUBLIC_KEY, {
+  betas: ["link_beta_3"],
   apiVersion: "2020-08-27;link_beta=v1",
 });
 
