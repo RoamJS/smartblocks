@@ -30,7 +30,6 @@ import { render as renderToast } from "roamjs-components/components/Toast";
 import createBlock from "roamjs-components/writes/createBlock";
 import deleteBlock from "roamjs-components/writes/deleteBlock";
 import getBasicTreeByParentUid from "roamjs-components/queries/getBasicTreeByParentUid";
-import getCurrentUserDisplayName from "roamjs-components/queries/getCurrentUserDisplayName";
 import getCurrentUserEmail from "roamjs-components/queries/getCurrentUserEmail";
 import getCurrentUserUid from "roamjs-components/queries/getCurrentUserUid";
 import getDisplayNameByUid from "roamjs-components/queries/getDisplayNameByUid";
@@ -41,6 +40,7 @@ import { InputTextNode } from "roamjs-components/types";
 import Markdown from "markdown-to-jsx";
 import {
   Elements,
+  LinkAuthenticationElement,
   PaymentElement,
   useElements,
   useStripe,
@@ -49,7 +49,9 @@ import { loadStripe } from "@stripe/stripe-js";
 import { getCleanCustomWorkflows } from "./smartblocks";
 import lego from "./img/lego3blocks.png";
 
-const stripePromise = loadStripe(process.env.STRIPE_PUBLIC_KEY);
+const stripePromise = loadStripe(process.env.STRIPE_PUBLIC_KEY, {
+  apiVersion: "2020-08-27;link_beta=v1",
+});
 
 type Props = {
   parentUid: string;
@@ -152,6 +154,8 @@ const StripeCheckout = ({
 }) => {
   const stripe = useStripe();
   const elements = useElements();
+  const defaultEmail = useMemo(getCurrentUserEmail, []);
+  const [email, setEmail] = useState(defaultEmail);
   const handleSubmit = useCallback(() => {
     setLoading(true);
     stripe
@@ -178,6 +182,11 @@ const StripeCheckout = ({
       }}
     >
       <Label>
+        Contact info
+        <LinkAuthenticationElement
+          options={{ defaultValues: { email: defaultEmail } }}
+          onChange={(e) => setEmail(e.value.email)}
+        />
         Payment Details
         <PaymentElement />
       </Label>

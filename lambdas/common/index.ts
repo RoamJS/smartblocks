@@ -4,7 +4,8 @@ import Stripe from "stripe";
 import sha256 from "crypto-js/sha256";
 
 export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
-  apiVersion: "2020-08-27",
+  // @ts-ignore
+  apiVersion: "2020-08-27;link_beta=v1",
   maxNetworkRetries: 3,
 });
 export const dynamo = new AWS.DynamoDB({

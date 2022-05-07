@@ -1,8 +1,21 @@
 import { APIGatewayProxyHandler } from "aws-lambda";
 import { DynamoDB } from "aws-sdk";
-import type Stripe from "stripe";
+import Stripe from "stripe";
 import { v4 } from "uuid";
-import { s3, dynamo, headers, stripe, ses, toStatus, fromStatus } from "./common";
+import {
+  s3,
+  dynamo,
+  headers,
+  stripe,
+  ses,
+  toStatus,
+  fromStatus,
+} from "./common";
+
+const oldStripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
+  apiVersion: "2020-08-27",
+  maxNetworkRetries: 3,
+});
 
 const getWorkflow = (item: DynamoDB.AttributeMap, graph: string) =>
   s3
@@ -58,7 +71,6 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     open,
     donation = "0",
   } = event.queryStringParameters || {};
-  console.log(event.queryStringParameters);
   const authorization =
     event.headers.Authorization || event.headers.authorization || "";
   const paymentIntentId = authorization.startsWith("email:")
@@ -86,7 +98,8 @@ export const handler: APIGatewayProxyHandler = async (event) => {
         .then((r) =>
           !(
             fromStatus(r.Item?.status?.S) === "LIVE" ||
-            (fromStatus(r.Item?.status?.S) === "UNDER REVIEW" && !!r.Item?.workflow?.S)
+            (fromStatus(r.Item?.status?.S) === "UNDER REVIEW" &&
+              !!r.Item?.workflow?.S)
           )
             ? {
                 statusCode: 400,
@@ -162,7 +175,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
                           donatable:
                             (Number(r.Item?.price?.N) || 0) === 0 &&
                             !!publisher.Item?.stripe?.S
-                              ? await stripe.accounts
+                              ? await oldStripe.accounts
                                   .retrieve(publisher.Item.stripe.S)
                                   .then((r) => r.details_submitted)
                                   .catch(() => false)
