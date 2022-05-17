@@ -372,30 +372,16 @@ runExtension("smartblocks", async () => {
   );
   const customCommands: { text: string; help: string }[] = [];
 
-  Object.keys(window.roamjs.extension).forEach((text) => {
-    if (window.roamjs.extension[text].registerSmartBlocksCommand) {
-      (
-        window.roamjs.extension[text] as {
-          registerSmartBlocksCommand: () => void;
-        }
-      ).registerSmartBlocksCommand();
-      delete window.roamjs.extension[text];
-    }
-  });
   window.roamjs.extension.smartblocks = {
     registerCommand: ({
       text,
       help = `Description for ${text}`,
       handler,
-    }: {
-      text: string;
-      help?: string;
-      handler: (
-        c: Pick<SmartBlocksContext, "targetUid" | "variables">
-      ) => CommandHandler;
+      delayArgs,
     }) => {
-      handlerByCommand[text] = { handler: handler(smartBlocksContext) };
-      customCommands.push({ text, help });
+      const command = text.toUpperCase();
+      handlerByCommand[command] = { handler: handler(smartBlocksContext), delayArgs };
+      customCommands.push({ text: command, help });
     },
     triggerSmartblock: ({
       srcName,
@@ -404,12 +390,6 @@ runExtension("smartblocks", async () => {
       targetName,
       targetUid = getPageUidByPageTitle(targetName),
       variables,
-    }: {
-      srcName?: string;
-      srcUid?: string;
-      targetName?: string;
-      targetUid?: string;
-      variables?: Record<string, string>;
     }) => {
       if (!srcUid) {
         if (srcName) {

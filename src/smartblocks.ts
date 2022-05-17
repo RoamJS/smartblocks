@@ -22,7 +22,6 @@ import parseRoamDate from "roamjs-components/date/parseRoamDate";
 import getParentUidsOfBlockUid from "roamjs-components/queries/getParentUidsOfBlockUid";
 import { BLOCK_REF_REGEX } from "roamjs-components/dom/constants";
 import getCurrentUserDisplayName from "roamjs-components/queries/getCurrentUserDisplayName";
-import openBlock from "roamjs-components/dom/openBlock";
 import getBlockUidAndTextIncludingText from "roamjs-components/queries/getBlockUidAndTextIncludingText";
 import getDisplayNameByUid from "roamjs-components/queries/getDisplayNameByUid";
 import getCurrentUserUid from "roamjs-components/queries/getCurrentUserUid";
@@ -33,7 +32,6 @@ import getChildrenLengthByPageUid from "roamjs-components/queries/getChildrenLen
 import normalizePageTitle from "roamjs-components/queries/normalizePageTitle";
 import getBlockUidsReferencingBlock from "roamjs-components/queries/getBlockUidsReferencingBlock";
 import getBasicTreeByParentUid from "roamjs-components/queries/getBasicTreeByParentUid";
-import * as chrono from "chrono-node";
 import datefnsFormat from "date-fns/format";
 import addDays from "date-fns/addDays";
 import addWeeks from "date-fns/addWeeks";
@@ -54,27 +52,28 @@ import differenceInDays from "date-fns/differenceInDays";
 import XRegExp from "xregexp";
 import { renderPrompt } from "./Prompt";
 import { render as renderToast } from "roamjs-components/components/Toast";
-import { ParsingComponents } from "chrono-node/dist/results";
-import { ORDINAL_WORD_DICTIONARY } from "./dom";
 import { Intent, ToasterPosition } from "@blueprintjs/core";
 import { renderLoading } from "./Loading";
 import axios from "axios";
 import lodashGet from "lodash/get";
 import getUids from "roamjs-components/dom/getUids";
 import getAttributeValueByBlockAndName from "roamjs-components/queries/getAttributeValueByBlockAndName";
+import parseNlpDate, {
+  addNlpDateParser,
+} from "roamjs-components/date/parseNlpDate";
 
 export const PREDEFINED_REGEX = /#\d*-predefined/;
 const PAGE_TITLE_REGEX = /^(?:#?\[\[(.*)\]\]|#([^\s]*))$/;
 const DAILY_REF_REGEX = new RegExp(
   `#?\\[\\[(${DAILY_NOTE_PAGE_REGEX.source})\\]\\]`
 );
-const getDateFromBlock = (args:{text: string, title:string}) => {
+const getDateFromBlock = (args: { text: string; title: string }) => {
   const fromText = DAILY_REF_REGEX.exec(args.text)?.[1];
   if (fromText) return parseRoamDate(fromText);
   const fromTitle = DAILY_NOTE_PAGE_TITLE_REGEX.exec(args.title)?.[0];
   if (fromTitle) return parseRoamDate(fromTitle);
-  return new Date('');
-}
+  return new Date("");
+};
 const getPageUidByBlockUid = (blockUid: string): string =>
   (
     window.roamAlphaAPI.q(
@@ -100,214 +99,43 @@ const getDateBasisDate = () => {
   }
 };
 
+addNlpDateParser({
+  pattern: () => /D[B,E]O(N)?[M,Y]/i,
+  extract: (_, match) => {
+    const date = getDateBasisDate();
+    const result = (d: Date) => ({
+      day: d.getDate(),
+      month: d.getMonth() + 1,
+      year: d.getFullYear(),
+    });
+
+    switch (match[0]) {
+      case "DBOM":
+        return result(startOfMonth(date));
+      case "DEOM":
+        return result(endOfMonth(date));
+      case "DBOY":
+        return result(startOfYear(date));
+      case "DEOY":
+        return result(endOfYear(date));
+      case "DBONM":
+        return result(addMonths(startOfMonth(date), 1));
+      case "DEONM":
+        return result(addMonths(endOfMonth(date), 1));
+      case "DBONY":
+        return result(addYears(startOfYear(date), 1));
+      case "DEONY":
+        return result(addYears(endOfYear(date), 1));
+      default:
+        return result(date);
+    }
+  },
+});
+
 const getUidFromParentArg = (arg: string) => {
   const pageOrUid = smartBlocksContext.variables[arg] || arg;
   return getPageUidByPageTitle(extractTag(pageOrUid)) || extractRef(pageOrUid);
 };
-
-const ORDINAL_REGEX = new RegExp(
-  `\\b(?:${Object.keys(ORDINAL_WORD_DICTIONARY)
-    .sort((a, b) => b.length - a.length)
-    .join("|")}|(?:[1-9])?[0-9](?:st|nd|rd|th)?)\\b`,
-  "i"
-);
-const customDateNlp = new chrono.Chrono();
-const DAYS_OFFSET = {
-  sunday: 0,
-  sun: 0,
-  monday: 1,
-  mon: 1,
-  tuesday: 2,
-  tues: 2,
-  tue: 2,
-  wednesday: 3,
-  wed: 3,
-  thursday: 4,
-  thurs: 4,
-  thur: 4,
-  thu: 4,
-  friday: 5,
-  fri: 5,
-  saturday: 6,
-  sat: 6,
-};
-const UPCOMING_PATTERN = new RegExp(
-  "(\\W|^)" +
-    "(?:(?:\\,|\\(|\\（)\\s*)?" +
-    "(?:on\\s*?)?" +
-    "upcoming\\s*" +
-    "(" +
-    Object.keys(DAYS_OFFSET).join("|") +
-    ")" +
-    "(?=\\W|$)",
-  "i"
-);
-// https://github.com/wanasit/chrono/blob/d8da3c840c50c959a62a0840c9a627f39bc765df/src/parsers/en/ENWeekdayParser.js
-customDateNlp.parsers.unshift({
-  pattern: () => UPCOMING_PATTERN,
-  extract: (context, match) => {
-    const index = match.index + match[1].length;
-    const text = match[0].substr(
-      match[1].length,
-      match[0].length - match[1].length
-    );
-    const result = context.createParsingResult(index, text);
-
-    const dayOfWeek = match[2].toLowerCase();
-    const offset = DAYS_OFFSET[dayOfWeek as keyof typeof DAYS_OFFSET];
-    if (offset === undefined) {
-      return null;
-    }
-
-    const startMoment = context.refDate;
-    const refOffset = startMoment.getDay();
-    result.start.assign("weekday", offset);
-    if (offset <= refOffset) {
-      startMoment.setDate(offset + 7 + startMoment.getDate() - refOffset);
-      result.start.assign("day", startMoment.getDate());
-      result.start.assign("month", startMoment.getMonth() + 1);
-      result.start.assign("year", startMoment.getFullYear());
-    } else {
-      startMoment.setDate(offset + startMoment.getDate() - refOffset);
-      result.start.imply("day", startMoment.getDate());
-      result.start.imply("month", startMoment.getMonth() + 1);
-      result.start.imply("year", startMoment.getFullYear());
-    }
-
-    return result;
-  },
-});
-customDateNlp.parsers.push(
-  {
-    pattern: () => /\b((start|end) )?of\b/i,
-    extract: () => ({}),
-  },
-  {
-    pattern: () => ORDINAL_REGEX,
-    extract: () => ({}),
-  },
-  {
-    pattern: () => /D[B,E]O(N)?[M,Y]/i,
-    extract: (_, match) => {
-      const date = getDateBasisDate();
-      const result = (d: Date) => ({
-        day: d.getDate(),
-        month: d.getMonth() + 1,
-        year: d.getFullYear(),
-      });
-
-      switch (match[0]) {
-        case "DBOM":
-          return result(startOfMonth(date));
-        case "DEOM":
-          return result(endOfMonth(date));
-        case "DBOY":
-          return result(startOfYear(date));
-        case "DEOY":
-          return result(endOfYear(date));
-        case "DBONM":
-          return result(addMonths(startOfMonth(date), 1));
-        case "DEONM":
-          return result(addMonths(endOfMonth(date), 1));
-        case "DBONY":
-          return result(addYears(startOfYear(date), 1));
-        case "DEONY":
-          return result(addYears(endOfYear(date), 1));
-        default:
-          return result(date);
-      }
-    },
-  }
-);
-
-const assignDay = (p: ParsingComponents, d: Date) => {
-  p.assign("year", d.getFullYear());
-  p.assign("month", d.getMonth() + 1);
-  p.assign("day", d.getDate());
-};
-customDateNlp.refiners.unshift({
-  refine: (_, results) => {
-    if (results.length >= 2) {
-      const [modifier, date, ...rest] = results;
-      if (/start of/i.test(modifier.text)) {
-        const dateObj = date.date();
-        if (/week/i.test(date.text)) {
-          const newDateObj = startOfWeek(dateObj);
-          assignDay(date.start, newDateObj);
-        }
-        if (/month/i.test(date.text)) {
-          const newDateObj = startOfMonth(dateObj);
-          assignDay(date.start, newDateObj);
-        }
-        if (/year/i.test(date.text)) {
-          const newDateObj = startOfYear(dateObj);
-          assignDay(date.start, newDateObj);
-        }
-      } else if (/end of/i.test(modifier.text)) {
-        const dateObj = date.date();
-        if (/week/i.test(date.text)) {
-          const newDateObj = endOfWeek(dateObj);
-          assignDay(date.start, newDateObj);
-        }
-        if (/month/i.test(date.text)) {
-          const newDateObj = endOfMonth(dateObj);
-          assignDay(date.start, newDateObj);
-        }
-        if (/year/i.test(date.text)) {
-          const newDateObj = endOfYear(dateObj);
-          assignDay(date.start, newDateObj);
-        }
-      } else if (rest.length >= 2) {
-        const [of, d, ...moreRest] = rest;
-        if (
-          ORDINAL_REGEX.test(modifier.text) &&
-          date.start.isOnlyWeekdayComponent() &&
-          /of/i.test(of.text)
-        ) {
-          const match = ORDINAL_REGEX.exec(modifier.text)[0].toLowerCase();
-          const num =
-            ORDINAL_WORD_DICTIONARY[match] ||
-            Number(match.replace(/(?:st|nd|rd|th)$/i, ""));
-          const dateObj = d.date();
-          if (/month/i.test(d.text)) {
-            const startOfMonthDate = startOfMonth(dateObj);
-            const originalMonth = startOfMonthDate.getMonth();
-            const startOfWeekDate = startOfWeek(startOfMonthDate);
-            const dayOfWeekDate = addDays(
-              startOfWeekDate,
-              date.start.get("weekday")
-            );
-            const newDateObj = addWeeks(
-              dayOfWeekDate,
-              num - (originalMonth === dayOfWeekDate.getMonth() ? 1 : 0)
-            );
-            assignDay(d.start, newDateObj);
-          } else if (/year/i.test(d.text)) {
-            const startOfYearDate = startOfYear(dateObj);
-            const originalYear = startOfYearDate.getFullYear();
-            const startOfWeekDate = startOfWeek(startOfYearDate);
-            const dayOfWeekDate = addDays(
-              startOfWeekDate,
-              date.start.get("weekday")
-            );
-            const newDateObj = addWeeks(
-              dayOfWeekDate,
-              num - (originalYear === dayOfWeekDate.getFullYear() ? 1 : 0)
-            );
-            assignDay(d.start, newDateObj);
-          } else {
-            return results;
-          }
-          return [d, ...moreRest];
-        }
-      } else {
-        return results;
-      }
-      return [date, ...rest];
-    }
-    return results;
-  },
-});
 
 const AsyncFunction: FunctionConstructor = new Function(
   `return Object.getPrototypeOf(async function(){}).constructor`
@@ -586,14 +414,14 @@ export const COMMANDS: {
     handler: (nlp, ...format) => {
       if (!nlp) {
         return `[[${toRoamDate(
-          customDateNlp.parseDate("today", getDateBasisDate())
+          parseNlpDate("today", getDateBasisDate())
         )}]]`;
       }
       const date =
-        customDateNlp.parseDate(nlp, getDateBasisDate()) ||
+        parseNlpDate(nlp, getDateBasisDate()) ||
         // chrono fails basic parsing requiring forward date if ambiguous
         // https://github.com/wanasit/chrono/commit/4f264a9f21fbd04eb740bf48f5616f6e6e0e78b7
-        customDateNlp.parseDate(`in ${nlp}`, getDateBasisDate());
+        parseNlpDate(`in ${nlp}`, getDateBasisDate());
       if (!date) {
         return `Could not return a valid date with text "${nlp}"`;
       }
@@ -611,10 +439,10 @@ export const COMMANDS: {
     help: "Returns time in 24 hour format",
     handler: (nlp) => {
       const dt = nlp
-        ? customDateNlp.parseDate(nlp, getDateBasisDate()) ||
+        ? parseNlpDate(nlp, getDateBasisDate()) ||
           // chrono fails basic parsing requiring forward date if ambiguous
           // https://github.com/wanasit/chrono/commit/4f264a9f21fbd04eb740bf48f5616f6e6e0e78b7
-          customDateNlp.parseDate(`in ${nlp}`, getDateBasisDate())
+          parseNlpDate(`in ${nlp}`, getDateBasisDate())
         : new Date();
       return (
         dt.getHours().toString().padStart(2, "0") +
@@ -628,10 +456,10 @@ export const COMMANDS: {
     help: "Returns time in AM/PM format.",
     handler: (nlp) => {
       const dt = nlp
-        ? customDateNlp.parseDate(nlp, getDateBasisDate()) ||
+        ? parseNlpDate(nlp, getDateBasisDate()) ||
           // chrono fails basic parsing requiring forward date if ambiguous
           // https://github.com/wanasit/chrono/commit/4f264a9f21fbd04eb740bf48f5616f6e6e0e78b7
-          customDateNlp.parseDate(`in ${nlp}`, getDateBasisDate())
+          parseNlpDate(`in ${nlp}`, getDateBasisDate())
         : new Date();
       const hours = dt.getHours();
       const minutes = dt.getMinutes();
@@ -728,7 +556,7 @@ export const COMMANDS: {
     help: "Returns a list of block refs of TODOs for today\n\n1. Max # blocks\n\n2. Format of output.\n\n3. optional filter values",
     handler: (...args) => {
       const today = toRoamDate(
-        customDateNlp.parseDate("today", getDateBasisDate())
+        parseNlpDate("today", getDateBasisDate())
       );
       const todos = window.roamAlphaAPI
         .q(
@@ -753,7 +581,7 @@ export const COMMANDS: {
     handler: (...args) => {
       const blocks = getBlockUidsAndTextsReferencingPage("TODO");
       const today = startOfDay(
-        customDateNlp.parseDate("today", getDateBasisDate())
+        parseNlpDate("today", getDateBasisDate())
       );
       const todos = blocks
         .filter(({ text }) => DAILY_REF_REGEX.test(text))
@@ -773,7 +601,7 @@ export const COMMANDS: {
     handler: (...args) => {
       const blocks = getBlockUidsAndTextsReferencingPage("TODO");
       const today = startOfDay(
-        customDateNlp.parseDate("today", getDateBasisDate())
+        parseNlpDate("today", getDateBasisDate())
       );
       const todos = blocks
         .map(({ text, uid }) => ({
@@ -799,7 +627,7 @@ export const COMMANDS: {
     help: "Returns a list of block refs of TODOs that are due in the future\n\n1. Max # blocks\n\n2. Format of output.\n\n3. optional filter values",
     handler: (...args) => {
       const blocks = getBlockUidsAndTextsReferencingPage("TODO");
-      const today = customDateNlp.parseDate("today", getDateBasisDate());
+      const today = parseNlpDate("today", getDateBasisDate());
       const todos = blocks
         .filter(({ text }) => DAILY_REF_REGEX.test(text))
         .map(({ text, uid }) => ({
@@ -817,7 +645,7 @@ export const COMMANDS: {
     help: "Returns a list of block refs of TODOs that are due in the future including DNP TODOs\n\n1. Max # blocks\n\n2. Format of output.\n\n3. optional filter values",
     handler: (...args) => {
       const blocks = getBlockUidsAndTextsReferencingPage("TODO");
-      const today = customDateNlp.parseDate("today", getDateBasisDate());
+      const today = parseNlpDate("today", getDateBasisDate());
       const todos = blocks
         .map(({ text, uid }) => ({
           text,
@@ -1036,11 +864,11 @@ export const COMMANDS: {
       const undated = startArg === "-1" && endArg === "-1";
       const start =
         !undated && startArg
-          ? startOfDay(customDateNlp.parseDate(startArg, referenceDate))
+          ? startOfDay(parseNlpDate(startArg, referenceDate))
           : new Date(0);
       const end =
         !undated && endArg
-          ? endOfDay(customDateNlp.parseDate(endArg, referenceDate))
+          ? endOfDay(parseNlpDate(endArg, referenceDate))
           : new Date(9999, 11, 31);
       const limit = Number(limitArg);
       const title = extractTag(titleArg);
@@ -1082,11 +910,9 @@ export const COMMANDS: {
             ? (a, b) => a.text.localeCompare(b.text)
             : sort === "DESC"
             ? (a, b) =>
-                getDateFromBlock(b).valueOf() -
-                getDateFromBlock(a).valueOf()
+                getDateFromBlock(b).valueOf() - getDateFromBlock(a).valueOf()
             : (a, b) =>
-                getDateFromBlock(a).valueOf() -
-                getDateFromBlock(b).valueOf()
+                getDateFromBlock(a).valueOf() - getDateFromBlock(b).valueOf()
         )
         .slice(0, limit)
         .map(getFormatter(format));
@@ -1159,7 +985,7 @@ export const COMMANDS: {
     text: "IFDATEOFYEAR",
     help: "Compares today's date\n\n1: Comma separated list of dates (mm/dd)\nExample: 01/01,04/01,09/01",
     handler: (...dates) => {
-      const today = customDateNlp.parseDate("today", getDateBasisDate());
+      const today = parseNlpDate("today", getDateBasisDate());
       const match = dates
         .map((d) => d.trim())
         .some((d) => {
@@ -1180,7 +1006,7 @@ export const COMMANDS: {
     text: "IFDAYOFMONTH",
     help: "Compares today's date\n\n1: Comma separated list of days\n Example: 5,10,15",
     handler: (...dates) => {
-      const today = customDateNlp.parseDate("today", getDateBasisDate());
+      const today = parseNlpDate("today", getDateBasisDate());
       const match = dates
         .map((s) => s.trim())
         .map((s) => Number(s))
@@ -1195,7 +1021,7 @@ export const COMMANDS: {
     text: "IFDAYOFWEEK",
     help: "Compares today's date\n\n1: Comma separated list of days of week. 1 is Monday, 7 is Sunday\nExample: 1,3",
     handler: (...dates) => {
-      const today = customDateNlp.parseDate("today", getDateBasisDate());
+      const today = parseNlpDate("today", getDateBasisDate());
       const match = dates
         .map((s) => s.trim())
         .map((s) => (s === "7" ? 0 : Number(s)))
@@ -1538,7 +1364,7 @@ export const COMMANDS: {
     handler: (mode = "DNP") => {
       smartBlocksContext.dateBasisMethod = undefined;
       smartBlocksContext.dateBasisMethod =
-        mode === "DNP" ? mode : chrono.parseDate(mode).toJSON();
+        mode === "DNP" ? mode : parseNlpDate(mode, getDateBasisDate()).toJSON();
       return "";
     },
   },
