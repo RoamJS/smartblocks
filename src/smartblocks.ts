@@ -1665,7 +1665,7 @@ export const handlerByCommand = Object.fromEntries(
   COMMANDS.map(({ text, help, ...rest }) => [text, rest])
 );
 
-const proccessBlockText = async (s: string): Promise<InputTextNode[]> => {
+export const proccessBlockText = async (s: string): Promise<InputTextNode[]> => {
   try {
     const nextBlocks: InputTextNode[] = [];
     const currentChildren: InputTextNode[] = [];

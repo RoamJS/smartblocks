@@ -46,6 +46,7 @@ import {
   getCleanCustomWorkflows,
   getCustomWorkflows,
   handlerByCommand,
+  proccessBlockText,
   sbBomb,
   SmartBlocksContext,
   smartBlocksContext,
@@ -380,7 +381,10 @@ runExtension("smartblocks", async () => {
       delayArgs,
     }) => {
       const command = text.toUpperCase();
-      handlerByCommand[command] = { handler: handler(smartBlocksContext), delayArgs };
+      handlerByCommand[command] = {
+        handler: handler({ ...smartBlocksContext, proccessBlockText }),
+        delayArgs,
+      };
       customCommands.push({ text: command, help });
     },
     triggerSmartblock: ({
