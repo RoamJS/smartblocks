@@ -382,7 +382,7 @@ runExtension("smartblocks", async () => {
     }) => {
       const command = text.toUpperCase();
       handlerByCommand[command] = {
-        handler: handler({ ...smartBlocksContext, proccessBlockText }),
+        handler: (args) => handler({ ...smartBlocksContext, proccessBlockText })(args),
         delayArgs,
       };
       customCommands.push({ text: command, help });
