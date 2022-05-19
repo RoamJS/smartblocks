@@ -413,9 +413,7 @@ export const COMMANDS: {
     help: "Returns a Roam formatted dated page reference.\n\n1: NLP expression\n\n2: optional: format for returned date, example: YYYY-MM-DD",
     handler: (nlp, ...format) => {
       if (!nlp) {
-        return `[[${toRoamDate(
-          parseNlpDate("today", getDateBasisDate())
-        )}]]`;
+        return `[[${toRoamDate(parseNlpDate("today", getDateBasisDate()))}]]`;
       }
       const date =
         parseNlpDate(nlp, getDateBasisDate()) ||
@@ -555,9 +553,7 @@ export const COMMANDS: {
     text: "TODOTODAY",
     help: "Returns a list of block refs of TODOs for today\n\n1. Max # blocks\n\n2. Format of output.\n\n3. optional filter values",
     handler: (...args) => {
-      const today = toRoamDate(
-        parseNlpDate("today", getDateBasisDate())
-      );
+      const today = toRoamDate(parseNlpDate("today", getDateBasisDate()));
       const todos = window.roamAlphaAPI
         .q(
           `[:find ?u ?s :where 
@@ -580,9 +576,7 @@ export const COMMANDS: {
     help: "Returns a list of block refs of TODOs that are Overdue\n\n1. Max # blocks\n\n2. Format of output.\n\n3. optional filter values",
     handler: (...args) => {
       const blocks = getBlockUidsAndTextsReferencingPage("TODO");
-      const today = startOfDay(
-        parseNlpDate("today", getDateBasisDate())
-      );
+      const today = startOfDay(parseNlpDate("today", getDateBasisDate()));
       const todos = blocks
         .filter(({ text }) => DAILY_REF_REGEX.test(text))
         .map(({ text, uid }) => ({
@@ -600,9 +594,7 @@ export const COMMANDS: {
     help: "Returns a list of block refs of TODOs that are Overdue including DNP TODOs\n\n1. Max # blocks\n\n2. Format of output.\n\n3. optional filter values",
     handler: (...args) => {
       const blocks = getBlockUidsAndTextsReferencingPage("TODO");
-      const today = startOfDay(
-        parseNlpDate("today", getDateBasisDate())
-      );
+      const today = startOfDay(parseNlpDate("today", getDateBasisDate()));
       const todos = blocks
         .map(({ text, uid }) => ({
           text,
@@ -1565,18 +1557,23 @@ export const COMMANDS: {
       const count = Number(numberArg) || 0;
       const windows = window.roamAlphaAPI.ui.rightSidebar.getWindows();
       if (count <= 0) {
-        windows.forEach((w) =>
-          window.roamAlphaAPI.ui.rightSidebar.removeWindow({
-            // @ts-ignore broken api
-            window: w,
-          })
-        );
-        window.roamAlphaAPI.ui.rightSidebar.close();
+        return Promise.all(
+          windows.map((w) =>
+            window.roamAlphaAPI.ui.rightSidebar.removeWindow({
+              // @ts-ignore broken api
+              window: w,
+            })
+          )
+        )
+          .then(() => window.roamAlphaAPI.ui.rightSidebar.close())
+          .then(() => "");
       } else if (count <= windows.length) {
-        window.roamAlphaAPI.ui.rightSidebar.removeWindow({
-          // @ts-ignore broken api
-          window: windows[count],
-        });
+        return window.roamAlphaAPI.ui.rightSidebar
+          .removeWindow({
+            // @ts-ignore broken api
+            window: windows[count],
+          })
+          .then(() => "");
       }
       return "";
     },
@@ -1665,7 +1662,9 @@ export const handlerByCommand = Object.fromEntries(
   COMMANDS.map(({ text, help, ...rest }) => [text, rest])
 );
 
-export const proccessBlockText = async (s: string): Promise<InputTextNode[]> => {
+export const proccessBlockText = async (
+  s: string
+): Promise<InputTextNode[]> => {
   try {
     const nextBlocks: InputTextNode[] = [];
     const currentChildren: InputTextNode[] = [];
