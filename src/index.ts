@@ -343,19 +343,6 @@ runExtension("smartblocks", async () => {
   });
 
   const tree = getBasicTreeByParentUid(pageUid);
-  const trigger = (
-    getLegacy42Setting("SmartBlockTrigger") ||
-    getSettingValueFromTree({
-      tree,
-      key: "trigger",
-      defaultValue: "jj",
-    })
-  )
-    .replace(/"/g, "")
-    .replace(/\\/g, "\\\\")
-    .replace(/\+/g, "\\+")
-    .trim();
-  const triggerRegex = new RegExp(`${trigger}$`);
   const isCustomOnly = tree.some((t) =>
     toFlexRegex("custom only").test(t.text)
   );
@@ -382,7 +369,8 @@ runExtension("smartblocks", async () => {
     }) => {
       const command = text.toUpperCase();
       handlerByCommand[command] = {
-        handler: (args) => handler({ ...smartBlocksContext, proccessBlockText })(args),
+        handler: (...args) =>
+          handler({ ...smartBlocksContext, proccessBlockText })(...args),
         delayArgs,
       };
       customCommands.push({ text: command, help });
@@ -427,6 +415,19 @@ runExtension("smartblocks", async () => {
       );
     },
   };
+  const trigger = (
+    getLegacy42Setting("SmartBlockTrigger") ||
+    getSettingValueFromTree({
+      tree,
+      key: "trigger",
+      defaultValue: "jj",
+    })
+  )
+    .replace(/"/g, "")
+    .replace(/\\/g, "\\\\")
+    .replace(/\+/g, "\\+")
+    .trim();
+  const triggerRegex = new RegExp(`${trigger}$`);
 
   document.addEventListener("input", (e) => {
     const target = e.target as HTMLElement;
