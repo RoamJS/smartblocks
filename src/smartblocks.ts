@@ -1320,7 +1320,7 @@ export const COMMANDS: {
               variables: smartBlocksContext.variables,
             }).then((uid) => {
               resetContext(parentContext);
-              return `((${uid}))`;
+              return uid ? `((${uid}))` : "";
             });
           });
         }
