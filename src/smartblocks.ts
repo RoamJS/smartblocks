@@ -244,14 +244,19 @@ export const getCleanCustomWorkflows = (workflows = getCustomWorkflows()) =>
   }));
 
 const getFormatter =
-  (format: string) =>
+  (format: string, search: RegExp) =>
   ({ uid, text, title }: { uid: string; text?: string; title?: string }) => ({
     text: format
-      .replace("{text}", text || getTextByBlockUid(uid))
-      .replace("{uid}", uid)
-      .replace("{page}", title || getPageTitleByBlockUid(uid))
+      .replace(/{text(?::([^}]+))?}/g, (_, arg) => {
+        const output = text || getTextByBlockUid(uid);
+        if (!arg) return output;
+        if (arg === "clean") return output.replace(new RegExp(search, "g"), "");
+        return output;
+      })
+      .replace(/{uid}/g, uid)
+      .replace(/{page}/g, title || getPageTitleByBlockUid(uid))
       .replace(
-        "{path}",
+        /{path}/g,
         getParentUidsOfBlockUid(uid)
           .reverse()
           .map((t, i) =>
@@ -259,7 +264,7 @@ const getFormatter =
           )
           .join(" > ")
       )
-      .replace(/{attr:([^}:]*)(?::([^}]*))?}/, (_, name, format = "VALUE") => {
+      .replace(/{attr:([^}:]*)(?::([^}]*))?}/g, (_, name, format = "VALUE") => {
         const value = (
           window.roamAlphaAPI
             .q(
@@ -291,7 +296,9 @@ const outputTodoBlocks = (
     );
   const limitArg = Number(limit);
   if (limitArg === -1) return `${outputtedBlocks.length}`;
-  return outputtedBlocks.slice(0, Number(limit)).map(getFormatter(format));
+  return outputtedBlocks
+    .slice(0, Number(limit))
+    .map(getFormatter(format, createTagRegex("TODO")));
 };
 
 type CommandOutput = string | string[] | InputTextNode[];
@@ -837,7 +844,7 @@ export const COMMANDS: {
       return results
         .sort((a, b) => a.text.localeCompare(b.text))
         .slice(0, limit)
-        .map(getFormatter(format));
+        .map(getFormatter(format, createTagRegex(title)));
     },
   },
   {
@@ -907,7 +914,7 @@ export const COMMANDS: {
                 getDateFromBlock(a).valueOf() - getDateFromBlock(b).valueOf()
         )
         .slice(0, limit)
-        .map(getFormatter(format));
+        .map(getFormatter(format, createTagRegex(title)));
     },
   },
   {
@@ -1214,7 +1221,7 @@ export const COMMANDS: {
       return results
         .sort((a, b) => a.text.localeCompare(b.text))
         .slice(0, limit)
-        .map(getFormatter(format));
+        .map(getFormatter(format, new RegExp(`(${search.join("|")})`)));
     },
   },
   {
@@ -1311,9 +1318,9 @@ export const COMMANDS: {
               srcUid,
               target: { uid: targetUid, isPage: true },
               variables: smartBlocksContext.variables,
-            }).then(() => {
+            }).then((uid) => {
               resetContext(parentContext);
-              return "";
+              return `((${uid}))`;
             });
           });
         }
@@ -1961,7 +1968,7 @@ export const sbBomb = async ({
   variables?: Record<string, string>;
   mutableCursor?: boolean;
   triggerUid?: string;
-}): Promise<number> => {
+}): Promise<0 | string> => {
   const finish = renderLoading(uid);
   resetContext({ targetUid: uid, variables, triggerUid });
   const childNodes = PREDEFINED_REGEX.test(srcUid)
@@ -1988,48 +1995,44 @@ export const sbBomb = async ({
     .then(resolveRefs)
     .then(async (tree) => {
       const [firstChild, ...next] = tree;
-      const numNodes = count(tree);
-      if (numNodes >= 300) {
-        renderToast({
-          intent: Intent.WARNING,
-          id: "smartblocks-limit",
-          content:
-            "This workflow outputs more than 300 blocks which is Roam's limit. Reach out to support@roamjs.com if this applies to you",
-        });
-      }
       if (firstChild) {
         const startingOrder = isPage
           ? getChildrenLengthByPageUid(uid)
           : getOrderByBlockUid(uid);
         const parentUid = isPage ? uid : getParentUidByBlockUid(uid);
-        if (isPage) {
-          await createBlock({
-            node: firstChild,
-            parentUid,
-            order: startingOrder,
-          });
-        } else {
-          const textPostProcess = getTextByBlockUid(uid);
-          const indexDiffered = textPostProcess
-            .split("")
-            .findIndex((c, i) => c !== props.introContent.charAt(i));
-          await updateBlock({
-            ...firstChild,
-            uid,
-            text: `${
-              indexDiffered < 0
-                ? textPostProcess
-                : textPostProcess.slice(0, indexDiffered)
-            }${firstChild.text || ""}${
-              indexDiffered < 0 ? "" : textPostProcess.substring(indexDiffered)
-            }`,
-          });
-          await Promise.all(
-            firstChild.children.map((node, order) =>
-              createBlock({ order, parentUid: uid, node })
-            )
-          );
-        }
+        const outputUid = await (isPage
+          ? createBlock({
+              node: firstChild,
+              parentUid,
+              order: startingOrder,
+            })
+          : Promise.resolve(getTextByBlockUid(uid))
+              .then((textPostProcess) => {
+                const indexDiffered = textPostProcess
+                  .split("")
+                  .findIndex((c, i) => c !== props.introContent.charAt(i));
+                return updateBlock({
+                  ...firstChild,
+                  uid,
+                  text: `${
+                    indexDiffered < 0
+                      ? textPostProcess
+                      : textPostProcess.slice(0, indexDiffered)
+                  }${firstChild.text || ""}${
+                    indexDiffered < 0
+                      ? ""
+                      : textPostProcess.substring(indexDiffered)
+                  }`,
+                });
+              })
+              .then(() =>
+                Promise.all(
+                  firstChild.children.map((node, order) =>
+                    createBlock({ order, parentUid: uid, node })
+                  )
+                )
+              )
+              .then(() => uid));
         await Promise.all(
           next.map((node, i) =>
             createBlock({
@@ -2039,7 +2042,11 @@ export const sbBomb = async ({
             })
           )
         );
+        return outputUid;
       }
+      return 0;
+    })
+    .then(async (output) => {
       if (smartBlocksContext.focusOnBlock) {
         await window.roamAlphaAPI.ui.mainWindow.openBlock({
           block: { uid: smartBlocksContext.focusOnBlock },
@@ -2066,7 +2073,7 @@ export const sbBomb = async ({
           (document.activeElement as HTMLTextAreaElement).blur();
         }
       }
-      return tree.length;
+      return output;
     })
     .then((c) =>
       Promise.all(smartBlocksContext.afterWorkflowMethods.map((w) => w()))
