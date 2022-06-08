@@ -375,6 +375,14 @@ runExtension("smartblocks", async () => {
       };
       customCommands.push({ text: command, help });
     },
+    unregisterCommand: (text: string) => {
+      const command = text.toUpperCase();
+      delete handlerByCommand[command];
+      customCommands.splice(
+        customCommands.findIndex((c) => c.text === command),
+        1
+      );
+    },
     triggerSmartblock: ({
       srcName,
       srcUid = getCleanCustomWorkflows().find(({ name }) => name === srcName)
