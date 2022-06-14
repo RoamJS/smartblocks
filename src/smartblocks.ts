@@ -250,7 +250,7 @@ const getFormatter =
       .replace(/{text(?::([^}]+))?}/g, (_, arg) => {
         const output = text || getTextByBlockUid(uid);
         if (!arg) return output;
-        if (arg === "clean") return output.replace(new RegExp(search, "g"), "");
+        if (arg === "clean") return output.replace(new RegExp(search, "g"), "").trim();
         return output;
       })
       .replace(/{uid}/g, uid)
