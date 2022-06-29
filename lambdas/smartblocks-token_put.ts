@@ -1,7 +1,7 @@
 import { APIGatewayProxyHandler } from "aws-lambda";
-import randomstring from "randomstring";
 import { dynamo, fromStatus, headers, toStatus, validToken } from "./common";
 import sha256 from "crypto-js/sha256";
+import nanoid from "nanoid";
 
 export const handler: APIGatewayProxyHandler = async (event) => {
   const { graph } = JSON.parse(event.body) as {
@@ -22,7 +22,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
         (!r.Item || fromStatus(r.Item?.status?.S) === "USER") &&
         validToken(event, r.Item)
       ) {
-        const newToken = randomstring.generate();
+        const newToken = nanoid();
         return dynamo
           .putItem({
             TableName: "RoamJSSmartBlocks",

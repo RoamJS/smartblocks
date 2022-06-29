@@ -9,7 +9,6 @@ import {
 import axios from "axios";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import getBasicTreeByParentUid from "roamjs-components/queries/getBasicTreeByParentUid";
-import getGraph from "roamjs-components/util/getGraph";
 import getSettingValueFromTree from "roamjs-components/util/getSettingValueFromTree";
 
 type WorkflowReview = { version?: string; workflow?: string };
@@ -69,7 +68,7 @@ const ReviewPanel = ({ parentUid }: { parentUid: string }) => {
   }>();
   useEffect(() => {
     axios
-      .get(`${process.env.API_URL}/smartblocks-review?graph=${getGraph()}`, {
+      .get(`${process.env.API_URL}/smartblocks-review?graph=${window.roamAlphaAPI.graph.name}`, {
         headers: { Authorization: token },
       })
       .then((r) => {
@@ -85,7 +84,7 @@ const ReviewPanel = ({ parentUid }: { parentUid: string }) => {
     if (inReview) {
       axios
         .get(
-          `${process.env.API_URL}/smartblocks-review?graph=${getGraph()}&uuid=${
+          `${process.env.API_URL}/smartblocks-review?graph=${window.roamAlphaAPI.graph.name}&uuid=${
             inReview.uuid
           }`,
           {
@@ -165,7 +164,7 @@ const ReviewPanel = ({ parentUid }: { parentUid: string }) => {
                     `${process.env.API_URL}/smartblocks-review`,
                     {
                       uuid: inReview.uuid,
-                      graph: getGraph(),
+                      graph: window.roamAlphaAPI.graph.name,
                       version: reviewData.newWorkflow?.version,
                     },
                     { headers: { Authorization: token } }

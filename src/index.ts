@@ -2,9 +2,7 @@ import toConfigPageName from "roamjs-components/util/toConfigPageName";
 import runExtension from "roamjs-components/util/runExtension";
 import getBlockUidsAndTextsReferencingPage from "roamjs-components/queries/getBlockUidsAndTextsReferencingPage";
 import addStyle from "roamjs-components/dom/addStyle";
-import toRoamDateUid from "roamjs-components/date/toRoamDateUid";
 import createPage from "roamjs-components/writes/createPage";
-import toRoamDate from "roamjs-components/date/toRoamDate";
 import createBlock from "roamjs-components/writes/createBlock";
 import getPageUidByPageTitle from "roamjs-components/queries/getPageUidByPageTitle";
 import getShallowTreeByParentUid from "roamjs-components/queries/getShallowTreeByParentUid";
@@ -60,6 +58,14 @@ import HotKeyPanel, { SmartblockHotKeys } from "./HotKeyPanel";
 import XRegExp from "xregexp";
 import axios from "axios";
 import React from "react";
+import TextPanel from "roamjs-components/components/ConfigPanels/TextPanel";
+import FlagPanel from "roamjs-components/components/ConfigPanels/FlagPanel";
+import CustomPanel from "roamjs-components/components/ConfigPanels/CustomPanel";
+import TimePanel from "roamjs-components/components/ConfigPanels/TimePanel";
+import type {
+  CustomField,
+  Field,
+} from "roamjs-components/components/ConfigPanels/types";
 
 addStyle(`.roamjs-smartblocks-popover-target {
   display:inline-block;
@@ -235,7 +241,7 @@ runExtension("smartblocks", async () => {
           id: "home",
           fields: [
             {
-              type: "text",
+              Panel: TextPanel,
               title: "trigger",
               description:
                 "The key combination to used to pull up the smart blocks menu",
@@ -243,28 +249,28 @@ runExtension("smartblocks", async () => {
             },
             {
               title: "custom only",
-              type: "flag",
+              Panel: FlagPanel,
               description:
                 "If checked, will exclude all the predefined workflows from Smart Blocks Menu",
             },
             {
               title: "hide button icon",
-              type: "flag",
+              Panel: FlagPanel,
               description:
                 "If checked, there will no longer appear a SmartBlocks logo on SmartBlocks buttons",
             },
             {
               title: "hot keys",
-              type: "custom",
               description:
                 "Map specific Smartblock workflows to a given hot key, with either an input combination or global modifier",
               options: {
                 component: HotKeyPanel(smartblockHotKeys),
               },
-            },
+              Panel: CustomPanel,
+            } as Field<CustomField>,
             {
               title: "highlighting",
-              type: "flag",
+              Panel: FlagPanel,
               description:
                 "Uses command highlighting to help write SmartBlock Workflows",
             },
@@ -274,20 +280,19 @@ runExtension("smartblocks", async () => {
           id: "daily",
           fields: [
             {
-              type: "text",
+              Panel: TextPanel,
               title: "workflow name",
               description:
                 "The workflow name used to automatically trigger on each day's daily note page.",
               defaultValue: "Daily",
             },
             {
-              type: "time",
+              Panel: TimePanel,
               title: "time",
               description:
                 "The time (24hr format) when the daily workflow is triggered each day.",
             },
             {
-              type: "custom",
               title: "scheduled",
               description:
                 "Tells you when the next Daily Smartblock is currently scheduled to fire",
@@ -295,7 +300,8 @@ runExtension("smartblocks", async () => {
                 component: () =>
                   React.createElement("p", {}, nextDailyRun.current),
               },
-            },
+              Panel: CustomPanel,
+            } as Field<CustomField>,
           ],
           toggleable: true,
         },
@@ -303,25 +309,25 @@ runExtension("smartblocks", async () => {
           id: "publish",
           fields: [
             {
-              type: "custom",
               title: "token",
               description:
                 "The token required to publish workflows to the Smartblocks Store",
               options: {
                 component: TokenPanel,
               },
-            },
+              Panel: CustomPanel,
+            } as Field<CustomField>,
             {
-              type: "custom",
               title: "stripe",
               description:
                 "Create a connected Stripe account to be able to sell workflows in the Store",
               options: {
                 component: StripePanel,
               },
-            },
+              Panel: CustomPanel,
+            } as Field<CustomField>,
             {
-              type: "text",
+              Panel: TextPanel,
               title: "display name",
               description:
                 "The display name that will appear in the store next to your workflow. By default, your display name in Roam will be shown. If not set, then your graph name will be shown.",
@@ -329,12 +335,12 @@ runExtension("smartblocks", async () => {
             },
             {
               title: "review",
-              type: "custom",
               description: "Smartblock workflows under review",
               options: {
                 component: ReviewPanel,
               },
-            },
+              Panel: CustomPanel,
+            } as Field<CustomField>,
           ],
         },
       ],
@@ -604,7 +610,7 @@ runExtension("smartblocks", async () => {
             intent: Intent.PRIMARY,
           });
         }
-        const todayUid = toRoamDateUid(today);
+        const todayUid = window.roamAlphaAPI.util.dateToPageUid(today);
         axios
           .put(`${process.env.API_URL}/smartblocks-daily`, {
             newDate: todayUid,
@@ -632,7 +638,9 @@ runExtension("smartblocks", async () => {
                     intent: Intent.PRIMARY,
                   });
                 }
-                createPage({ title: toRoamDate(today) }).then(() =>
+                createPage({
+                  title: window.roamAlphaAPI.util.dateToPageTitle(today),
+                }).then(() =>
                   sbBomb({
                     srcUid,
                     target: { uid: todayUid, isPage: true },

@@ -10,7 +10,6 @@ import React, { useState } from "react";
 import createBlock from "roamjs-components/writes/createBlock";
 import getFirstChildTextByBlockUid from "roamjs-components/queries/getFirstChildTextByBlockUid";
 import getFirstChildUidByBlockUid from "roamjs-components/queries/getFirstChildUidByBlockUid";
-import getGraph from "roamjs-components/util/getGraph";
 import updateBlock from "roamjs-components/writes/updateBlock";
 
 const TokenPanel = ({
@@ -55,15 +54,15 @@ const TokenPanel = ({
             setError("");
             const tokenUid =
               uid ||
-              await createBlock({
+              (await createBlock({
                 node: { text: "token" },
                 parentUid,
-              });
+              }));
             const oldToken = getFirstChildTextByBlockUid(tokenUid) || "";
             axios
               .put(
                 `${process.env.API_URL}/smartblocks-token`,
-                { graph: getGraph() },
+                { graph: window.roamAlphaAPI.graph.name },
                 { headers: { Authorization: oldToken } }
               )
               .then((r) => {

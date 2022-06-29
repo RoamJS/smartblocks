@@ -8,7 +8,6 @@ import updateBlock from "roamjs-components/writes/updateBlock";
 import createBlock from "roamjs-components/writes/createBlock";
 import getTextByBlockUid from "roamjs-components/queries/getTextByBlockUid";
 import { InputTextNode } from "roamjs-components/types";
-import toRoamDate from "roamjs-components/date/toRoamDate";
 import getBlockUidsAndTextsReferencingPage from "roamjs-components/queries/getBlockUidsAndTextsReferencingPage";
 import getBlockUidsWithParentUid from "roamjs-components/queries/getBlockUidsWithParentUid";
 import createTagRegex from "roamjs-components/util/createTagRegex";
@@ -18,7 +17,6 @@ import extractRef from "roamjs-components/util/extractRef";
 import extractTag from "roamjs-components/util/extractTag";
 import getPageUidByPageTitle from "roamjs-components/queries/getPageUidByPageTitle";
 import getPageTitleByBlockUid from "roamjs-components/queries/getPageTitleByBlockUid";
-import parseRoamDate from "roamjs-components/date/parseRoamDate";
 import getParentUidsOfBlockUid from "roamjs-components/queries/getParentUidsOfBlockUid";
 import { BLOCK_REF_REGEX } from "roamjs-components/dom/constants";
 import getCurrentUserDisplayName from "roamjs-components/queries/getCurrentUserDisplayName";
@@ -53,7 +51,7 @@ import XRegExp from "xregexp";
 import { renderPrompt } from "./Prompt";
 import { render as renderToast } from "roamjs-components/components/Toast";
 import { Intent, ToasterPosition } from "@blueprintjs/core";
-import { renderLoading } from "./Loading";
+import { renderLoading } from "roamjs-components/components/Loading";
 import axios from "axios";
 import lodashGet from "lodash/get";
 import getUids from "roamjs-components/dom/getUids";
@@ -69,9 +67,9 @@ const DAILY_REF_REGEX = new RegExp(
 );
 const getDateFromBlock = (args: { text: string; title: string }) => {
   const fromText = DAILY_REF_REGEX.exec(args.text)?.[1];
-  if (fromText) return parseRoamDate(fromText);
+  if (fromText) return window.roamAlphaAPI.util.pageTitleToDate(fromText);
   const fromTitle = DAILY_NOTE_PAGE_TITLE_REGEX.exec(args.title)?.[0];
-  if (fromTitle) return parseRoamDate(fromTitle);
+  if (fromTitle) return window.roamAlphaAPI.util.pageTitleToDate(fromTitle);
   return new Date("");
 };
 const getPageUidByBlockUid = (blockUid: string): string =>
@@ -87,7 +85,7 @@ const getDateBasisDate = () => {
       getPageTitleByBlockUid(smartBlocksContext.targetUid) ||
       getPageTitleByPageUid(smartBlocksContext.targetUid);
     const dnp = DAILY_NOTE_PAGE_REGEX.test(title)
-      ? parseRoamDate(title)
+      ? window.roamAlphaAPI.util.pageTitleToDate(title)
       : new Date();
     dnp.setHours(new Date().getHours());
     dnp.setMinutes(new Date().getMinutes());
@@ -250,7 +248,8 @@ const getFormatter =
       .replace(/{text(?::([^}]+))?}/g, (_, arg) => {
         const output = text || getTextByBlockUid(uid);
         if (!arg) return output;
-        if (arg === "clean") return output.replace(new RegExp(search, "g"), "").trim();
+        if (arg === "clean")
+          return output.replace(new RegExp(search, "g"), "").trim();
         return output;
       })
       .replace(/{uid}/g, uid)
@@ -420,7 +419,9 @@ export const COMMANDS: {
     help: "Returns a Roam formatted dated page reference.\n\n1: NLP expression\n\n2: optional: format for returned date, example: YYYY-MM-DD",
     handler: (nlp, ...format) => {
       if (!nlp) {
-        return `[[${toRoamDate(parseNlpDate("today", getDateBasisDate()))}]]`;
+        return `[[${window.roamAlphaAPI.util.dateToPageTitle(
+          parseNlpDate("today", getDateBasisDate())
+        )}]]`;
       }
       const date =
         parseNlpDate(nlp, getDateBasisDate()) ||
@@ -436,7 +437,7 @@ export const COMMANDS: {
           useAdditionalWeekYearTokens: true,
         });
       }
-      return `[[${toRoamDate(date)}]]`;
+      return `[[${window.roamAlphaAPI.util.dateToPageTitle(date)}]]`;
     },
   },
   {
@@ -560,7 +561,7 @@ export const COMMANDS: {
     text: "TODOTODAY",
     help: "Returns a list of block refs of TODOs for today\n\n1. Max # blocks\n\n2. Format of output.\n\n3. optional filter values",
     handler: (...args) => {
-      const today = toRoamDate(parseNlpDate("today", getDateBasisDate()));
+      const today = window.roamAlphaAPI.util.dateToPageTitle(parseNlpDate("today", getDateBasisDate()));
       const todos = window.roamAlphaAPI
         .q(
           `[:find ?u ?s :where 
@@ -589,7 +590,7 @@ export const COMMANDS: {
         .map(({ text, uid }) => ({
           text,
           uid,
-          date: parseRoamDate(DAILY_REF_REGEX.exec(text)[1]),
+          date: window.roamAlphaAPI.util.pageTitleToDate(DAILY_REF_REGEX.exec(text)[1]),
         }))
         .filter(({ date }) => isBefore(date, today))
         .sort(({ date: a }, { date: b }) => a.valueOf() - b.valueOf());
@@ -614,7 +615,7 @@ export const COMMANDS: {
         .map(({ text, uid, date }) => ({
           text,
           uid,
-          date: parseRoamDate(date),
+          date: window.roamAlphaAPI.util.pageTitleToDate(date),
         }))
         .filter(({ date }) => isBefore(date, today))
         .sort(({ date: a }, { date: b }) => a.valueOf() - b.valueOf());
@@ -632,7 +633,7 @@ export const COMMANDS: {
         .map(({ text, uid }) => ({
           text,
           uid,
-          date: parseRoamDate(DAILY_REF_REGEX.exec(text)[1]),
+          date: window.roamAlphaAPI.util.pageTitleToDate(DAILY_REF_REGEX.exec(text)[1]),
         }))
         .filter(({ date }) => isAfter(date, today))
         .sort(({ date: a }, { date: b }) => a.valueOf() - b.valueOf());
@@ -657,7 +658,7 @@ export const COMMANDS: {
         .map(({ text, uid, date }) => ({
           text,
           uid,
-          date: parseRoamDate(date),
+          date: window.roamAlphaAPI.util.pageTitleToDate(date),
         }))
         .filter(({ date }) => isAfter(date, today))
         .sort(({ date: a }, { date: b }) => a.valueOf() - b.valueOf());
@@ -889,7 +890,7 @@ export const COMMANDS: {
             DAILY_REF_REGEX.exec(text)?.[1] ||
             DAILY_NOTE_PAGE_TITLE_REGEX.exec(title)?.[0];
           if (ref) {
-            const d = parseRoamDate(ref);
+            const d = window.roamAlphaAPI.util.pageTitleToDate(ref);
             return !undated && !isBefore(d, start) && !isAfter(d, end);
           } else {
             return undated;
@@ -1234,12 +1235,12 @@ export const COMMANDS: {
         if (isADate && isBDate) {
           return b;
         } else if (isADate) {
-          return toRoamDate(
-            addDays(parseRoamDate(extractTag(a)), Number(b) || 0)
+          return window.roamAlphaAPI.util.dateToPageTitle(
+            addDays(window.roamAlphaAPI.util.pageTitleToDate(extractTag(a)), Number(b) || 0)
           );
         } else if (isBDate) {
-          return toRoamDate(
-            addDays(parseRoamDate(extractTag(b)), Number(a) || 0)
+          return window.roamAlphaAPI.util.dateToPageTitle(
+            addDays(window.roamAlphaAPI.util.pageTitleToDate(extractTag(b)), Number(a) || 0)
           );
         } else {
           return ((Number(a) || 0) + (Number(b) || 0)).toString();
@@ -1254,16 +1255,16 @@ export const COMMANDS: {
       const isSubDate = DAILY_NOTE_PAGE_REGEX.test(extractTag(subtrahend));
       if (isMinDate && isSubDate) {
         return differenceInDays(
-          parseRoamDate(extractTag(minuend)),
-          parseRoamDate(extractTag(subtrahend))
+          window.roamAlphaAPI.util.pageTitleToDate(extractTag(minuend)),
+          window.roamAlphaAPI.util.pageTitleToDate(extractTag(subtrahend))
         ).toString();
       } else if (isMinDate) {
-        return toRoamDate(
-          subDays(parseRoamDate(extractTag(minuend)), Number(subtrahend) || 0)
+        return window.roamAlphaAPI.util.dateToPageTitle(
+          subDays(window.roamAlphaAPI.util.pageTitleToDate(extractTag(minuend)), Number(subtrahend) || 0)
         );
       } else if (isSubDate) {
-        return toRoamDate(
-          subDays(parseRoamDate(extractTag(subtrahend)), Number(minuend) || 0)
+        return window.roamAlphaAPI.util.dateToPageTitle(
+          subDays(window.roamAlphaAPI.util.pageTitleToDate(extractTag(subtrahend)), Number(minuend) || 0)
         );
       } else {
         return ((Number(minuend) || 0) - (Number(subtrahend) || 0)).toString();

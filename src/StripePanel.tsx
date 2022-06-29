@@ -1,8 +1,13 @@
 import { Button, Intent, Spinner, SpinnerSize } from "@blueprintjs/core";
 import axios from "axios";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import getFirstChildTextByBlockUid from "roamjs-components/queries/getFirstChildTextByBlockUid";
-import getGraph from "roamjs-components/util/getGraph";
 import getShallowTreeByParentUid from "roamjs-components/queries/getShallowTreeByParentUid";
 import localStorageGet from "roamjs-components/util/localStorageGet";
 import localStorageSet from "roamjs-components/util/localStorageSet";
@@ -33,7 +38,7 @@ const StripePanel = ({ parentUid }: { uid?: string; parentUid: string }) => {
       axios
         .post(
           `${process.env.API_URL}/smartblocks-token`,
-          { operation: "FINISH", author: getGraph() },
+          { operation: "FINISH", author: window.roamAlphaAPI.graph.name },
           opts
         )
         .then((r) => {
@@ -45,12 +50,18 @@ const StripePanel = ({ parentUid }: { uid?: string; parentUid: string }) => {
             window.clearTimeout(intervalListenerRef.current);
           } else {
             setShowRetry(true);
-            intervalListenerRef.current = window.setTimeout(connectInterval, 1000);
+            intervalListenerRef.current = window.setTimeout(
+              connectInterval,
+              1000
+            );
           }
         })
         .catch((e) => {
           if (e.response?.status !== 400) {
-            intervalListenerRef.current = window.setTimeout(connectInterval, 1000);
+            intervalListenerRef.current = window.setTimeout(
+              connectInterval,
+              1000
+            );
           } else {
             setLoading(false);
           }
@@ -71,7 +82,7 @@ const StripePanel = ({ parentUid }: { uid?: string; parentUid: string }) => {
       axios
         .post(
           `${process.env.API_URL}/smartblocks-token`,
-          { operation: "CREATE", author: getGraph() },
+          { operation: "CREATE", author: window.roamAlphaAPI.graph.name },
           opts
         )
         .then((r) => {
@@ -95,7 +106,7 @@ const StripePanel = ({ parentUid }: { uid?: string; parentUid: string }) => {
       axios
         .post(
           `${process.env.API_URL}/smartblocks-token`,
-          { operation: "RETRY", author: getGraph() },
+          { operation: "RETRY", author: window.roamAlphaAPI.graph.name },
           opts
         )
         .then((r) => {

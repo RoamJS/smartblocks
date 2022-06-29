@@ -33,11 +33,9 @@ import getBasicTreeByParentUid from "roamjs-components/queries/getBasicTreeByPar
 import getCurrentUserEmail from "roamjs-components/queries/getCurrentUserEmail";
 import getCurrentUserUid from "roamjs-components/queries/getCurrentUserUid";
 import getDisplayNameByUid from "roamjs-components/queries/getDisplayNameByUid";
-import getGraph from "roamjs-components/util/getGraph";
 import getPageUidByPageTitle from "roamjs-components/queries/getPageUidByPageTitle";
 import getShallowTreeByParentUid from "roamjs-components/queries/getShallowTreeByParentUid";
 import { InputTextNode } from "roamjs-components/types";
-import Markdown from "markdown-to-jsx";
 import {
   Elements,
   LinkAuthenticationElement,
@@ -48,6 +46,7 @@ import {
 import { loadStripe } from "@stripe/stripe-js";
 import { getCleanCustomWorkflows } from "./smartblocks";
 import lego from "./img/lego3blocks.png";
+import type Marked from "marked-react";
 
 const stripePromise = loadStripe(process.env.STRIPE_PUBLIC_KEY, {
   betas: ["link_beta_3"],
@@ -205,12 +204,12 @@ const StripeCheckout = ({
 const ROW_LENGTH = 4;
 const DRAWER_TABS = ["Marketplace", "Installed", "Published"] as const;
 type DrawerTab = typeof DRAWER_TABS[number];
-const graph = getGraph();
 
 const DrawerContent = ({
   parentUid,
   onClose,
-}: { onClose: () => void } & Props) => {
+  Markdown,
+}: { onClose: () => void; Markdown: typeof Marked } & Props) => {
   const workflows = useMemo(getCleanCustomWorkflows, []);
   const [smartblocks, setSmartblocks] = useState<Smartblocks[]>([]);
   const [users, setUsers] = useState<Record<string, string>>({});
@@ -253,7 +252,7 @@ const DrawerContent = ({
           smartblocks: Smartblocks[];
           users: { author: string; displayName: string }[];
         }>(
-          `${process.env.API_URL}/smartblocks-store?tab=${tabId}&graph=${graph}`
+          `${process.env.API_URL}/smartblocks-store?tab=${tabId}&graph=${window.roamAlphaAPI.graph.name}`
         )
         .then((r) => {
           setSmartblocks(
@@ -283,7 +282,7 @@ const DrawerContent = ({
       setError("");
       axios
         .get(
-          `${process.env.API_URL}/smartblocks-store?uuid=${selectedSmartBlockId}&graph=${graph}&open=true`
+          `${process.env.API_URL}/smartblocks-store?uuid=${selectedSmartBlockId}&graph=${window.roamAlphaAPI.graph.name}&open=true`
         )
         .then((r) => {
           const selectedName = selectedSmartBlock.name
@@ -296,7 +295,7 @@ const DrawerContent = ({
           setDonatable(r.data.donatable);
           setNumberOfDownloads(r.data.count);
           setSelectedSmartBlockAuthorDisplayName(
-            selectedSmartBlock.author === getGraph()
+            selectedSmartBlock.author === window.roamAlphaAPI.graph.name
               ? getSettingValueFromTree({
                   tree: getSubTree({
                     tree: getBasicTreeByParentUid(
@@ -369,7 +368,7 @@ const DrawerContent = ({
     setError("");
     axios
       .get(
-        `${process.env.API_URL}/smartblocks-store?uuid=${selectedSmartBlockId}&graph=${graph}&donation=${donation}`,
+        `${process.env.API_URL}/smartblocks-store?uuid=${selectedSmartBlockId}&graph=${window.roamAlphaAPI.graph.name}&donation=${donation}`,
         {
           headers: { Authorization: `email:${getCurrentUserEmail() || ""}` },
         }
@@ -446,7 +445,7 @@ const DrawerContent = ({
                   onSuccess={(id: string) =>
                     axios
                       .get(
-                        `${process.env.API_URL}/smartblocks-store?uuid=${selectedSmartBlockId}&graph=${graph}`,
+                        `${process.env.API_URL}/smartblocks-store?uuid=${selectedSmartBlockId}&graph=${window.roamAlphaAPI.graph.name}`,
                         {
                           headers: {
                             Authorization: id,
@@ -624,7 +623,8 @@ const DrawerContent = ({
   );
 };
 
-const SmartblocksStore = ({
+const SmartblocksStore = 
+  (Markdown: typeof Marked) => ({
   onClose,
   ...props
 }: { onClose: () => void } & Props) => {
@@ -636,14 +636,17 @@ const SmartblocksStore = ({
       isOpen={true}
       style={{ zIndex: 1000, minWidth: 640 }}
     >
-      <DrawerContent {...props} onClose={onClose} />
+      <DrawerContent {...props} onClose={onClose} Markdown={Markdown} />
     </Drawer>
   );
 };
 
-export const render = createOverlayRender<Props>(
-  "marketplace-drawer",
-  SmartblocksStore
-);
+export const render = (props: Props) =>
+  (window.RoamLazy
+    ? window.RoamLazy.MarkedReact()
+    : import("marked-react").then((r) => r.default)
+  ).then((Markdown) =>
+    createOverlayRender<Props>("marketplace-drawer", SmartblocksStore(Markdown))(props)
+  );
 
 export default SmartblocksStore;

@@ -16,7 +16,6 @@ import getBlockUidsReferencingBlock from "roamjs-components/queries/getBlockUids
 import getCurrentPageUid from "roamjs-components/dom/getCurrentPageUid";
 import getDisplayNameByUid from "roamjs-components/queries/getDisplayNameByUid";
 import getFirstChildUidByBlockUid from "roamjs-components/queries/getFirstChildUidByBlockUid";
-import getGraph from "roamjs-components/util/getGraph";
 import getPageUidByPageTitle from "roamjs-components/queries/getPageUidByPageTitle";
 import getShallowTreeByParentUid from "roamjs-components/queries/getShallowTreeByParentUid";
 import getFullTreeByParentUid from "roamjs-components/queries/getFullTreeByParentUid";
@@ -150,7 +149,7 @@ const Content = ({
                   .trim(),
                 tags,
                 img: image[0],
-                author: getGraph(),
+                author: window.roamAlphaAPI.graph.name,
                 description: (description[0] || "").replace(/__/g, "_"),
                 workflow: JSON.stringify(children.map(toInputTextNode)),
                 price: Number(price[0] || "0") || 0,
@@ -206,9 +205,7 @@ const Content = ({
           onClick={() =>
             axios
               .delete(
-                `${process.env.API_URL}/smartblocks-store?uuid=${
-                  uuid[0]
-                }&graph=${getGraph()}`,
+                `${process.env.API_URL}/smartblocks-store?uuid=${uuid[0]}&graph=${window.roamAlphaAPI.graph.name}`,
                 { headers: { Authorization: token } }
               )
               .then((r) => {
