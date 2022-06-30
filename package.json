@@ -29,7 +29,7 @@
     "@stripe/stripe-js": "^1.16.0",
     "lodash": "^4.17.21",
     "react-device-detect": "^1.17.0",
-    "roamjs-components": "^0.66.4",
+    "roamjs-components": "^0.66.5",
     "stripe": "^8.222.0",
     "uuid": "^8.3.2",
     "xregexp": "^5.1.0"

@@ -65,7 +65,32 @@ import type {
   Field,
 } from "roamjs-components/components/ConfigPanels/types";
 
-addStyle(`.roamjs-smartblocks-popover-target {
+const getLegacy42Setting = (name: string) => {
+  const settings = Object.fromEntries(
+    getBlockUidsAndTextsReferencingPage("42Setting").map(({ text, uid }) => {
+      const [_, name, value] = text.trim().split(/\s/);
+      return [name, { value, uid }];
+    })
+  );
+  return (settings[name]?.value || "").replace(/"/g, "").trim();
+};
+
+const extensionId = "smartblocks";
+const CONFIG = toConfigPageName(extensionId);
+const COMMAND_ENTRY_REGEX = /<%$/;
+const COLORS = ["darkblue", "darkred", "darkgreen", "darkgoldenrod"];
+export default runExtension({
+  extensionId,
+  run: async () => {
+    const smartblockHotKeys: SmartblockHotKeys = {
+      uidToMapping: {},
+      mappingToBlock: {},
+    };
+    const nextDailyRun: { current: string; timeout: number } = {
+      current: "Unscheduled",
+      timeout: 0,
+    };
+    const style = addStyle(`.roamjs-smartblocks-popover-target {
   display:inline-block;
   height:14px;
   width:17px;
@@ -210,30 +235,7 @@ a.stripe-connect.disabled {
 .StripeElement--webkit-autofill {
   background-color: #fefde5 !important;
 }`);
-
-const getLegacy42Setting = (name: string) => {
-  const settings = Object.fromEntries(
-    getBlockUidsAndTextsReferencingPage("42Setting").map(({ text, uid }) => {
-      const [_, name, value] = text.trim().split(/\s/);
-      return [name, { value, uid }];
-    })
-  );
-  return (settings[name]?.value || "").replace(/"/g, "").trim();
-};
-
-const ID = "smartblocks";
-const CONFIG = toConfigPageName(ID);
-const COMMAND_ENTRY_REGEX = /<%$/;
-const smartblockHotKeys: SmartblockHotKeys = {
-  uidToMapping: {},
-  mappingToBlock: {},
-};
-const COLORS = ["darkblue", "darkred", "darkgreen", "darkgoldenrod"];
-const nextDailyRun: { current: string } = { current: "Unscheduled" };
-export default runExtension({
-  extensionId: ID,
-  run: async () => {
-    const { pageUid } = await createConfigObserver({
+    const { pageUid, observer: configObserver } = await createConfigObserver({
       title: CONFIG,
       config: {
         tabs: [
@@ -355,15 +357,13 @@ export default runExtension({
     const hideButtonIcon = tree.some((t) =>
       toFlexRegex("hide button icon").test(t.text)
     );
-    const dailyConfig = tree.find((t) => toFlexRegex("daily").test(t.text));
+    const dailyConfig = getSubTree({ tree, key: "daily" });
     const hotkeyConfig = getSubTree({ tree, key: "hot keys" });
     hotkeyConfig.children.forEach(({ uid, text, children }) => {
       smartblockHotKeys.uidToMapping[uid] = text;
       smartblockHotKeys.mappingToBlock[text] = children?.[0]?.text;
     });
-    const highlighting = tree.some((t) =>
-      toFlexRegex("highlighting").test(t.text)
-    );
+    const highlighting = getSubTree({ tree, key: "highlighting" });
     const customCommands: { text: string; help: string }[] = [];
 
     window.roamjs.extension.smartblocks = {
@@ -445,7 +445,7 @@ export default runExtension({
       .trim();
     const triggerRegex = new RegExp(`${trigger}$`);
 
-    document.addEventListener("input", (e) => {
+    const documentInputListener = (e: InputEvent) => {
       const target = e.target as HTMLElement;
       if (
         target.tagName === "TEXTAREA" &&
@@ -532,45 +532,45 @@ export default runExtension({
           }
         }
       }
-    });
+    };
+    document.addEventListener("input", documentInputListener);
 
     const appRoot = document.querySelector<HTMLDivElement>(".roam-app");
-    if (appRoot) {
-      appRoot.addEventListener("keydown", async (e) => {
-        const modifiers = new Set();
-        if (e.altKey) modifiers.add("alt");
-        if (e.shiftKey) modifiers.add("shift");
-        if (e.ctrlKey) modifiers.add("control");
-        if (e.metaKey) modifiers.add("meta");
-        if (modifiers.size) {
-          const mapping = Array.from(modifiers)
-            .sort()
-            .concat(e.key.toLowerCase())
-            .join("+");
-          const srcUid = smartblockHotKeys.mappingToBlock[mapping];
-          if (srcUid) {
-            e.preventDefault();
-            e.stopPropagation();
-            const target =
-              window.roamAlphaAPI.ui.getFocusedBlock()?.["block-uid"] ||
-              (await createBlock({
-                node: { text: "" },
-                parentUid: getCurrentPageUid(),
-              }));
-            const start = getTextByBlockUid(target).length;
-            sbBomb({
-              srcUid,
-              target: {
-                uid: target,
-                start,
-                end: start,
-              },
-              mutableCursor: true,
-            });
-          }
+    const appRootKeydownListener = async (e: KeyboardEvent) => {
+      const modifiers = new Set();
+      if (e.altKey) modifiers.add("alt");
+      if (e.shiftKey) modifiers.add("shift");
+      if (e.ctrlKey) modifiers.add("control");
+      if (e.metaKey) modifiers.add("meta");
+      if (modifiers.size) {
+        const mapping = Array.from(modifiers)
+          .sort()
+          .concat(e.key.toLowerCase())
+          .join("+");
+        const srcUid = smartblockHotKeys.mappingToBlock[mapping];
+        if (srcUid) {
+          e.preventDefault();
+          e.stopPropagation();
+          const target =
+            window.roamAlphaAPI.ui.getFocusedBlock()?.["block-uid"] ||
+            (await createBlock({
+              node: { text: "" },
+              parentUid: getCurrentPageUid(),
+            }));
+          const start = getTextByBlockUid(target).length;
+          sbBomb({
+            srcUid,
+            target: {
+              uid: target,
+              start,
+              end: start,
+            },
+            mutableCursor: true,
+          });
         }
-      });
-    }
+      }
+    };
+    appRoot?.addEventListener("keydown", appRootKeydownListener);
 
     const runDaily = () => {
       if (dailyConfig) {
@@ -594,7 +594,7 @@ export default runExtension({
         );
         if (isBefore(today, triggerTime)) {
           const ms = differenceInMilliseconds(triggerTime, today);
-          setTimeout(runDaily, ms + 1000);
+          nextDailyRun.timeout = window.setTimeout(runDaily, ms + 1000);
           if (debug) {
             renderToast({
               id: "smartblocks-info",
@@ -673,7 +673,7 @@ export default runExtension({
               }
               const nextRun = addSeconds(addDays(triggerTime, 1), 1);
               const ms = differenceInMilliseconds(nextRun, today);
-              setTimeout(runDaily, ms);
+              nextDailyRun.timeout = window.setTimeout(runDaily, ms);
               nextDailyRun.current = `Next Daily SmartBlock scheduled to run at ${dateFnsFormat(
                 nextRun,
                 "yyyy-MM-dd hh:mm:ss a"
@@ -691,8 +691,9 @@ export default runExtension({
     };
     runDaily();
 
+    const OPEN_SMARTBLOCK_STORE_COMMAND_LABEL = "Open SmartBlocks Store";
     window.roamAlphaAPI.ui.commandPalette.addCommand({
-      label: "Open SmartBlocks Store",
+      label: OPEN_SMARTBLOCK_STORE_COMMAND_LABEL,
       callback: async () => {
         const pageUid = getPageUidByPageTitle(CONFIG);
         const tree = getShallowTreeByParentUid(pageUid);
@@ -706,8 +707,9 @@ export default runExtension({
       },
     });
 
+    const RUN_MULTIPLE_SMARTBLOCKS_COMMAND_LABEL = "Run Multiple SmartBlocks";
     window.roamAlphaAPI.ui.commandPalette.addCommand({
-      label: "Run Multiple SmartBlocks",
+      label: RUN_MULTIPLE_SMARTBLOCKS_COMMAND_LABEL,
       callback: () => {
         const parentUid =
           window.roamAlphaAPI.ui.getFocusedBlock()?.["block-uid"];
@@ -723,7 +725,7 @@ export default runExtension({
       },
     });
 
-    createHTMLObserver({
+    const logoObserver = createHTMLObserver({
       className: "rm-page-ref--tag",
       tag: "SPAN",
       callback: (s: HTMLSpanElement) => {
@@ -741,7 +743,7 @@ export default runExtension({
       },
     });
 
-    createHTMLObserver({
+    const buttonLogoObserver = createHTMLObserver({
       className: "bp3-button",
       tag: "BUTTON",
       callback: (b: HTMLButtonElement) => {
@@ -841,86 +843,109 @@ export default runExtension({
       },
     });
 
-    if (highlighting) {
-      createBlockObserver((b) => {
-        let colorIndex = 0;
-        const flattenTextNodes = (c: ChildNode): ChildNode[] =>
-          c.nodeName === "#text"
-            ? [c]
-            : Array.from(c.childNodes).flatMap(flattenTextNodes);
-        const textNodes = flattenTextNodes(b).filter(
-          (t) => !t.parentElement.closest(".CodeMirror")
-        );
-        const getMatches = (
-          s: string,
-          offset: number
-        ): XRegExp.MatchRecursiveValueNameMatch[] => {
-          const matches = XRegExp.matchRecursive(s, "<%[A-Z]+:?", "%>", "g", {
-            valueNames: ["text", "left", "args", "right"],
-            unbalanced: "skip",
-          });
-          const someMatches = matches.length
-            ? matches.map((m) => ({
-                ...m,
-                start: m.start + offset,
-                end: m.end + offset,
-              }))
-            : [
-                {
-                  name: "text",
-                  value: s,
-                  start: offset,
-                  end: offset + s.length,
-                },
-              ];
-          return someMatches.flatMap((m) =>
-            m.name === "args" ? getMatches(m.value, m.start) : m
+    const highlightingObservers = highlighting
+      ? createBlockObserver((b) => {
+          let colorIndex = 0;
+          const flattenTextNodes = (c: ChildNode): ChildNode[] =>
+            c.nodeName === "#text"
+              ? [c]
+              : Array.from(c.childNodes).flatMap(flattenTextNodes);
+          const textNodes = flattenTextNodes(b).filter(
+            (t) => !t.parentElement.closest(".CodeMirror")
           );
-        };
-        const matches = getMatches(
-          textNodes.map((t) => t.nodeValue).join(""),
-          0
-        ).filter((m) => m.end > m.start);
-        let totalCount = 0;
-        if (matches.length > 1) {
-          textNodes.forEach((t) => {
-            matches
-              .filter(
-                (m) =>
-                  m.end > totalCount &&
-                  m.start < totalCount + t.nodeValue.length
-              )
-              .map((m) => {
-                const overlap = t.nodeValue.substring(
-                  Math.max(0, m.start - totalCount),
-                  Math.min(t.nodeValue.length, m.end - totalCount)
-                );
-                if (m.name === "text") return document.createTextNode(overlap);
-                if (m.name === "left") {
-                  const span = document.createElement("span");
-                  span.style.color = COLORS[colorIndex % COLORS.length];
-                  span.innerText = overlap;
-                  colorIndex++;
-                  return span;
-                }
-                if (m.name === "right") {
-                  const span = document.createElement("span");
-                  if (colorIndex > 0) {
-                    colorIndex--;
+          const getMatches = (
+            s: string,
+            offset: number
+          ): XRegExp.MatchRecursiveValueNameMatch[] => {
+            const matches = XRegExp.matchRecursive(s, "<%[A-Z]+:?", "%>", "g", {
+              valueNames: ["text", "left", "args", "right"],
+              unbalanced: "skip",
+            });
+            const someMatches = matches.length
+              ? matches.map((m) => ({
+                  ...m,
+                  start: m.start + offset,
+                  end: m.end + offset,
+                }))
+              : [
+                  {
+                    name: "text",
+                    value: s,
+                    start: offset,
+                    end: offset + s.length,
+                  },
+                ];
+            return someMatches.flatMap((m) =>
+              m.name === "args" ? getMatches(m.value, m.start) : m
+            );
+          };
+          const matches = getMatches(
+            textNodes.map((t) => t.nodeValue).join(""),
+            0
+          ).filter((m) => m.end > m.start);
+          let totalCount = 0;
+          if (matches.length > 1) {
+            textNodes.forEach((t) => {
+              matches
+                .filter(
+                  (m) =>
+                    m.end > totalCount &&
+                    m.start < totalCount + t.nodeValue.length
+                )
+                .map((m) => {
+                  const overlap = t.nodeValue.substring(
+                    Math.max(0, m.start - totalCount),
+                    Math.min(t.nodeValue.length, m.end - totalCount)
+                  );
+                  if (m.name === "text")
+                    return document.createTextNode(overlap);
+                  if (m.name === "left") {
+                    const span = document.createElement("span");
                     span.style.color = COLORS[colorIndex % COLORS.length];
+                    span.innerText = overlap;
+                    colorIndex++;
+                    return span;
                   }
-                  span.innerText = overlap;
-                  return span;
-                }
-                return null;
-              })
-              .filter((s) => !!s)
-              .forEach((s) => t.parentElement.insertBefore(s, t));
-            totalCount += t.nodeValue.length;
-            t.nodeValue = "";
-          });
-        }
-      });
-    }
+                  if (m.name === "right") {
+                    const span = document.createElement("span");
+                    if (colorIndex > 0) {
+                      colorIndex--;
+                      span.style.color = COLORS[colorIndex % COLORS.length];
+                    }
+                    span.innerText = overlap;
+                    return span;
+                  }
+                  return null;
+                })
+                .filter((s) => !!s)
+                .forEach((s) => t.parentElement.insertBefore(s, t));
+              totalCount += t.nodeValue.length;
+              t.nodeValue = "";
+            });
+          }
+        })
+      : [];
+
+    return {
+      elements: [style],
+      observers: [
+        configObserver,
+        logoObserver,
+        buttonLogoObserver,
+        ...highlightingObservers,
+      ],
+      domListeners: [
+        { type: "input", listener: documentInputListener, el: document },
+        { type: "keydown", el: appRoot, listener: appRootKeydownListener },
+      ],
+      timeouts: [nextDailyRun],
+      commands: [
+        OPEN_SMARTBLOCK_STORE_COMMAND_LABEL,
+        RUN_MULTIPLE_SMARTBLOCKS_COMMAND_LABEL,
+      ],
+    };
+  },
+  unload: () => {
+    delete window.roamjs.extension.smartblocks;
   },
 });
