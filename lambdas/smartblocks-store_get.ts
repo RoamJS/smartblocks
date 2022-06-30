@@ -1,7 +1,7 @@
 import { APIGatewayProxyHandler } from "aws-lambda";
 import { DynamoDB } from "aws-sdk";
 import Stripe from "stripe";
-import { v4 } from "uuid";
+import nanoid from "nanoid";
 import {
   s3,
   dynamo,
@@ -29,7 +29,7 @@ const getWorkflow = (item: DynamoDB.AttributeMap, graph: string) =>
         .putItem({
           TableName: "RoamJSSmartBlocks",
           Item: {
-            uuid: { S: v4() },
+            uuid: { S: nanoid() },
             name: { S: item.uuid.S },
             author: { S: graph },
             workflow: { S: item.workflow.S },

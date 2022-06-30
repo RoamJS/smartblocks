@@ -1,9 +1,9 @@
 import { APIGatewayProxyHandler } from "aws-lambda";
 import { dynamo, headers, toStatus } from "./common";
-import { v4 } from "uuid";
+import nanoid from "nanoid";
 
 export const handler: APIGatewayProxyHandler = async (event) => {
-  const { uuid = v4(), newDate } = JSON.parse(event.body) as {
+  const { uuid = nanoid(), newDate } = JSON.parse(event.body) as {
     uuid?: string;
     newDate: string;
   };

@@ -18,7 +18,6 @@
   "devDependencies": {
     "@types/aws-lambda": "^8.10.78",
     "@types/lodash": "^4.14.176",
-    "@types/uuid": "^8.3.1",
     "concurrently": "^7.1.0",
     "localhost-lambdas": "^0.4.2",
     "roamjs-scripts": "^0.19.11",
@@ -28,10 +27,8 @@
     "@stripe/react-stripe-js": "^1.7.2",
     "@stripe/stripe-js": "^1.16.0",
     "lodash": "^4.17.21",
-    "react-device-detect": "^1.17.0",
     "roamjs-components": "^0.66.5",
     "stripe": "^8.222.0",
-    "uuid": "^8.3.2",
     "xregexp": "^5.1.0"
   }
 }

@@ -1,5 +1,5 @@
 import { APIGatewayProxyHandler } from "aws-lambda";
-import { v4 } from "uuid";
+import nanoid from "nanoid";
 import format from "date-fns/format";
 import { headers, dynamo, s3, ses, validToken, fromStatus, toStatus } from "./common";
 
@@ -11,7 +11,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     author,
     description = "",
     workflow,
-    uuid = v4(),
+    uuid = nanoid(),
     price: priceArg = "0",
     displayName = "",
   } = JSON.parse(event.body) as {

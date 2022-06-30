@@ -24,7 +24,6 @@ import {
 } from "./core";
 import fuzzy from "fuzzy";
 import getSettingValueFromTree from "roamjs-components/util/getSettingValueFromTree";
-import { isMobile } from "react-device-detect";
 import axios from "axios";
 
 type Props = {
@@ -150,7 +149,7 @@ const SmartblocksMenu = ({
           onClose();
           return;
         }
-      } else if (isMobile) {
+      } else if (window.roamAlphaAPI.platform.isMobile) {
         const value = menuRef.current.getAttribute("data-filter");
         setFilter(`${value}${String.fromCharCode(e.keyCode)}`);
       } else if (e.key !== "Shift") {
