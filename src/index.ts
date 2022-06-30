@@ -39,16 +39,14 @@ import { render as renderStore } from "./SmartblocksStore";
 import { render as renderPopover } from "./SmartblockPopover";
 import { render as renderBulk } from "./BulkTrigger";
 import {
-  CommandHandler,
   COMMANDS,
   getCleanCustomWorkflows,
   getCustomWorkflows,
   handlerByCommand,
   proccessBlockText,
   sbBomb,
-  SmartBlocksContext,
   smartBlocksContext,
-} from "./smartblocks";
+} from "./core";
 import TokenPanel from "./TokenPanel";
 import ReviewPanel from "./ReviewPanel";
 import lego from "./img/lego3blocks.png";

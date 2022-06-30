@@ -21,7 +21,7 @@ import {
   predefinedWorkflows,
   PREDEFINED_REGEX,
   sbBomb,
-} from "./smartblocks";
+} from "./core";
 import fuzzy from "fuzzy";
 import getSettingValueFromTree from "roamjs-components/util/getSettingValueFromTree";
 import { isMobile } from "react-device-detect";

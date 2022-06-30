@@ -26,7 +26,7 @@ import { render as renderToast } from "roamjs-components/components/Toast";
 import toFlexRegex from "roamjs-components/util/toFlexRegex";
 import useSubTree from "roamjs-components/hooks/useSubTree";
 import lego from "./img/lego3blocks.png";
-import { HIDE_REGEX } from "./smartblocks";
+import { HIDE_REGEX } from "./core";
 
 const toInputTextNode = (n: TreeNode): InputTextNode => ({
   text: n.text,

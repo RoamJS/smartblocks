@@ -6,7 +6,7 @@ import getFirstChildUidByBlockUid from "roamjs-components/queries/getFirstChildU
 import updateBlock from "roamjs-components/writes/updateBlock";
 import MenuItemSelect from "roamjs-components/components/MenuItemSelect";
 import deleteBlock from "roamjs-components/writes/deleteBlock";
-import { getCleanCustomWorkflows } from "./smartblocks";
+import { getCleanCustomWorkflows } from "./core";
 
 export type SmartblockHotKeys = {
   uidToMapping: Record<string, string>;

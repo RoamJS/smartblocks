@@ -44,7 +44,7 @@ import {
   useStripe,
 } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
-import { getCleanCustomWorkflows } from "./smartblocks";
+import { getCleanCustomWorkflows } from "./core";
 import lego from "./img/lego3blocks.png";
 import type Marked from "marked-react";
 
