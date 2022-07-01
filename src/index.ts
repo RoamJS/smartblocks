@@ -573,7 +573,7 @@ a.stripe-connect.disabled {
     appRoot?.addEventListener("keydown", appRootKeydownListener);
 
     const runDaily = () => {
-      if (dailyConfig) {
+      if (!!dailyConfig.uid) {
         const dailyChildren = getBasicTreeByParentUid(dailyConfig.uid);
         const time = getSettingValueFromTree({
           tree: dailyChildren,
@@ -843,7 +843,7 @@ a.stripe-connect.disabled {
       },
     });
 
-    const highlightingObservers = highlighting
+    const highlightingObservers = !!highlighting.uid
       ? createBlockObserver((b) => {
           let colorIndex = 0;
           const flattenTextNodes = (c: ChildNode): ChildNode[] =>
