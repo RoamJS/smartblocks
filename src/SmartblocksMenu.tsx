@@ -10,7 +10,6 @@ import ReactDOM from "react-dom";
 import { DAILY_NOTE_PAGE_REGEX } from "roamjs-components/date/constants";
 import getPageTitleByBlockUid from "roamjs-components/queries/getPageTitleByBlockUid";
 import getPageUidByPageTitle from "roamjs-components/queries/getPageUidByPageTitle";
-import getUids from "roamjs-components/dom/getUids";
 import getTextByBlockUid from "roamjs-components/queries/getTextByBlockUid";
 import { RoamBasicNode } from "roamjs-components/types";
 import { getCoords } from "./dom";

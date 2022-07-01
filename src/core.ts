@@ -919,6 +919,7 @@ export const COMMANDS: {
     },
   },
   {
+    // @DEPRECATED
     text: "IF",
     help: "Evaluates a condition for true. Use with THEN & ELSE.\n\n1: Logic to be evaluated\n\n2: (Optional) Value if true\n\n3: (Optional) Value if false",
     handler: (condition = "false", then, els) => {
@@ -945,6 +946,7 @@ export const COMMANDS: {
     },
   },
   {
+    // @DEPRECATED
     text: "THEN",
     delayArgs: true,
     help: "Used with IF when IF is true\n\n1: Text to be inserted",
@@ -957,6 +959,7 @@ export const COMMANDS: {
     },
   },
   {
+    // @DEPRECATED
     text: "ELSE",
     help: "Used with IF when IF is false\n\n1: Text to be inserted",
     handler: (...args: string[]) => {
@@ -968,6 +971,7 @@ export const COMMANDS: {
     },
   },
   {
+    // @DEPRECATED
     text: "IFTRUE",
     help: "Test if parameter is true. If true, the block is output.\n\n1: Logic to be evaluated",
     handler: (condition) => {
@@ -1052,6 +1056,27 @@ export const COMMANDS: {
     help: "Compares whether the current block produced children, and if not, skips.",
     handler: () => {
       smartBlocksContext.exitBlock = "childless";
+      return "";
+    },
+  },
+  {
+    text: "IFVAR",
+    help: "Compares the variable with a given value. If the test fails, the block is skipped.\n\n1. Variable name\n\n2. Value or Regular Expression",
+    handler: (name = "", ...exp) => {
+      const actual = smartBlocksContext.variables[name];
+      if (typeof actual === "undefined") {
+        smartBlocksContext.exitBlock = "yes";
+        return "";
+      }
+      const expected = exp.join(",");
+      if (expected.startsWith("/") && expected.endsWith("/")) {
+        if (new RegExp(expected.slice(1, -1)).test(actual)) {
+          return "";
+        }
+      } else if (actual === expected) {
+        return "";
+      }
+      smartBlocksContext.exitBlock = "yes";
       return "";
     },
   },
