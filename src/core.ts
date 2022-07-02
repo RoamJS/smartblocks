@@ -7,7 +7,7 @@ import getParentUidByBlockUid from "roamjs-components/queries/getParentUidByBloc
 import updateBlock from "roamjs-components/writes/updateBlock";
 import createBlock from "roamjs-components/writes/createBlock";
 import getTextByBlockUid from "roamjs-components/queries/getTextByBlockUid";
-import { InputTextNode } from "roamjs-components/types";
+import { InputTextNode, PullBlock } from "roamjs-components/types";
 import getBlockUidsAndTextsReferencingPage from "roamjs-components/queries/getBlockUidsAndTextsReferencingPage";
 import getBlockUidsWithParentUid from "roamjs-components/queries/getBlockUidsWithParentUid";
 import createTagRegex from "roamjs-components/util/createTagRegex";
@@ -68,6 +68,20 @@ const PAGE_TITLE_REGEX = /^(?:#?\[\[(.*)\]\]|#([^\s]*))$/;
 const DAILY_REF_REGEX = new RegExp(
   `#?\\[\\[(${DAILY_NOTE_PAGE_REGEX.source})\\]\\]`
 );
+
+const getBlockUidTextAndPageReferencingTag = (title: string) =>
+  window.roamAlphaAPI.data.fast
+    .q(
+      `[:find (pull ?r [:block/uid :block/string]) (pull ?t [:node/title]) :where [?p :node/title "${normalizePageTitle(
+        title
+      )}"] [?r :block/refs ?p] [?r :block/page ?t]]`
+    )
+    .map(([block, page]: PullBlock[]) => ({
+      text: block?.[":block/string"] || "",
+      uid: block?.[":block/uid"] || "",
+      title: page?.[":node/title"] || "",
+    }));
+
 const getDateFromBlock = (args: { text: string; title: string }) => {
   const fromText = DAILY_REF_REGEX.exec(args.text)?.[1];
   if (fromText) return window.roamAlphaAPI.util.pageTitleToDate(fromText);
@@ -245,7 +259,7 @@ export const getCleanCustomWorkflows = (workflows = getCustomWorkflows()) =>
   }));
 
 const getFormatter =
-  (format: string, search: RegExp) =>
+  (format: string, search: RegExp = /$^/) =>
   ({ uid, text, title }: { uid: string; text?: string; title?: string }) => ({
     text: format
       .replace(/{text(?::([^}]+))?}/g, (_, arg) => {
@@ -402,13 +416,13 @@ const javascriptHandler =
     });
   };
 
-const stripUids = ({
-  uid,
-  children,
-  ...rest
-}: InputTextNode): InputTextNode => ({
+const formatTree = (
+  { uid, children, text, ...rest }: InputTextNode,
+  format: string
+): InputTextNode => ({
   ...rest,
-  children: children.map(stripUids),
+  children: children.map((c) => formatTree(c, format)),
+  text: getFormatter(format)({ uid, text }).text,
 });
 
 export const COMMANDS: {
@@ -679,20 +693,7 @@ export const COMMANDS: {
     text: "TODOUNDATED",
     help: "Returns a list of block refs of TODOs with no date\n\n1. Max # blocks\n\n2. Format of output.\n\n3. optional filter values",
     handler: (...args) => {
-      const blocks = window.roamAlphaAPI
-        .q(
-          `[:find (pull ?r [:block/uid :block/string]) (pull ?t [:node/title]) :where [?p :node/title "TODO"] [?r :block/refs ?p] [?r :block/page ?t]]`
-        )
-        .map(
-          ([
-            { uid, string = "" },
-            p, // could be null
-          ]: Record<string, string>[]) => ({
-            uid,
-            text: string,
-            title: p.title,
-          })
-        );
+      const blocks = getBlockUidTextAndPageReferencingTag("TODO");
       const todos = blocks
         .filter(
           ({ text, title }) =>
@@ -844,10 +845,14 @@ export const COMMANDS: {
     ) => {
       const limit = Number(limitArg);
       const title = extractTag(titleArg);
-      const results = getBlockUidsAndTextsReferencingPage(title).filter(
-        ({ text }) =>
+      const results = getBlockUidTextAndPageReferencingTag(title).filter(
+        ({ text, title }) =>
           search.every((s) =>
-            s.startsWith("-")
+            s.startsWith("*")
+              ? !title.includes(s.substring(1))
+              : s.startsWith("^")
+              ? title.includes(s.substring(1))
+              : s.startsWith("-")
               ? !text.includes(s.substring(1))
               : text.includes(s)
           )
@@ -883,19 +888,7 @@ export const COMMANDS: {
           : new Date(9999, 11, 31);
       const limit = Number(limitArg);
       const title = extractTag(titleArg);
-      const results = window.roamAlphaAPI
-        .q(
-          `[:find (pull ?r [:block/uid :block/string]) (pull ?t [:node/title]) :where [?p :node/title "${normalizePageTitle(
-            title
-          )}"] [?r :block/refs ?p] [?r :block/page ?t]]`
-        )
-        .map(
-          ([{ string: text, uid }, { title }]: Record<string, string>[]) => ({
-            text,
-            uid,
-            title,
-          })
-        )
+      const results = getBlockUidTextAndPageReferencingTag(title)
         .filter(({ text, title }) => {
           const ref =
             DAILY_REF_REGEX.exec(text)?.[1] ||
@@ -1706,11 +1699,15 @@ export const COMMANDS: {
   },
   {
     text: "CHILDREN",
-    help: "Gets the block tree nested under the input block reference\n\n1. Block reference",
-    handler: (text) => {
+    help: "Gets the block tree nested under the input block reference\n\n1. Block reference\n\n2. Start index, inclusive\n\n3. End index, inclusive\n\n4. Format",
+    handler: (text, start = "1", endArg = "0", format = "{text}") => {
       const normText = smartBlocksContext.variables[text] || text;
       const uid = extractRef(normText);
-      return getBasicTreeByParentUid(uid).map(stripUids);
+      const tree = getBasicTreeByParentUid(uid);
+      const end = Number(endArg) || 0;
+      return tree
+        .slice(Number(start) - 1, end <= 0 ? tree.length : end)
+        .map((n) => formatTree(n, format));
     },
   },
 ];
