@@ -96,11 +96,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
         })
         .promise()
         .then((r) =>
-          !(
-            fromStatus(r.Item?.status?.S) === "LIVE" ||
-            (fromStatus(r.Item?.status?.S) === "UNDER REVIEW" &&
-              !!r.Item?.workflow?.S)
-          )
+          fromStatus(r.Item?.status?.S) !== "LIVE"
             ? {
                 statusCode: 400,
                 body: `Invalid id ${uuid} doesn't represent a LIVE SmartBlock Workflow`,
@@ -363,70 +359,36 @@ export const handler: APIGatewayProxyHandler = async (event) => {
                 });
               })
           : filterTab === "published"
-          ? Promise.all([
-              dynamo
-                .query({
-                  TableName: "RoamJSSmartBlocks",
-                  IndexName: "status-author-index",
-                  ExpressionAttributeNames: {
-                    "#s": "status",
-                    "#a": "author",
-                  },
-                  ExpressionAttributeValues: {
-                    ":s": { S: toStatus("LIVE") },
-                    ":a": { S: graph },
-                  },
-                  KeyConditionExpression: "#a = :a AND #s = :s",
-                })
-                .promise()
-                .then((r) => r.Items),
-              dynamo
-                .query({
-                  TableName: "RoamJSSmartBlocks",
-                  IndexName: "status-author-index",
-                  ExpressionAttributeNames: {
-                    "#s": "status",
-                    "#a": "author",
-                  },
-                  ExpressionAttributeValues: {
-                    ":s": { S: toStatus("UNDER REVIEW") },
-                    ":a": { S: graph },
-                  },
-                  KeyConditionExpression: "#a = :a AND #s = :s",
-                })
-                .promise()
-                .then((r) => r.Items.filter((i) => !!i.workflow?.S)),
-            ]).then((items) => items.flat())
-          : Promise.all([
-              dynamo
-                .query({
-                  TableName: "RoamJSSmartBlocks",
-                  IndexName: "status-index",
-                  ExpressionAttributeNames: {
-                    "#s": "status",
-                  },
-                  ExpressionAttributeValues: {
-                    ":s": { S: toStatus("LIVE") },
-                  },
-                  KeyConditionExpression: "#s = :s",
-                })
-                .promise()
-                .then((r) => r.Items),
-              dynamo
-                .query({
-                  TableName: "RoamJSSmartBlocks",
-                  IndexName: "status-index",
-                  ExpressionAttributeNames: {
-                    "#s": "status",
-                  },
-                  ExpressionAttributeValues: {
-                    ":s": { S: toStatus("UNDER REVIEW") },
-                  },
-                  KeyConditionExpression: "#s = :s",
-                })
-                .promise()
-                .then((r) => r.Items.filter((i) => !!i.workflow?.S)),
-            ]).then((items) => items.flat()),
+          ? dynamo
+              .query({
+                TableName: "RoamJSSmartBlocks",
+                IndexName: "status-author-index",
+                ExpressionAttributeNames: {
+                  "#s": "status",
+                  "#a": "author",
+                },
+                ExpressionAttributeValues: {
+                  ":s": { S: toStatus("LIVE") },
+                  ":a": { S: graph },
+                },
+                KeyConditionExpression: "#a = :a AND #s = :s",
+              })
+              .promise()
+              .then((r) => r.Items)
+          : dynamo
+              .query({
+                TableName: "RoamJSSmartBlocks",
+                IndexName: "status-index",
+                ExpressionAttributeNames: {
+                  "#s": "status",
+                },
+                ExpressionAttributeValues: {
+                  ":s": { S: toStatus("LIVE") },
+                },
+                KeyConditionExpression: "#s = :s",
+              })
+              .promise()
+              .then((r) => r.Items),
         dynamo
           .query({
             TableName: "RoamJSSmartBlocks",

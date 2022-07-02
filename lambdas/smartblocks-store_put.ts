@@ -1,7 +1,14 @@
 import { APIGatewayProxyHandler } from "aws-lambda";
 import nanoid from "nanoid";
 import format from "date-fns/format";
-import { headers, dynamo, s3, ses, validToken, fromStatus, toStatus } from "./common";
+import {
+  headers,
+  dynamo,
+  s3,
+  validToken,
+  fromStatus,
+  toStatus,
+} from "./common";
 
 export const handler: APIGatewayProxyHandler = async (event) => {
   const {
@@ -39,8 +46,15 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       headers,
     };
   }
-  const requiresReview =
+  const isInvalid =
     /<%((J(A(VASCRIPT(ASYNC)?)?)?)|(ONBLOCKEXIT)|(IF(TRUE)?)):/.test(workflow);
+  if (isInvalid) {
+    return {
+      statusCode: 400,
+      headers,
+      body: "Your workflow was rejected from being published to the SmartBlocks Store, because it contains some illegal commands. Please remove these commands and try again.",
+    };
+  }
   return dynamo
     .query({
       TableName: "RoamJSSmartBlocks",
@@ -55,7 +69,9 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     })
     .promise()
     .then((r) => {
-      const existingWorkflow = r.Items.find((i) => fromStatus(i.status.S) !== "USER");
+      const existingWorkflow = r.Items.find(
+        (i) => fromStatus(i.status.S) !== "USER"
+      );
       if (existingWorkflow && existingWorkflow?.uuid?.S !== uuid) {
         return {
           statusCode: 400,
@@ -64,7 +80,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
         };
       }
       const version = format(new Date(), "yyyy-MM-dd-hh-mm-ss");
-      const putItem = (existingDisplayName: string, previousWorkflow = '') =>
+      const putItem = (existingDisplayName: string, previousWorkflow = "") =>
         s3
           .upload({
             Bucket: "roamjs-smartblocks",
@@ -105,34 +121,9 @@ export const handler: APIGatewayProxyHandler = async (event) => {
                   img: { S: img.replace(/^!\[.*?\]\(/, "").replace(/\)$/, "") },
                   author: { S: author },
                   description: { S: description },
-                  workflow: { S: requiresReview ? previousWorkflow : version },
-                  status: { S: toStatus(requiresReview ? "UNDER REVIEW" : "LIVE") },
+                  workflow: { S: version },
+                  status: { S: toStatus("LIVE") },
                 },
-              })
-              .promise()
-          )
-          .then(() =>
-            ses
-              .sendEmail({
-                Destination: {
-                  ToAddresses: ["support@roamjs.com"],
-                },
-                Message: {
-                  Body: {
-                    Html: {
-                      Charset: "UTF-8",
-                      Data: `<p>Name: ${name}</p>
-<p>Description: ${description}</p>
-<p>Requires Review: ${`${requiresReview}`.toUpperCase()}</p>
-<p>Price: ${price || "FREE"}</p>`,
-                    },
-                  },
-                  Subject: {
-                    Charset: "UTF-8",
-                    Data: `New SmartBlock ${name} Published!`,
-                  },
-                },
-                Source: "support@roamjs.com",
               })
               .promise()
           )
@@ -140,7 +131,6 @@ export const handler: APIGatewayProxyHandler = async (event) => {
             statusCode: 200,
             body: JSON.stringify({
               uuid,
-              requiresReview,
             }),
             headers,
           }));

@@ -186,12 +186,15 @@ const Content = ({
               onClose();
               renderToast({
                 id: "roamjs-smartblock-publish-success",
-                content: `Successfully published workflow to the SmartBlocks Store!${
-                  r.data.requiresReview
-                    ? "\n\nBecause your workflow contains custom JavaScript, it will first undergo review by RoamJS before going live."
-                    : ""
-                }`,
-                intent: r.data.requiresReview ? Intent.WARNING : Intent.SUCCESS,
+                content: `Successfully published workflow to the SmartBlocks Store!`,
+                intent: Intent.SUCCESS,
+              });
+            })
+            .catch((e) => {
+              renderToast({
+                id: "roamjs-smartblock-publish-failed",
+                content: e.message,
+                intent: Intent.DANGER,
               });
             });
         }}
