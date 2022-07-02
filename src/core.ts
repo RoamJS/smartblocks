@@ -52,13 +52,16 @@ import { renderPrompt } from "./Prompt";
 import { render as renderToast } from "roamjs-components/components/Toast";
 import { Intent, ToasterPosition } from "@blueprintjs/core";
 import { renderLoading } from "roamjs-components/components/Loading";
-import axios from "axios";
 import lodashGet from "lodash/get";
 import getUids from "roamjs-components/dom/getUids";
 import getAttributeValueByBlockAndName from "roamjs-components/queries/getAttributeValueByBlockAndName";
 import parseNlpDate, {
   addNlpDateParser,
 } from "roamjs-components/date/parseNlpDate";
+import apiGet from "roamjs-components/util/apiGet";
+import { render as renderSimpleAlert } from "roamjs-components/components/SimpleAlert";
+import getSubTree from "roamjs-components/util/getSubTree";
+import getShallowTreeByParentUid from "roamjs-components/queries/getShallowTreeByParentUid";
 
 export const PREDEFINED_REGEX = /#\d*-predefined/;
 const PAGE_TITLE_REGEX = /^(?:#?\[\[(.*)\]\]|#([^\s]*))$/;
@@ -306,7 +309,6 @@ export type CommandHandler = (
 ) => CommandOutput | Promise<CommandOutput>;
 
 export type SmartBlocksContext = {
-  onBlockExit: CommandHandler;
   targetUid: string;
   triggerUid: string;
   ifCommand?: boolean;
@@ -322,10 +324,10 @@ export type SmartBlocksContext = {
   dateBasisMethod?: string;
   refMapping: Record<string, string>;
   afterWorkflowMethods: (() => void | Promise<void>)[];
+  illegalCommands: Set<string>;
 };
 
 export const smartBlocksContext: SmartBlocksContext = {
-  onBlockExit: () => "",
   targetUid: "",
   exitBlock: "no",
   exitWorkflow: false,
@@ -336,9 +338,9 @@ export const smartBlocksContext: SmartBlocksContext = {
   refMapping: {},
   afterWorkflowMethods: [],
   triggerUid: "",
+  illegalCommands: new Set(),
 };
 const resetContext = (context: Partial<SmartBlocksContext>) => {
-  smartBlocksContext.onBlockExit = context.onBlockExit || (() => "");
   smartBlocksContext.triggerUid = context.triggerUid || context.targetUid || "";
   smartBlocksContext.targetUid = context.targetUid || "";
   smartBlocksContext.ifCommand = context.ifCommand || undefined;
@@ -354,6 +356,7 @@ const resetContext = (context: Partial<SmartBlocksContext>) => {
   smartBlocksContext.dateBasisMethod = context.dateBasisMethod;
   smartBlocksContext.refMapping = context.refMapping || {};
   smartBlocksContext.afterWorkflowMethods = context.afterWorkflowMethods || [];
+  smartBlocksContext.illegalCommands = context.illegalCommands || new Set();
 };
 
 const javascriptHandler =
@@ -413,6 +416,7 @@ export const COMMANDS: {
   help: string;
   delayArgs?: true;
   handler: CommandHandler;
+  illegal?: true;
 }[] = [
   {
     text: "DATE",
@@ -561,7 +565,9 @@ export const COMMANDS: {
     text: "TODOTODAY",
     help: "Returns a list of block refs of TODOs for today\n\n1. Max # blocks\n\n2. Format of output.\n\n3. optional filter values",
     handler: (...args) => {
-      const today = window.roamAlphaAPI.util.dateToPageTitle(parseNlpDate("today", getDateBasisDate()));
+      const today = window.roamAlphaAPI.util.dateToPageTitle(
+        parseNlpDate("today", getDateBasisDate())
+      );
       const todos = window.roamAlphaAPI
         .q(
           `[:find ?u ?s :where 
@@ -590,7 +596,9 @@ export const COMMANDS: {
         .map(({ text, uid }) => ({
           text,
           uid,
-          date: window.roamAlphaAPI.util.pageTitleToDate(DAILY_REF_REGEX.exec(text)[1]),
+          date: window.roamAlphaAPI.util.pageTitleToDate(
+            DAILY_REF_REGEX.exec(text)[1]
+          ),
         }))
         .filter(({ date }) => isBefore(date, today))
         .sort(({ date: a }, { date: b }) => a.valueOf() - b.valueOf());
@@ -633,7 +641,9 @@ export const COMMANDS: {
         .map(({ text, uid }) => ({
           text,
           uid,
-          date: window.roamAlphaAPI.util.pageTitleToDate(DAILY_REF_REGEX.exec(text)[1]),
+          date: window.roamAlphaAPI.util.pageTitleToDate(
+            DAILY_REF_REGEX.exec(text)[1]
+          ),
         }))
         .filter(({ date }) => isAfter(date, today))
         .sort(({ date: a }, { date: b }) => a.valueOf() - b.valueOf());
@@ -702,33 +712,34 @@ export const COMMANDS: {
     },
   },
   {
+    illegal: true,
     text: "JAVASCRIPT",
-    help: "Custom JavaScript code to run\n\n1. JavaScript code",
+    help: "DEPRECATED",
     handler: javascriptHandler(Function),
   },
   {
+    illegal: true,
     text: "J",
-    help: "Shortcut for Custom JavaScript code to run\n\n1. JavaScript code",
+    help: "DEPRECATED",
     handler: javascriptHandler(Function),
   },
   {
+    illegal: true,
     text: "JAVASCRIPTASYNC",
-    help: "Custom asynchronous JavaScript code to run\n\n1. JavaScipt code",
+    help: "DEPRECATED",
     handler: javascriptHandler(AsyncFunction),
   },
   {
+    illegal: true,
     text: "JA",
-    help: "Shortcut for custom asynchronous JavaScript code to run\n\n1. JavaScipt code",
+    help: "DEPRECATED",
     handler: javascriptHandler(AsyncFunction),
   },
   {
     text: "ONBLOCKEXIT",
-    help: "Asynchronous JavaScript code to \nrun after a block has been\nprocessed by Roam42\n1. JavaScipt code\nReturn value not processed",
-    handler: (...args) => {
-      smartBlocksContext.onBlockExit = () =>
-        javascriptHandler(AsyncFunction)(...args);
-      return "";
-    },
+    illegal: true,
+    help: "DEPRECATED",
+    handler: () => "",
   },
   {
     text: "BREADCRUMBS",
@@ -919,9 +930,9 @@ export const COMMANDS: {
     },
   },
   {
-    // @DEPRECATED
+    illegal: true,
     text: "IF",
-    help: "Evaluates a condition for true. Use with THEN & ELSE.\n\n1: Logic to be evaluated\n\n2: (Optional) Value if true\n\n3: (Optional) Value if false",
+    help: "DEPRECATED",
     handler: (condition = "false", then, els) => {
       try {
         const evaluated = eval(condition);
@@ -946,7 +957,7 @@ export const COMMANDS: {
     },
   },
   {
-    // @DEPRECATED
+    illegal: true,
     text: "THEN",
     delayArgs: true,
     help: "Used with IF when IF is true\n\n1: Text to be inserted",
@@ -959,7 +970,7 @@ export const COMMANDS: {
     },
   },
   {
-    // @DEPRECATED
+    illegal: true,
     text: "ELSE",
     help: "Used with IF when IF is false\n\n1: Text to be inserted",
     handler: (...args: string[]) => {
@@ -971,7 +982,7 @@ export const COMMANDS: {
     },
   },
   {
-    // @DEPRECATED
+    illegal: true,
     text: "IFTRUE",
     help: "Test if parameter is true. If true, the block is output.\n\n1: Logic to be evaluated",
     handler: (condition) => {
@@ -1261,11 +1272,17 @@ export const COMMANDS: {
           return b;
         } else if (isADate) {
           return window.roamAlphaAPI.util.dateToPageTitle(
-            addDays(window.roamAlphaAPI.util.pageTitleToDate(extractTag(a)), Number(b) || 0)
+            addDays(
+              window.roamAlphaAPI.util.pageTitleToDate(extractTag(a)),
+              Number(b) || 0
+            )
           );
         } else if (isBDate) {
           return window.roamAlphaAPI.util.dateToPageTitle(
-            addDays(window.roamAlphaAPI.util.pageTitleToDate(extractTag(b)), Number(a) || 0)
+            addDays(
+              window.roamAlphaAPI.util.pageTitleToDate(extractTag(b)),
+              Number(a) || 0
+            )
           );
         } else {
           return ((Number(a) || 0) + (Number(b) || 0)).toString();
@@ -1285,11 +1302,17 @@ export const COMMANDS: {
         ).toString();
       } else if (isMinDate) {
         return window.roamAlphaAPI.util.dateToPageTitle(
-          subDays(window.roamAlphaAPI.util.pageTitleToDate(extractTag(minuend)), Number(subtrahend) || 0)
+          subDays(
+            window.roamAlphaAPI.util.pageTitleToDate(extractTag(minuend)),
+            Number(subtrahend) || 0
+          )
         );
       } else if (isSubDate) {
         return window.roamAlphaAPI.util.dateToPageTitle(
-          subDays(window.roamAlphaAPI.util.pageTitleToDate(extractTag(subtrahend)), Number(minuend) || 0)
+          subDays(
+            window.roamAlphaAPI.util.pageTitleToDate(extractTag(subtrahend)),
+            Number(minuend) || 0
+          )
         );
       } else {
         return ((Number(minuend) || 0) - (Number(subtrahend) || 0)).toString();
@@ -1673,7 +1696,7 @@ export const COMMANDS: {
           : typeof s === "string"
           ? s
           : JSON.stringify(s);
-      return axios.get(url).then((r) => {
+      return apiGet({ domain: url, path: "", anonymous: true }).then((r) => {
         if (field) {
           return output(lodashGet(r.data, field.trim()));
         }
@@ -1772,7 +1795,8 @@ const processBlockTextToPromises = (s: string) => {
         return [...prev.slice(0, -1), `${current}${cur}`];
       }
     }, [] as string[]);
-    const { handler, delayArgs } = handlerByCommand[cmd] || {};
+    const { handler, delayArgs, illegal } = handlerByCommand[cmd] || {};
+    if (illegal) smartBlocksContext.illegalCommands.add(cmd);
     return (
       delayArgs
         ? Promise.resolve({ args, nodeProps: {} })
@@ -1873,7 +1897,6 @@ const proccessBlockWithSmartness = async (
         return [];
       }
     }
-    await smartBlocksContext.onBlockExit();
     const processedChildren = await processChildren({
       nodes: n.children,
       nextBlocks,
@@ -2106,5 +2129,34 @@ export const sbBomb = async ({
         .catch((e) => console.error(e))
         .then(() => c)
     )
-    .finally(finish);
+    .finally(() => {
+      finish();
+      if (smartBlocksContext.illegalCommands.size) {
+        const configUid = getPageUidByPageTitle("roam/js/smartblocks");
+        const dontShowAgainNode = getSubTree({
+          key: "Illegal commands",
+          parentUid: configUid,
+        });
+        const exists = getSubTree({
+          key: "Do not show again",
+          tree: dontShowAgainNode.children,
+        });
+
+        if (!exists.uid) {
+          renderSimpleAlert({
+            content: `WARNING: The SmartBlocks workflow you just ran uses the following commands:
+
+${Array.from(smartBlocksContext.illegalCommands)
+  .sort()
+  .map((c) => `- \`${c}\``)
+  .join("\n")}
+
+These commands will soon be removed in a future version of SmartBlocks. Please visit our [migration guide](https://roamjs.com/extensions/smartblocks/migration_guide) on how to migrate away from these commands, or contact the original author of the SmartBlock workflow for an update.
+`,
+            externalLink: true,
+            dontShowAgain: dontShowAgainNode.uid,
+          });
+        }
+      }
+    });
 };

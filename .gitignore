@@ -2,7 +2,7 @@ node_modules
 build
 dist
 out
-.env.local
+.env
 smartblocks.js
 smartBlocksCmd.js
 smartBlocksRB.js
