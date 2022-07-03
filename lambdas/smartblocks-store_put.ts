@@ -2,7 +2,9 @@ import { APIGatewayProxyHandler } from "aws-lambda";
 import nanoid from "nanoid";
 import format from "date-fns/format";
 import { awsGetRoamJSUser } from "roamjs-components/backend/getRoamJSUser";
-import { headers, dynamo, s3, fromStatus, toStatus, isInvalid } from "./common";
+import headers from "roamjs-components/backend/headers";
+import emailCatch from "roamjs-components/backend/emailCatch";
+import { dynamo, s3, fromStatus, toStatus, isInvalid } from "./common";
 
 export const handler: APIGatewayProxyHandler = awsGetRoamJSUser(
   async (user, event) => {
@@ -207,10 +209,10 @@ export const handler: APIGatewayProxyHandler = awsGetRoamJSUser(
           headers,
         };
       })
-      .catch((e) => ({
-        statusCode: 500,
-        body: e.message,
-        headers,
-      }));
+      .catch(
+        emailCatch(
+          `Failed to publish workflow: ${name}`
+        )
+      );
   }
 );
