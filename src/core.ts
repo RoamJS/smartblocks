@@ -1070,7 +1070,7 @@ export const COMMANDS: {
     help: "Compares the variable with a given value. If the test fails, the block is skipped.\n\n1. Variable name\n\n2. Value or Regular Expression",
     handler: (name = "", ...exp) => {
       const actual = smartBlocksContext.variables[name];
-      if (typeof actual === "undefined") {
+      if (typeof actual === "undefined" && exp.length > 0) {
         smartBlocksContext.exitBlock = "yes";
         return "";
       }

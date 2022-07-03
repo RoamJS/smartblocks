@@ -47,7 +47,6 @@ import {
   sbBomb,
   smartBlocksContext,
 } from "./core";
-import TokenPanel from "./TokenPanel";
 import lego from "./img/lego3blocks.png";
 import StripePanel from "./StripePanel";
 import { Intent } from "@blueprintjs/core";
@@ -290,15 +289,6 @@ a.stripe-connect.disabled {
           {
             id: "publish",
             fields: [
-              {
-                title: "token",
-                description:
-                  "The token required to publish workflows to the Smartblocks Store",
-                options: {
-                  component: TokenPanel,
-                },
-                Panel: CustomPanel,
-              } as Field<CustomField>,
               {
                 title: "stripe",
                 description:

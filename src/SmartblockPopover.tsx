@@ -5,7 +5,8 @@ import {
   Spinner,
   SpinnerSize,
 } from "@blueprintjs/core";
-import axios from "axios";
+import apiPut from "roamjs-components/util/apiPut";
+import apiDelete from "roamjs-components/util/apiDelete";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import ReactDOM from "react-dom";
 import createBlock from "roamjs-components/writes/createBlock";
@@ -34,13 +35,11 @@ const toInputTextNode = (n: TreeNode): InputTextNode => ({
 });
 
 const ApiButton = ({
-  token,
   setError,
   onClick,
   text,
   intent,
 }: {
-  token: string;
   setError: (s: string) => void;
   onClick: () => Promise<void>;
   text: string;
@@ -50,7 +49,7 @@ const ApiButton = ({
   return (
     <div style={{ display: "flex", alignItems: "center", width: 216 }}>
       <Button
-        disabled={!token || loading}
+        disabled={loading}
         text={text}
         intent={intent}
         style={{ margin: "4px 16px 4px 0", width: 176 }}
@@ -58,10 +57,13 @@ const ApiButton = ({
           setLoading(true);
           setError("");
           setTimeout(() => {
-            onClick().catch((e) => {
-              setError(e.response?.data || e.message);
-              setLoading(false);
-            });
+            onClick()
+              .catch((e) => {
+                setError(e.response?.data || e.message);
+              })
+              .finally(() => {
+                setLoading(false);
+              });
           }, 1);
         }}
       />
@@ -88,11 +90,6 @@ const Content = ({
     parentUid: pageUid,
     order: 3,
   });
-  const { children: tokenChildren } = useSubTree({
-    tree: publishChildren,
-    key: "token",
-  });
-  const token = tokenChildren[0]?.text;
   const displayName = useMemo(
     () =>
       getSettingValueFromTree({
@@ -104,19 +101,20 @@ const Content = ({
   );
   const [error, setError] = useState("");
   useEffect(() => {
-    if (!token) {
-      setError(
-        "Token necessary for publishing Smartblocks Workflows. Please head to the [[roam/js/smartblocks]] page to generate one."
-      );
+    if (!error) {
+      renderToast({
+        id: "roamjs-smartblock-publish-failed",
+        content: error,
+        intent: Intent.DANGER,
+      });
     }
-  }, [token]);
+  }, [error]);
 
   const {
     description = [],
     image = [],
     tags = [],
     uuid = [],
-    price = [],
   } = useMemo(
     () =>
       Object.fromEntries(
@@ -134,96 +132,77 @@ const Content = ({
       <ApiButton
         text={"Publish Workflow"}
         intent={Intent.PRIMARY}
-        token={token}
         setError={setError}
         onClick={() => {
           const { text, children } = getFullTreeByParentUid(blockUid);
-          return axios
-            .put(
-              `${process.env.API_URL}/smartblocks-store`,
-              {
-                uuid: uuid[0],
-                name: text
-                  .replace(/#(42)?SmartBlock/, "")
-                  .replace(HIDE_REGEX, "")
-                  .trim(),
-                tags,
-                img: image[0],
-                author: window.roamAlphaAPI.graph.name,
-                description: (description[0] || "").replace(/__/g, "_"),
-                workflow: JSON.stringify(children.map(toInputTextNode)),
-                price: Number(price[0] || "0") || 0,
-                displayName,
-              },
-              { headers: { Authorization: token } }
-            )
-            .then(async (r) => {
-              const ref = `((${blockUid}))`;
-              const refUid =
-                publishChildren.find((t) => t.text.trim() === ref)?.uid ||
-                (await createBlock({
-                  node: { text: ref },
-                  parentUid: publishUid,
-                  order: 1,
-                }));
-              const uuidUid =
-                getShallowTreeByParentUid(refUid).find((t) =>
-                  toFlexRegex("uuid").test(t.text)
-                )?.uid ||
-                (await createBlock({
-                  node: { text: "uuid" },
-                  parentUid: refUid,
-                }));
-              const valueUid = getFirstChildUidByBlockUid(uuidUid);
-              if (valueUid) {
-                await updateBlock({ text: r.data.uuid, uid: valueUid });
-              } else {
-                await createBlock({
-                  node: { text: r.data.uuid },
-                  parentUid: uuidUid,
-                });
-              }
-              onClose();
-              renderToast({
-                id: "roamjs-smartblock-publish-success",
-                content: `Successfully published workflow to the SmartBlocks Store!`,
-                intent: Intent.SUCCESS,
+          return apiPut<{ uuid: string }>(`smartblocks-store`, {
+            uuid: uuid[0],
+            name: text
+              .replace(/#(42)?SmartBlock/, "")
+              .replace(HIDE_REGEX, "")
+              .trim(),
+            tags,
+            img: image[0],
+            author: window.roamAlphaAPI.graph.name,
+            description: (description[0] || "").replace(/__/g, "_"),
+            workflow: JSON.stringify(children.map(toInputTextNode)),
+            displayName,
+          }).then(async (r) => {
+            const ref = `((${blockUid}))`;
+            const refUid =
+              publishChildren.find((t) => t.text.trim() === ref)?.uid ||
+              (await createBlock({
+                node: { text: ref },
+                parentUid: publishUid,
+                order: 1,
+              }));
+            const uuidUid =
+              getShallowTreeByParentUid(refUid).find((t) =>
+                toFlexRegex("uuid").test(t.text)
+              )?.uid ||
+              (await createBlock({
+                node: { text: "uuid" },
+                parentUid: refUid,
+              }));
+            const valueUid = getFirstChildUidByBlockUid(uuidUid);
+            if (valueUid) {
+              await updateBlock({ text: r.uuid, uid: valueUid });
+            } else {
+              await createBlock({
+                node: { text: r.uuid },
+                parentUid: uuidUid,
               });
-            })
-            .catch((e) => {
-              renderToast({
-                id: "roamjs-smartblock-publish-failed",
-                content: e.message,
-                intent: Intent.DANGER,
-              });
+            }
+            onClose();
+            renderToast({
+              id: "roamjs-smartblock-publish-success",
+              content: `Successfully published workflow to the SmartBlocks Store!`,
+              intent: Intent.SUCCESS,
             });
+          });
         }}
       />
       {!!uuid[0] && (
         <ApiButton
           text={"Remove From Store"}
           intent={Intent.DANGER}
-          token={token}
           setError={setError}
           onClick={() =>
-            axios
-              .delete(
-                `${process.env.API_URL}/smartblocks-store?uuid=${uuid[0]}&graph=${window.roamAlphaAPI.graph.name}`,
-                { headers: { Authorization: token } }
-              )
-              .then((r) => {
-                const ref = `((${blockUid}))`;
-                const refUid = publishChildren.find(
-                  (t) => t.text.trim() === ref
-                )?.uid;
-                deleteBlock(refUid);
-                onClose();
-                renderToast({
-                  id: "roamjs-smartblock-delete-success",
-                  content: `Successfully deleted workflow from the SmartBlocks Store.`,
-                  intent: Intent.SUCCESS,
-                });
-              })
+            apiDelete(
+              `${process.env.API_URL}/smartblocks-store?uuid=${uuid[0]}&graph=${window.roamAlphaAPI.graph.name}`
+            ).then(() => {
+              const ref = `((${blockUid}))`;
+              const refUid = publishChildren.find(
+                (t) => t.text.trim() === ref
+              )?.uid;
+              deleteBlock(refUid);
+              onClose();
+              renderToast({
+                id: "roamjs-smartblock-delete-success",
+                content: `Successfully deleted workflow from the SmartBlocks Store.`,
+                intent: Intent.SUCCESS,
+              });
+            })
           }
         />
       )}

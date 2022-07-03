@@ -9,8 +9,11 @@ on:
 env:
   AWS_ACCESS_KEY_ID: ${{ secrets.DEPLOY_AWS_ACCESS_KEY }}
   AWS_SECRET_ACCESS_KEY: ${{ secrets.DEPLOY_AWS_ACCESS_SECRET }}
-  STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+  ROAMJS_DEVELOPER_TOKEN: ${{ secrets.ROAMJS_DEVELOPER_TOKEN }}
+  ROAMJS_EMAIL: support@roamjs.com
+  ROAMJS_EXTENSION_ID: smartblocks
   ROAMJS_HOST: https://roamjs.com
+  STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
 
 jobs:
   deploy:

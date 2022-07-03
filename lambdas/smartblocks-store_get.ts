@@ -444,7 +444,14 @@ export const handler: APIGatewayProxyHandler = async (event) => {
           statusCode: 200,
           body: JSON.stringify({
             smartblocks: items
-              .sort((a, b) => Number(b.score?.N || 0) - Number(a.score?.N || 0))
+              .sort((a, b) => {
+                const scoreDiff =
+                  Number(b.score?.N || 0) - Number(a.score?.N || 0);
+                if (!scoreDiff) {
+                  return (a.name?.S || "").localeCompare(b?.name.S || "");
+                }
+                return Number(b.score?.N || 0) - Number(a.score?.N || 0);
+              })
               .map((i) =>
                 Object.fromEntries(
                   Object.entries(i)

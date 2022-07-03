@@ -67,14 +67,6 @@ module "roamjs_lambda" {
       method = "put"
     },
     { 
-      path = "smartblocks-token", 
-      method = "put"
-    },
-    {
-      path = "smartblocks-token",
-      method = "post"
-    },
-    { 
       path = "smartblocks-daily", 
       method = "put"
     },
