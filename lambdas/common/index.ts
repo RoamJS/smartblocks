@@ -39,3 +39,6 @@ export const validToken = (
 export const toStatus = (s: string) =>
   process.env.NODE_ENV === "development" ? `${s} DEV` : s;
 export const fromStatus = (s = "") => s.replace(/ DEV$/, "");
+
+export const isInvalid = (workflow: string) =>
+  /<%((J(A(VASCRIPT(ASYNC)?)?)?)|(ONBLOCKEXIT)|(IF(TRUE)?)):/.test(workflow);

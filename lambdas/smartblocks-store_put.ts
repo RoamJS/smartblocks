@@ -8,6 +8,7 @@ import {
   validToken,
   fromStatus,
   toStatus,
+  isInvalid,
 } from "./common";
 
 export const handler: APIGatewayProxyHandler = async (event) => {
@@ -46,9 +47,8 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       headers,
     };
   }
-  const isInvalid =
-    /<%((J(A(VASCRIPT(ASYNC)?)?)?)|(ONBLOCKEXIT)|(IF(TRUE)?)):/.test(workflow);
-  if (isInvalid) {
+  
+  if (isInvalid(workflow)) {
     return {
       statusCode: 400,
       headers,
