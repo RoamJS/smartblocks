@@ -510,12 +510,14 @@ export const COMMANDS: {
   {
     text: "RANDOMBLOCKFROM",
     help: "Returns a random child block from a page or block ref\n\n1: Page name or UID.",
-    handler: (titleOrUid = "") => {
+    handler: (titleOrUid = "", format = "(({uid}))") => {
       const possibleTitle = extractTag(titleOrUid);
       const parentUid = getPageUidByPageTitle(possibleTitle) || titleOrUid;
       const uids = getBlockUidsWithParentUid(parentUid);
       const uid = uids[Math.floor(Math.random() * uids.length)];
-      return uids.length ? `((${uid}))` : "No blocks on page!";
+      return uids.length
+        ? getFormatter(format)({ uid }).text
+        : "No blocks on page!";
     },
   },
   {
