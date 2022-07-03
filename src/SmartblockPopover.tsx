@@ -60,6 +60,13 @@ const ApiButton = ({
             onClick()
               .catch((e) => {
                 setError(e.response?.data || e.message);
+                /*
+                renderToast({
+                  id: "roamjs-smartblock-publish-failed",
+                  content: error,
+                  intent: Intent.DANGER,
+                });
+                */
               })
               .finally(() => {
                 setLoading(false);
@@ -100,15 +107,6 @@ const Content = ({
     [publishChildren]
   );
   const [error, setError] = useState("");
-  useEffect(() => {
-    if (!error) {
-      renderToast({
-        id: "roamjs-smartblock-publish-failed",
-        content: error,
-        intent: Intent.DANGER,
-      });
-    }
-  }, [error]);
 
   const {
     description = [],
