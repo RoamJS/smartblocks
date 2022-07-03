@@ -153,14 +153,6 @@ export const handler: APIGatewayProxyHandler = awsGetRoamJSUser(
                     )
                     .then(() =>
                       dynamo
-                        .getItem({
-                          TableName: "RoamJSSmartBlocks",
-                          Key: { uuid: { S: uuid } },
-                        })
-                        .promise()
-                    )
-                    .then((item) =>
-                      dynamo
                         .putItem({
                           TableName: "RoamJSSmartBlocks",
                           Item: {
@@ -176,7 +168,7 @@ export const handler: APIGatewayProxyHandler = awsGetRoamJSUser(
                             description: { S: description },
                             workflow: { S: version },
                             status: { S: toStatus("LIVE") },
-                            score: { N: item.Item?.score?.N || "0" },
+                            score: { N: existingWorkflow?.score?.N || "0" },
                           },
                         })
                         .promise()

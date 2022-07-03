@@ -509,11 +509,14 @@ export const COMMANDS: {
   },
   {
     text: "RANDOMBLOCKFROM",
-    help: "Returns a random child block from a page or block ref\n\n1: Page name or UID.",
-    handler: (titleOrUid = "", format = "(({uid}))") => {
+    help: "Returns a random child block from a page or block ref\n\n1: Page name or UID.\n\n2: Format\n\n3: Levels Included",
+    handler: (titleOrUid = "", format = "(({uid}))", levelsIncluded = "0") => {
       const possibleTitle = extractTag(titleOrUid);
       const parentUid = getPageUidByPageTitle(possibleTitle) || titleOrUid;
-      const uids = getBlockUidsWithParentUid(parentUid);
+      const levels = Number(levelsIncluded) || 0;
+      const uids = levels
+        ? getShallowTreeByParentUid(parentUid).map((u) => u.uid)
+        : getBlockUidsWithParentUid(parentUid);
       const uid = uids[Math.floor(Math.random() * uids.length)];
       return uids.length
         ? getFormatter(format)({ uid }).text
