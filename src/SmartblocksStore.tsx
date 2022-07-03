@@ -201,7 +201,7 @@ const StripeCheckout = ({
   );
 };
 
-const ROW_LENGTH = 4;
+const ROW_LENGTH = 2;
 const DRAWER_TABS = ["Marketplace", "Installed", "Published"] as const;
 type DrawerTab = typeof DRAWER_TABS[number];
 
@@ -216,6 +216,7 @@ const DrawerContent = ({
   const [installed, setInstalled] = useState(false);
   const [updateable, setUpdateable] = useState(false);
   const [donatable, setDonatable] = useState(false);
+  const [invalid, setInvalid] = useState(false);
   const [numberOfDownloads, setNumberOfDownloads] = useState(0);
   const [
     selectedSmartBlockAuthorDisplayName,
@@ -255,11 +256,7 @@ const DrawerContent = ({
           `${process.env.API_URL}/smartblocks-store?tab=${tabId}&graph=${window.roamAlphaAPI.graph.name}`
         )
         .then((r) => {
-          setSmartblocks(
-            r.data.smartblocks.sort(({ name: a }, { name: b }) =>
-              a.localeCompare(b)
-            )
-          );
+          setSmartblocks(r.data.smartblocks);
           setUsers(
             Object.fromEntries(
               r.data.users.map(({ author, displayName }) => [
@@ -293,6 +290,7 @@ const DrawerContent = ({
           );
           setUpdateable(r.data.updatable);
           setDonatable(r.data.donatable);
+          setInvalid(r.data.invalid);
           setNumberOfDownloads(r.data.count);
           setSelectedSmartBlockAuthorDisplayName(
             selectedSmartBlock.author === window.roamAlphaAPI.graph.name
@@ -318,6 +316,7 @@ const DrawerContent = ({
       setUpdateable(false);
       setInstalled(false);
       setDonatable(false);
+      setInvalid(false);
       setNumberOfDownloads(0);
       setSelectedSmartBlockAuthorDisplayName("");
     }
@@ -326,6 +325,7 @@ const DrawerContent = ({
     setUpdateable,
     setInstalled,
     setDonatable,
+    setInvalid,
     selectedSmartBlockId,
     setDonation,
     setNumberOfDownloads,
@@ -494,29 +494,35 @@ const DrawerContent = ({
                     />
                   </>
                 )}
-                {updateable ? (
-                  <Button
-                    style={{ margin: "16px 0" }}
-                    text={"Update"}
-                    intent={Intent.WARNING}
-                    onClick={buttonOnClick}
-                  />
-                ) : installed && donatable ? (
-                  <Button
-                    style={{ margin: "16px 0" }}
-                    text={"Donate"}
-                    intent={Intent.SUCCESS}
-                    onClick={buttonOnClick}
-                  />
-                ) : (
-                  <Button
-                    style={{ margin: "16px 0" }}
-                    text={"Install"}
-                    disabled={installed}
-                    intent={Intent.PRIMARY}
-                    onClick={buttonOnClick}
-                  />
-                )}
+                <div className={"flex gap-4 items-center"}>
+                  {updateable ? (
+                    <Button
+                      className={"flex-shrink-0 my-4"}
+                      text={"Update"}
+                      intent={Intent.WARNING}
+                      onClick={buttonOnClick}
+                    />
+                  ) : installed && donatable ? (
+                    <Button
+                      className={"flex-shrink-0 my-4"}
+                      text={"Donate"}
+                      intent={Intent.SUCCESS}
+                      onClick={buttonOnClick}
+                    />
+                  ) : (
+                    <Button
+                      className={"flex-shrink-0 my-4"}
+                      text={"Install"}
+                      disabled={installed}
+                      intent={Intent.PRIMARY}
+                      onClick={buttonOnClick}
+                    />
+                  )}
+                  <span className="inline-block text-xs text-yellow-900">
+                    {invalid &&
+                      "WARNING: This workflow contains illegal commands. Please notify the author before downloading."}
+                  </span>
+                </div>
               </div>
             )}
             <div style={{ minWidth: 24 }}>
@@ -548,7 +554,7 @@ const DrawerContent = ({
     </div>
   ) : (
     <>
-      <div>
+      <div className="flex-shrink-0">
         <Tabs
           id={"smartblocks-store"}
           selectedTabId={tabId}
@@ -561,9 +567,8 @@ const DrawerContent = ({
         </Tabs>
       </div>
       <div
-        className={Classes.DRAWER_BODY}
+        className={`${Classes.DRAWER_BODY} gap-8 grid p-2`}
         style={{
-          display: "grid",
           gridTemplateColumns: `repeat(${ROW_LENGTH}, 1fr)`,
           gridTemplateRows: `repeat(${Math.ceil(
             filteredSmartblocks.length / ROW_LENGTH
@@ -623,30 +628,31 @@ const DrawerContent = ({
   );
 };
 
-const SmartblocksStore = 
-  (Markdown: typeof Marked) => ({
-  onClose,
-  ...props
-}: { onClose: () => void } & Props) => {
-  return (
-    <Drawer
-      title={"RoamJS Smartblocks Store"}
-      position={Position.LEFT}
-      onClose={onClose}
-      isOpen={true}
-      style={{ zIndex: 1000, minWidth: 640 }}
-    >
-      <DrawerContent {...props} onClose={onClose} Markdown={Markdown} />
-    </Drawer>
-  );
-};
+const SmartblocksStore =
+  (Markdown: typeof Marked) =>
+  ({ onClose, ...props }: { onClose: () => void } & Props) => {
+    return (
+      <Drawer
+        title={"RoamJS Smartblocks Store"}
+        position={Position.LEFT}
+        onClose={onClose}
+        isOpen={true}
+        style={{ zIndex: 1000, minWidth: 640 }}
+      >
+        <DrawerContent {...props} onClose={onClose} Markdown={Markdown} />
+      </Drawer>
+    );
+  };
 
 export const render = (props: Props) =>
   (window.RoamLazy
     ? window.RoamLazy.MarkedReact()
     : import("marked-react").then((r) => r.default)
   ).then((Markdown) =>
-    createOverlayRender<Props>("marketplace-drawer", SmartblocksStore(Markdown))(props)
+    createOverlayRender<Props>(
+      "marketplace-drawer",
+      SmartblocksStore(Markdown)
+    )(props)
   );
 
 export default SmartblocksStore;

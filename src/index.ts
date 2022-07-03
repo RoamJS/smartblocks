@@ -105,11 +105,12 @@ export default runExtension({
   flex-direction: column;
   width: 100%;
   box-sizing: border-box;
-  padding: 4px;
+  padding: 4px 12px 0;
   cursor: pointer;
   font-size: 12px;   
   border: 1px solid #10161a26;
   background: white;
+  border-radius: 24px;
 }
 
 .roamjs-smartblocks-store-item:hover {
@@ -128,7 +129,7 @@ export default runExtension({
 }
 
 .roamjs-smartblocks-store-tabs {
-  height: 84px;
+  height: 48px;
 }
 
 .roamjs-smartblock-hotkey-block {
