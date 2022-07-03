@@ -509,8 +509,8 @@ export const COMMANDS: {
   },
   {
     text: "RANDOMBLOCKFROM",
-    help: "Returns a random child block from a page or block ref\n\n1: Page name or UID.\n\n2: Format\n\n3: Levels Included",
-    handler: (titleOrUid = "", format = "(({uid}))", levelsIncluded = "0") => {
+    help: "Returns a random child block from a page or block ref\n\n1: Page name or UID.\n\n2: Levels Included\n\n3: Format",
+    handler: (titleOrUid = "", levelsIncluded = "0", format = "(({uid}))") => {
       const possibleTitle = extractTag(titleOrUid);
       const parentUid = getPageUidByPageTitle(possibleTitle) || titleOrUid;
       const levels = Number(levelsIncluded) || 0;
