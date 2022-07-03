@@ -11,7 +11,7 @@ env:
   AWS_SECRET_ACCESS_KEY: ${{ secrets.DEPLOY_AWS_ACCESS_SECRET }}
   ROAMJS_DEVELOPER_TOKEN: ${{ secrets.ROAMJS_DEVELOPER_TOKEN }}
   ROAMJS_EMAIL: support@roamjs.com
-  ROAMJS_EXTENSION_ID: smartblocks
+  # ROAMJS_EXTENSION_ID: smartblocks - not a premium
   ROAMJS_HOST: https://roamjs.com
   STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
 
