@@ -443,13 +443,15 @@ export const handler: APIGatewayProxyHandler = async (event) => {
         .then(([items, users]) => ({
           statusCode: 200,
           body: JSON.stringify({
-            smartblocks: items.map((i) =>
-              Object.fromEntries(
-                Object.entries(i)
-                  .filter(([k]) => k !== "workflow")
-                  .map(([k, v]) => [k, v.N ? Number(v.N) : v.S || v.SS])
-              )
-            ),
+            smartblocks: items
+              .sort((a, b) => Number(b.score?.N || 0) - Number(a.score?.N || 0))
+              .map((i) =>
+                Object.fromEntries(
+                  Object.entries(i)
+                    .filter(([k]) => k !== "workflow")
+                    .map(([k, v]) => [k, v.N ? Number(v.N) : v.S || v.SS])
+                )
+              ),
             users: users.map((i) => ({
               author: i.uuid.S,
               displayName: i.description?.S || "",

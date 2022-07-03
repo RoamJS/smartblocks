@@ -47,12 +47,33 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       headers,
     };
   }
-  
+
   if (isInvalid(workflow)) {
     return {
       statusCode: 400,
       headers,
       body: "Your workflow was rejected from being published to the SmartBlocks Store, because it contains some illegal commands. Please remove these commands and try again.",
+    };
+  }
+  if (/\n/.test(name)) {
+    return {
+      statusCode: 400,
+      headers,
+      body: "Your workflow name has invalid characters. Please remove and try again.",
+    };
+  }
+  if (name.length === 0) {
+    return {
+      statusCode: 400,
+      headers,
+      body: "Your workflow name is empty. Please add a name!",
+    };
+  }
+  if (name.length > 64) {
+    return {
+      statusCode: 400,
+      headers,
+      body: `Your workflow name is ${name.length} characters long. The maximum length is 64.`,
     };
   }
   return dynamo
