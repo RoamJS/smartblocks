@@ -30,7 +30,7 @@ export const handler: APIGatewayProxyHandler = awsGetRoamJSUser(
       displayName?: string;
     };
     const price = Number(priceArg) || 0;
-    if (price >= 0) {
+    if (price > 0) {
       return {
         statusCode: 400,
         body: `We no longer support premium SmartBlock workflows. Please remove the price block and try again`,
@@ -209,10 +209,6 @@ export const handler: APIGatewayProxyHandler = awsGetRoamJSUser(
           headers,
         };
       })
-      .catch(
-        emailCatch(
-          `Failed to publish workflow: ${name}`
-        )
-      );
+      .catch(emailCatch(`Failed to publish workflow: ${name}`));
   }
 );
