@@ -36,22 +36,9 @@ import getDisplayNameByUid from "roamjs-components/queries/getDisplayNameByUid";
 import getPageUidByPageTitle from "roamjs-components/queries/getPageUidByPageTitle";
 import getShallowTreeByParentUid from "roamjs-components/queries/getShallowTreeByParentUid";
 import { InputTextNode } from "roamjs-components/types";
-import {
-  Elements,
-  LinkAuthenticationElement,
-  PaymentElement,
-  useElements,
-  useStripe,
-} from "@stripe/react-stripe-js";
-import { loadStripe } from "@stripe/stripe-js";
 import { getCleanCustomWorkflows } from "./core";
 import lego from "./img/lego3blocks.png";
 import type Marked from "marked-react";
-
-const stripePromise = loadStripe(process.env.STRIPE_PUBLIC_KEY, {
-  betas: ["link_beta_3"],
-  apiVersion: "2020-08-27;link_beta=v1",
-});
 
 type Props = {
   parentUid: string;
@@ -61,26 +48,10 @@ type Smartblocks = {
   uuid: string;
   name: string;
   tags: string[];
-  price: number;
   img?: string;
   author: string;
   description?: string;
 };
-
-const Price = ({ price }: { price: number }) => (
-  <b
-    style={{
-      color: "green",
-      minWidth: "fit-content",
-    }}
-  >
-    {price
-      ? `$${Math.floor(price / 100)}.${(price % 100)
-          .toString()
-          .padStart(2, "0")}`
-      : "FREE"}
-  </b>
-);
 
 const Thumbnail = ({ src = lego }: { src?: string }): React.ReactElement => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -137,70 +108,6 @@ const Thumbnail = ({ src = lego }: { src?: string }): React.ReactElement => {
   );
 };
 
-const StripeCheckout = ({
-  payment,
-  setLoading,
-  setError,
-  onSuccess,
-  loading,
-  isDonation,
-}: {
-  payment: { secret: string; id: string };
-  setLoading: (f: boolean) => void;
-  setError: (m: string) => void;
-  onSuccess: (id: string) => void;
-  loading: boolean;
-  isDonation: boolean;
-}) => {
-  const stripe = useStripe();
-  const elements = useElements();
-  const defaultEmail = useMemo(getCurrentUserEmail, []);
-  const [email, setEmail] = useState(defaultEmail);
-  const handleSubmit = useCallback(() => {
-    setLoading(true);
-    stripe
-      .confirmPayment({
-        elements,
-        redirect: "if_required",
-      })
-      .then((s) => {
-        if (s.error) {
-          throw new Error(s.error.message);
-        } else {
-          onSuccess(payment.id);
-        }
-      })
-      .catch((e) => {
-        setLoading(false);
-        setError(e.message);
-      });
-  }, [stripe, setLoading]);
-  return (
-    <div
-      style={{
-        flexGrow: 1,
-      }}
-    >
-      <Label>
-        Contact info
-        <LinkAuthenticationElement
-          options={{ defaultValues: { email: defaultEmail } }}
-          onChange={(e) => setEmail(e.value.email)}
-        />
-        Payment Details
-        <PaymentElement />
-      </Label>
-      <Button
-        style={{ margin: "16px 0" }}
-        text={isDonation ? "Donate" : "Buy SmartBlock"}
-        disabled={loading}
-        intent={Intent.PRIMARY}
-        onClick={handleSubmit}
-      />
-    </div>
-  );
-};
-
 const ROW_LENGTH = 2;
 const DRAWER_TABS = ["Marketplace", "Installed", "Published"] as const;
 type DrawerTab = typeof DRAWER_TABS[number];
@@ -215,14 +122,12 @@ const DrawerContent = ({
   const [users, setUsers] = useState<Record<string, string>>({});
   const [installed, setInstalled] = useState(false);
   const [updateable, setUpdateable] = useState(false);
-  const [donatable, setDonatable] = useState(false);
   const [invalid, setInvalid] = useState(false);
   const [numberOfDownloads, setNumberOfDownloads] = useState(0);
   const [
     selectedSmartBlockAuthorDisplayName,
     setSelectedSmartBlockAuthorDisplayName,
   ] = useState("");
-  const [donation, setDonation] = useState(0);
   const [tabId, setTabId] = useState<DrawerTab>("Marketplace");
   const [search, setSearch] = useState("");
   const filteredSmartblocks = useMemo(() => {
@@ -243,7 +148,6 @@ const DrawerContent = ({
     () => smartblocks.find(({ uuid }) => uuid === selectedSmartBlockId),
     [selectedSmartBlockId, smartblocks]
   );
-  const [payment, setPayment] = useState<{ id: string; secret: string }>();
   useEffect(() => {
     if (!selectedSmartBlockId) {
       setLoading(true);
@@ -289,7 +193,6 @@ const DrawerContent = ({
             r.data.installed && workflows.some((w) => w.name === selectedName)
           );
           setUpdateable(r.data.updatable);
-          setDonatable(r.data.donatable);
           setInvalid(r.data.invalid);
           setNumberOfDownloads(r.data.count);
           setSelectedSmartBlockAuthorDisplayName(
@@ -315,19 +218,15 @@ const DrawerContent = ({
     } else {
       setUpdateable(false);
       setInstalled(false);
-      setDonatable(false);
       setInvalid(false);
       setNumberOfDownloads(0);
       setSelectedSmartBlockAuthorDisplayName("");
     }
-    setDonation(0);
   }, [
     setUpdateable,
     setInstalled,
-    setDonatable,
     setInvalid,
     selectedSmartBlockId,
-    setDonation,
     setNumberOfDownloads,
     setSelectedSmartBlockAuthorDisplayName,
     workflows,
@@ -368,14 +267,13 @@ const DrawerContent = ({
     setError("");
     axios
       .get(
-        `${process.env.API_URL}/smartblocks-store?uuid=${selectedSmartBlockId}&graph=${window.roamAlphaAPI.graph.name}&donation=${donation}`,
+        `${process.env.API_URL}/smartblocks-store?uuid=${selectedSmartBlockId}&graph=${window.roamAlphaAPI.graph.name}`,
         {
           headers: { Authorization: `email:${getCurrentUserEmail() || ""}` },
         }
       )
       .then((r) => {
         if (r.data.secret) {
-          setPayment(r.data);
           setLoading(false);
         } else if (r.data.workflow) {
           return installWorkflow(r.data.workflow);
@@ -407,11 +305,7 @@ const DrawerContent = ({
               style={{ display: "inline-block", minWidth: 120 }}
               className={loading ? Classes.SKELETON : ""}
             >
-              {installed ? (
-                <i>Already Installed</i>
-              ) : (
-                <Price price={selectedSmartBlock.price} />
-              )}
+              {installed && <i>Already Installed</i>}
             </span>
             <b
               style={{
@@ -427,104 +321,31 @@ const DrawerContent = ({
             {selectedSmartBlockAuthorDisplayName || selectedSmartBlock.author}
           </h6>
           <h1>{selectedSmartBlock.name.replace(/<%[A-Z]+%>/g, "").trim()}</h1>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
-            {payment ? (
-              <Elements
-                stripe={stripePromise}
-                options={{ clientSecret: payment.secret }}
-              >
-                <StripeCheckout
-                  payment={payment}
-                  isDonation={!!donation}
-                  onSuccess={(id: string) =>
-                    axios
-                      .get(
-                        `${process.env.API_URL}/smartblocks-store?uuid=${selectedSmartBlockId}&graph=${window.roamAlphaAPI.graph.name}`,
-                        {
-                          headers: {
-                            Authorization: id,
-                          },
-                        }
-                      )
-                      .then((r) => {
-                        renderToast({
-                          id: "smartblock-store-success",
-                          intent: Intent.SUCCESS,
-                          content: `Successfully ${
-                            donation ? "Dontated Towards" : "Bought"
-                          } SmartBlock!`,
-                        });
-                        if (updateable || !installed) {
-                          return installWorkflow(r.data.workflow);
-                        } else {
-                          return onClose();
-                        }
-                      })
-                      .catch((e) => {
-                        setLoading(false);
-                        setError(
-                          e.response?.data?.message ||
-                            e.response?.data ||
-                            e.message
-                        );
-                      })
-                  }
-                  setError={setError}
-                  setLoading={setLoading}
-                  loading={loading}
-                />
-              </Elements>
-            ) : (
-              <div className={loading ? Classes.SKELETON : ""}>
-                {donatable && (
-                  <>
-                    <h6>Thank the author by sending them a donation!</h6>
-                    <NumericInput
-                      leftIcon={"dollar"}
-                      min={0}
-                      step={1}
-                      value={donation}
-                      onValueChange={(e) => setDonation(e)}
-                    />
-                  </>
+          <div className="flex space-between items-center">
+            <div className={loading ? Classes.SKELETON : ""}>
+              <div className={"flex gap-4 items-center"}>
+                {updateable ? (
+                  <Button
+                    className={"flex-shrink-0 my-4"}
+                    text={"Update"}
+                    intent={Intent.WARNING}
+                    onClick={buttonOnClick}
+                  />
+                ) : (
+                  <Button
+                    className={"flex-shrink-0 my-4"}
+                    text={"Install"}
+                    disabled={installed}
+                    intent={Intent.PRIMARY}
+                    onClick={buttonOnClick}
+                  />
                 )}
-                <div className={"flex gap-4 items-center"}>
-                  {updateable ? (
-                    <Button
-                      className={"flex-shrink-0 my-4"}
-                      text={"Update"}
-                      intent={Intent.WARNING}
-                      onClick={buttonOnClick}
-                    />
-                  ) : installed && donatable ? (
-                    <Button
-                      className={"flex-shrink-0 my-4"}
-                      text={"Donate"}
-                      intent={Intent.SUCCESS}
-                      onClick={buttonOnClick}
-                    />
-                  ) : (
-                    <Button
-                      className={"flex-shrink-0 my-4"}
-                      text={"Install"}
-                      disabled={installed}
-                      intent={Intent.PRIMARY}
-                      onClick={buttonOnClick}
-                    />
-                  )}
-                  <span className="inline-block text-xs text-yellow-900">
-                    {invalid &&
-                      "WARNING: This workflow contains illegal commands. Please notify the author before downloading."}
-                  </span>
-                </div>
+                <span className="inline-block text-xs text-yellow-900">
+                  {invalid &&
+                    "WARNING: This workflow contains illegal commands. Please notify the author before downloading."}
+                </span>
               </div>
-            )}
+            </div>
             <div style={{ minWidth: 24 }}>
               {loading && <Spinner size={SpinnerSize.SMALL} />}
             </div>
@@ -546,7 +367,6 @@ const DrawerContent = ({
         icon={"arrow-left"}
         onClick={() => {
           setSelectedSmartBlockId("");
-          setPayment(undefined);
         }}
         minimal
         style={{ position: "absolute", top: 8, right: 8 }}
@@ -608,7 +428,6 @@ const DrawerContent = ({
                   <Tooltip content={e.name} minimal targetTagName={"b"}>
                     {e.name}
                   </Tooltip>
-                  {tabId !== "Installed" && <Price price={e.price} />}
                 </div>
               </div>
             );

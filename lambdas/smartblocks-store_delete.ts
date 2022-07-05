@@ -5,13 +5,6 @@ import headers from "roamjs-components/backend/headers";
 
 export const handler: APIGatewayProxyHandler = awsGetRoamJSUser(
   async (user, { uuid, graph }: Record<string, string>) => {
-    if (user.email !== "support@roamjs.com") {
-      return {
-        statusCode: 400,
-        body: "Deleting workflows are temporarily disabled. Reach out to support@roamjs.com for assistance.",
-        headers,
-      };
-    }
     if (!uuid) {
       return {
         statusCode: 400,
@@ -23,6 +16,20 @@ export const handler: APIGatewayProxyHandler = awsGetRoamJSUser(
       return {
         statusCode: 400,
         body: "Argument `graph` is required",
+        headers,
+      };
+    }
+    const expectedUserId = await dynamo
+      .getItem({
+        TableName: "RoamJSSmartBlocks",
+        Key: { uuid: { S: graph } },
+      })
+      .promise()
+      .then((i) => i.Item?.token?.S);
+    if (expectedUserId !== user.id) {
+      return {
+        statusCode: 403,
+        body: "User does not have permission to remove this workflow.",
         headers,
       };
     }

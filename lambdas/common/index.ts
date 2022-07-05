@@ -1,11 +1,5 @@
 import AWS from "aws-sdk";
-import Stripe from "stripe";
 
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
-  // @ts-ignore
-  apiVersion: "2020-08-27;link_beta=v1",
-  maxNetworkRetries: 3,
-});
 export const dynamo = new AWS.DynamoDB({
   apiVersion: "2012-08-10",
   region: "us-east-1",

@@ -1,22 +1,14 @@
 import { APIGatewayProxyHandler } from "aws-lambda";
 import { DynamoDB } from "aws-sdk";
-import Stripe from "stripe";
 import nanoid from "nanoid";
 import {
   s3,
   dynamo,
   headers,
-  stripe,
-  ses,
   toStatus,
   fromStatus,
   isInvalid,
 } from "./common";
-
-const oldStripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
-  apiVersion: "2020-08-27",
-  maxNetworkRetries: 3,
-});
 
 const getWorkflow = ({
   item,
@@ -75,45 +67,14 @@ const TAB_REGEX = new RegExp(
   "i"
 );
 
-const ensureCustomer = (email: string): Promise<string | undefined> => {
-  if (!email) {
-    return Promise.resolve(undefined);
-  }
-  return stripe.customers
-    .list({ email })
-    .then((c) =>
-      c.data.length
-        ? c.data[0].id
-        : stripe.customers.create({ email }).then((c) => c.id)
-    )
-    .catch(() => undefined);
-};
-
 export const handler: APIGatewayProxyHandler = async (event) => {
   const {
     uuid = "",
     tab = "marketplace",
     graph = "",
     open,
-    donation = "0",
   } = event.queryStringParameters || {};
-  const authorization =
-    event.headers.Authorization || event.headers.authorization || "";
-  const paymentIntentId = authorization.startsWith("email:")
-    ? ""
-    : authorization;
-  const email = authorization.startsWith("email:")
-    ? authorization.slice(6)
-    : "";
   const filterTab = TAB_REGEX.test(tab) ? tab.toLowerCase() : "marketplace";
-  const donationValue = (Number(donation) || 0) * 100;
-  if (donationValue > 0 && donationValue < 1) {
-    return {
-      statusCode: 400,
-      body: `Invalid donation amount. Any donation must be at least $1.`,
-      headers,
-    };
-  }
   return uuid
     ? dynamo
         .getItem({
@@ -159,7 +120,6 @@ export const handler: APIGatewayProxyHandler = async (event) => {
                 body: JSON.stringify({
                   installed: true,
                   updatable: false,
-                  donatable: false,
                   count: installs,
                   invalid,
                 }),
@@ -204,144 +164,11 @@ export const handler: APIGatewayProxyHandler = async (event) => {
                         : prev,
                     { workflow: { S: "0000" } }
                   ).workflow?.S !== r.Item.workflow.S,
-                donatable:
-                  (Number(r.Item?.price?.N) || 0) === 0 &&
-                  !!publisher.Item?.stripe?.S
-                    ? await oldStripe.accounts
-                        .retrieve(publisher.Item.stripe.S)
-                        .then((r) => r.details_submitted)
-                        .catch(() => false)
-                    : false,
               }),
               headers,
             }));
           }
-          if (!!paymentIntentId) {
-            return stripe.paymentIntents.retrieve(paymentIntentId).then((p) =>
-              p.status === "succeeded"
-                ? getWorkflow({ item: r.Item, graph, installs }).then(
-                    async (response) => {
-                      const noUser = {
-                        name: "Anonymous User",
-                        email: "",
-                      };
-                      return Promise.all([
-                        oldStripe.accounts.retrieve(
-                          p.transfer_data.destination as string
-                        ),
-                        p.customer
-                          ? stripe.customers
-                              .retrieve(p.customer as string)
-                              .then((c) => (c as Stripe.Customer) || noUser)
-                              .catch((e) => {
-                                console.log(e);
-                                return noUser;
-                              })
-                          : Promise.resolve(noUser),
-                        stripe.paymentMethods.retrieve(
-                          p.payment_method as string
-                        ),
-                      ])
-                        .then(
-                          ([a, c, pm]) =>
-                            a.email &&
-                            ses
-                              .sendEmail({
-                                Destination: {
-                                  ToAddresses: [a.email],
-                                },
-                                Message: {
-                                  Body: {
-                                    Text: {
-                                      Charset: "UTF-8",
-                                      Data: `${
-                                        c.name || noUser.name
-                                      } just paid $${
-                                        p.amount / 100
-                                      } for your SmartBlock workflow ${
-                                        r.Item?.name?.S
-                                      }!\n\n${
-                                        (c.email || pm.billing_details.email) &&
-                                        `You could reach them at ${
-                                          c.email || pm.billing_details.email
-                                        } to say thanks!`
-                                      }`,
-                                    },
-                                  },
-                                  Subject: {
-                                    Charset: "UTF-8",
-                                    Data: `New RoamJS SmartBlock Purchase!`,
-                                  },
-                                },
-                                Source: "support@roamjs.com",
-                              })
-                              .promise()
-                        )
-                        .then(() => response)
-                        .catch((e) => {
-                          console.log(e);
-                          return response;
-                        });
-                    }
-                  )
-                : {
-                    statusCode: 401,
-                    body: `Invalid payment id`,
-                    headers,
-                  }
-            );
-          }
-          const amount = Number(r.Item?.price?.N) || donationValue;
-          if (amount <= 0) {
-            return getWorkflow({ item: r.Item, graph, installs });
-          }
-          return dynamo
-            .query({
-              TableName: "RoamJSSmartBlocks",
-              IndexName: "name-author-index",
-              ExpressionAttributeNames: {
-                "#s": "name",
-                "#a": "author",
-              },
-              ExpressionAttributeValues: {
-                ":s": { S: uuid },
-                ":a": { S: graph },
-              },
-              KeyConditionExpression: "#a = :a AND #s = :s",
-            })
-            .promise()
-            .then((i) =>
-              i.Count > 0 && donationValue <= 0
-                ? getWorkflow({ item: r.Item, graph, installs })
-                : dynamo
-                    .getItem({
-                      TableName: "RoamJSSmartBlocks",
-                      Key: { uuid: { S: r.Item.author.S } },
-                    })
-                    .promise()
-                    .then((t) =>
-                      ensureCustomer(email).then((customer) =>
-                        stripe.paymentIntents.create({
-                          automatic_payment_methods: { enabled: true },
-                          amount,
-                          currency: "usd",
-                          application_fee_amount: 30 + Math.ceil(amount * 0.08),
-                          transfer_data: {
-                            destination: t.Item.stripe.S,
-                          },
-                          customer,
-                        })
-                      )
-                    )
-                    .then((s) => ({
-                      statusCode: 200,
-                      body: JSON.stringify({
-                        secret: s.client_secret,
-                        id: s.id,
-                      }),
-                      headers,
-                    }))
-            );
+          return getWorkflow({ item: r.Item, graph, installs });
         })
         .catch((e) => ({
           statusCode: 500,

@@ -13,7 +13,6 @@ env:
   ROAMJS_EMAIL: support@roamjs.com
   # ROAMJS_EXTENSION_ID: smartblocks - not a premium
   ROAMJS_HOST: https://roamjs.com
-  STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
 
 jobs:
   deploy:

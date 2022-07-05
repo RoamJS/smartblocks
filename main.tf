@@ -30,14 +30,6 @@ variable "github_token" {
   type = string
 }
 
-variable "stripe_public" {
-    type = string
-}
-
-variable "stripe_secret" {
-    type = string
-}
-
 provider "aws" {
   region = "us-east-1"
   access_key = var.aws_access_token
@@ -187,16 +179,4 @@ resource "aws_s3_bucket" "main" {
   tags = {
     Application = "Roam JS Extensions"
   }
-}
-
-resource "github_actions_secret" "stripe_public" {
-  repository       = "roamjs-smartblocks"
-  secret_name      = "STRIPE_PUBLIC_KEY"
-  plaintext_value  = var.stripe_public
-}
-
-resource "github_actions_secret" "stripe_secret" {
-  repository       = "roamjs-smartblocks"
-  secret_name      = "STRIPE_SECRET_KEY"
-  plaintext_value  = var.stripe_secret
 }
