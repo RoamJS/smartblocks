@@ -273,7 +273,7 @@ const DrawerContent = ({
   const buttonOnClick = () => {
     setLoading(true);
     setError("");
-    apiGet({
+    apiGet<{secret: string, workflow: string}>({
       path: `smartblocks-store`,
       data: {
         uuid: selectedSmartBlockId,
@@ -282,10 +282,10 @@ const DrawerContent = ({
       anonymous: true,
     })
       .then((r) => {
-        if (r.data.secret) {
+        if (r.secret) {
           setLoading(false);
-        } else if (r.data.workflow) {
-          return installWorkflow(r.data.workflow);
+        } else if (r.workflow) {
+          return installWorkflow(r.workflow);
         } else {
           throw new Error("Returned empty response");
         }
