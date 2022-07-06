@@ -1342,8 +1342,14 @@ export const COMMANDS: {
   {
     text: "CLIPBOARDPASTETEXT",
     help: "Pastes from the clipboard",
-    handler: () => {
-      return navigator.clipboard.readText();
+    handler: async (...args) => {
+      const settings = new Set(args);
+      const raw = await navigator.clipboard.readText();
+      const postTrim = settings.has("trim") ? raw.trim() : raw;
+      const postSplit = settings.has("split")
+        ? postTrim.split(/(?:\r)?\n/)
+        : [postTrim];
+      return postSplit;
     },
   },
   {
