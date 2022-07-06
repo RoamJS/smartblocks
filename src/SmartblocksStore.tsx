@@ -465,6 +465,7 @@ const SmartblocksStore =
         position={Position.LEFT}
         onClose={onClose}
         isOpen={true}
+        autoFocus={false}
         style={{ zIndex: 1000, minWidth: 640 }}
       >
         <DrawerContent {...props} onClose={onClose} Markdown={Markdown} />
