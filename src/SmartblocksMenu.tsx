@@ -23,7 +23,7 @@ import {
 } from "./core";
 import fuzzy from "fuzzy";
 import getSettingValueFromTree from "roamjs-components/util/getSettingValueFromTree";
-import axios from "axios";
+import apiPut from "roamjs-components/util/apiPut";
 
 type Props = {
   textarea: HTMLTextAreaElement;
@@ -111,9 +111,13 @@ const SmartblocksMenu = ({
                     tree: dailyConfig.children,
                     key: "latest",
                   });
-                  axios.put(`${process.env.API_URL}/smartblocks-daily`, {
-                    newDate,
-                    uuid,
+                  apiPut({
+                    path: `smartblocks-daily`,
+                    data: {
+                      newDate,
+                      uuid,
+                    },
+                    anonymous: true,
                   });
                 }
               }

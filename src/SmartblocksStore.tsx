@@ -22,11 +22,9 @@ import React, {
   useRef,
   useState,
 } from "react";
-import axios from "axios";
 import createOverlayRender from "roamjs-components/util/createOverlayRender";
 import getSettingValueFromTree from "roamjs-components/util/getSettingValueFromTree";
 import getSubTree from "roamjs-components/util/getSubTree";
-import { render as renderToast } from "roamjs-components/components/Toast";
 import createBlock from "roamjs-components/writes/createBlock";
 import deleteBlock from "roamjs-components/writes/deleteBlock";
 import getBasicTreeByParentUid from "roamjs-components/queries/getBasicTreeByParentUid";
@@ -35,10 +33,11 @@ import getCurrentUserUid from "roamjs-components/queries/getCurrentUserUid";
 import getDisplayNameByUid from "roamjs-components/queries/getDisplayNameByUid";
 import getPageUidByPageTitle from "roamjs-components/queries/getPageUidByPageTitle";
 import getShallowTreeByParentUid from "roamjs-components/queries/getShallowTreeByParentUid";
-import { InputTextNode } from "roamjs-components/types";
+import { InputTextNode } from "roamjs-components/types/native";
 import { getCleanCustomWorkflows } from "./core";
 import lego from "./img/lego3blocks.png";
 import type Marked from "marked-react";
+import apiGet from "roamjs-components/util/apiGet";
 
 type Props = {
   parentUid: string;
@@ -152,21 +151,19 @@ const DrawerContent = ({
     if (!selectedSmartBlockId) {
       setLoading(true);
       setError("");
-      axios
-        .get<{
-          smartblocks: Smartblocks[];
-          users: { author: string; displayName: string }[];
-        }>(
-          `${process.env.API_URL}/smartblocks-store?tab=${tabId}&graph=${window.roamAlphaAPI.graph.name}`
-        )
+      apiGet<{
+        smartblocks: Smartblocks[];
+        users: { author: string; displayName: string }[];
+      }>({
+        path: `smartblocks-store`,
+        data: { tab: tabId, graph: window.roamAlphaAPI.graph.name },
+        anonymous: true,
+      })
         .then((r) => {
-          setSmartblocks(r.data.smartblocks);
+          setSmartblocks(r.smartblocks);
           setUsers(
             Object.fromEntries(
-              r.data.users.map(({ author, displayName }) => [
-                author,
-                displayName,
-              ])
+              r.users.map(({ author, displayName }) => [author, displayName])
             )
           );
         })
@@ -181,20 +178,31 @@ const DrawerContent = ({
     if (selectedSmartBlockId) {
       setLoading(true);
       setError("");
-      axios
-        .get(
-          `${process.env.API_URL}/smartblocks-store?uuid=${selectedSmartBlockId}&graph=${window.roamAlphaAPI.graph.name}&open=true`
-        )
+      apiGet<{
+        installed: boolean;
+        updatable: boolean;
+        invalid: boolean;
+        count: number;
+        displayName: string;
+      }>({
+        path: `smartblocks-store`,
+        data: {
+          uuid: selectedSmartBlockId,
+          graph: window.roamAlphaAPI.graph.name,
+          open: `true`,
+        },
+        anonymous: true,
+      })
         .then((r) => {
           const selectedName = selectedSmartBlock.name
             .replace(/<%[A-Z]+%>/g, "")
             .trim();
           setInstalled(
-            r.data.installed && workflows.some((w) => w.name === selectedName)
+            r.installed && workflows.some((w) => w.name === selectedName)
           );
-          setUpdateable(r.data.updatable);
-          setInvalid(r.data.invalid);
-          setNumberOfDownloads(r.data.count);
+          setUpdateable(r.updatable);
+          setInvalid(r.invalid);
+          setNumberOfDownloads(r.count);
           setSelectedSmartBlockAuthorDisplayName(
             selectedSmartBlock.author === window.roamAlphaAPI.graph.name
               ? getSettingValueFromTree({
@@ -207,7 +215,7 @@ const DrawerContent = ({
                   key: "display name",
                   defaultValue: getDisplayNameByUid(getCurrentUserUid()),
                 })
-              : r.data.displayName
+              : r.displayName
           );
         })
         .catch((e) => {
@@ -265,13 +273,14 @@ const DrawerContent = ({
   const buttonOnClick = () => {
     setLoading(true);
     setError("");
-    axios
-      .get(
-        `${process.env.API_URL}/smartblocks-store?uuid=${selectedSmartBlockId}&graph=${window.roamAlphaAPI.graph.name}`,
-        {
-          headers: { Authorization: `email:${getCurrentUserEmail() || ""}` },
-        }
-      )
+    apiGet({
+      path: `smartblocks-store`,
+      data: {
+        uuid: selectedSmartBlockId,
+        graph: window.roamAlphaAPI.graph.name,
+      },
+      anonymous: true,
+    })
       .then((r) => {
         if (r.data.secret) {
           setLoading(false);

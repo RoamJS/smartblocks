@@ -51,12 +51,12 @@ import lego from "./img/lego3blocks.png";
 import { Intent } from "@blueprintjs/core";
 import HotKeyPanel, { SmartblockHotKeys } from "./HotKeyPanel";
 import XRegExp from "xregexp";
-import axios from "axios";
 import React from "react";
 import TextPanel from "roamjs-components/components/ConfigPanels/TextPanel";
 import FlagPanel from "roamjs-components/components/ConfigPanels/FlagPanel";
 import CustomPanel from "roamjs-components/components/ConfigPanels/CustomPanel";
 import TimePanel from "roamjs-components/components/ConfigPanels/TimePanel";
+import apiPut from "roamjs-components/util/apiPut";
 import type {
   CustomField,
   Field,
@@ -493,13 +493,16 @@ export default runExtension({
             });
           }
           const todayUid = window.roamAlphaAPI.util.dateToPageUid(today);
-          axios
-            .put(`${process.env.API_URL}/smartblocks-daily`, {
+          apiPut<{oldDate: string, uuid: string}>({
+            path: `smartblocks-daily`,
+            data: {
               newDate: todayUid,
               uuid: latest.length < 36 ? undefined : latest,
-            })
+            },
+            anonymous: true,
+          })
             .then((r) => {
-              const latestUid = r.data.oldDate || latest;
+              const latestUid = r.oldDate || latest;
               const latestDate = latestUid
                 ? parseRoamDateUid(latestUid)
                 : new Date(1970, 0, 1);
@@ -545,7 +548,7 @@ export default runExtension({
               if (latest.length < 36) {
                 setInputSetting({
                   blockUid: dailyConfig.uid,
-                  value: r.data.uuid,
+                  value: r.uuid,
                   key: "latest",
                   index: 2,
                 });
