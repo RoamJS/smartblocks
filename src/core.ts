@@ -1704,7 +1704,7 @@ export const COMMANDS: {
           : typeof s === "string"
           ? s
           : JSON.stringify(s);
-      return apiGet({ domain: url, path: "", anonymous: true }).then((r) => {
+      return apiGet({ href: url, path: "", anonymous: true }).then((r) => {
         if (field) {
           return output(lodashGet(r.data, field.trim()));
         }
