@@ -20,7 +20,7 @@
     "@types/lodash": "^4.14.176",
     "concurrently": "^7.1.0",
     "localhost-lambdas": "^0.4.2",
-    "roamjs-scripts": "^0.19.11",
+    "roamjs-scripts": "^0.19.13",
     "typescript": "^4.3.2"
   },
   "dependencies": {

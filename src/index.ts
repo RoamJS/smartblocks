@@ -322,11 +322,13 @@ export default runExtension({
       .replace(/\\/g, "\\\\")
       .replace(/\+/g, "\\+")
       .trim();
-    const triggerRegex = new RegExp(`${trigger}$`);
+    const triggerRegex = new RegExp(`${trigger}(.*)$`);
+    let menuLoaded = false;
 
     const documentInputListener = (e: InputEvent) => {
       const target = e.target as HTMLElement;
       if (
+        !menuLoaded &&
         target.tagName === "TEXTAREA" &&
         target.classList.contains("rm-block-input")
       ) {
@@ -336,14 +338,18 @@ export default runExtension({
           0,
           textarea.selectionStart
         );
-        if (triggerRegex.test(valueToCursor)) {
+        const match = triggerRegex.exec(valueToCursor);
+        if (match) {
+          menuLoaded = true;
           render({
             textarea,
-            triggerLength:
-              triggerRegex.source.replace("\\\\", "\\").replace(/\\\+/g, "+")
-                .length - 1,
+            triggerRegex,
+            triggerStart: match.index,
             isCustomOnly,
             dailyConfig,
+            onClose: () => {
+              menuLoaded = false;
+            },
           });
         } else if (COMMAND_ENTRY_REGEX.test(valueToCursor)) {
           renderCursorMenu({
@@ -493,7 +499,7 @@ export default runExtension({
             });
           }
           const todayUid = window.roamAlphaAPI.util.dateToPageUid(today);
-          apiPut<{oldDate: string, uuid: string}>({
+          apiPut<{ oldDate: string; uuid: string }>({
             path: `smartblocks-daily`,
             data: {
               newDate: todayUid,

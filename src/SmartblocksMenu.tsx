@@ -27,7 +27,8 @@ import apiPut from "roamjs-components/util/apiPut";
 
 type Props = {
   textarea: HTMLTextAreaElement;
-  triggerLength: number;
+  triggerStart: number;
+  triggerRegex: RegExp;
   isCustomOnly: boolean;
   dailyConfig?: RoamBasicNode;
 };
@@ -43,7 +44,8 @@ const waitForBlock = (uid: string, text: string): Promise<void> =>
 const SmartblocksMenu = ({
   onClose,
   textarea,
-  triggerLength,
+  triggerStart,
+  triggerRegex,
   isCustomOnly,
   dailyConfig,
 }: { onClose: () => void } & Props) => {
@@ -74,7 +76,7 @@ const SmartblocksMenu = ({
   );
   const [activeIndex, setActiveIndex] = useState(0);
   const onSelect = useCallback(
-    (index, clicked = false) => {
+    (index) => {
       const item =
         menuRef.current.children[index].querySelector(".bp3-menu-item");
       const srcName = item.getAttribute("data-name");
@@ -82,8 +84,6 @@ const SmartblocksMenu = ({
       const currentTextarea = document.getElementById(
         textarea.id
       ) as HTMLTextAreaElement;
-      const start = currentTextarea.selectionStart - triggerLength;
-      const end = currentTextarea.selectionStart;
       waitForBlock(blockUid, textarea.value).then(() => {
         onClose();
         setTimeout(() => {
@@ -91,8 +91,8 @@ const SmartblocksMenu = ({
             srcUid,
             target: {
               uid: blockUid,
-              start,
-              end,
+              start: triggerStart,
+              end: currentTextarea.selectionStart,
               windowId,
             },
             mutableCursor: !srcName.includes("<%NOCURSOR%>"),
@@ -126,43 +126,46 @@ const SmartblocksMenu = ({
         }, 10);
       });
     },
-    [menuRef, blockUid, onClose, triggerLength, textarea]
+    [menuRef, blockUid, onClose, triggerStart, textarea]
   );
   const keydownListener = useCallback(
     (e: KeyboardEvent) => {
-      if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+      if (e.key === "ArrowDown") {
         const index = Number(menuRef.current.getAttribute("data-active-index"));
         const count = menuRef.current.childElementCount;
         setActiveIndex((index + 1) % count);
-      } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+        e.stopPropagation();
+        e.preventDefault();
+      } else if (e.key === "ArrowUp") {
         const index = Number(menuRef.current.getAttribute("data-active-index"));
         const count = menuRef.current.childElementCount;
         setActiveIndex((index - 1 + count) % count);
+        e.stopPropagation();
+        e.preventDefault();
+      } else if (e.key == "ArrowLeft" || e.key === "ArrowRight") {
+        e.stopPropagation();
+        e.preventDefault();
       } else if (e.key === "Enter") {
         const index = Number(menuRef.current.getAttribute("data-active-index"));
         onSelect(index);
-      } else if (e.key.length === 1) {
-        const value = menuRef.current.getAttribute("data-filter");
-        setFilter(`${value}${e.key}`);
-      } else if (e.key === "Backspace") {
-        const value = menuRef.current.getAttribute("data-filter");
+        e.stopPropagation();
+        e.preventDefault();
+      } else if (e.key === "Escape") {
+        onClose();
+      } else {
+        const value =
+          triggerRegex.exec(
+            textarea.value.substring(0, textarea.selectionStart)
+          )?.[1] || "";
         if (value) {
-          setFilter(value.slice(0, -1));
+          setFilter(value);
         } else {
           onClose();
           return;
         }
-      } else if (window.roamAlphaAPI.platform.isMobile) {
-        const value = menuRef.current.getAttribute("data-filter");
-        setFilter(`${value}${String.fromCharCode(e.keyCode)}`);
-      } else if (e.key !== "Shift") {
-        onClose();
-        return;
       }
-      e.stopPropagation();
-      e.preventDefault();
     },
-    [menuRef, setActiveIndex, setFilter, onClose]
+    [menuRef, setActiveIndex, setFilter, onClose, triggerRegex, textarea]
   );
   useEffect(() => {
     const listeningEl = !!textarea.closest(".rm-reference-item")
@@ -190,7 +193,6 @@ const SmartblocksMenu = ({
         <Menu
           ulRef={menuRef}
           data-active-index={activeIndex}
-          data-filter={filter}
           className={"roamjs-smartblock-menu"}
         >
           {workflows.length ? (
@@ -221,7 +223,7 @@ const SmartblocksMenu = ({
                   }
                   active={i === activeIndex}
                   onMouseEnter={() => setActiveIndex(i)}
-                  onClick={() => onSelect(i, true)}
+                  onClick={() => onSelect(i)}
                 />
               );
             })
@@ -242,7 +244,7 @@ const SmartblocksMenu = ({
   );
 };
 
-export const render = (props: Props) => {
+export const render = (props: Props & { onClose: () => void }) => {
   const parent = document.createElement("span");
   const coords = getCoords(props.textarea);
   parent.style.position = "absolute";
@@ -253,6 +255,7 @@ export const render = (props: Props) => {
     <SmartblocksMenu
       {...props}
       onClose={() => {
+        props.onClose();
         ReactDOM.unmountComponentAtNode(parent);
         parent.remove();
       }}
