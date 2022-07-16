@@ -1706,9 +1706,9 @@ export const COMMANDS: {
           : JSON.stringify(s);
       return apiGet({ href: url, path: "", anonymous: true }).then((r) => {
         if (field) {
-          return output(lodashGet(r.data, field.trim()));
+          return output(lodashGet(r, field.trim()));
         }
-        return output(r.data);
+        return output(r);
       });
     },
   },
