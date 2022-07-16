@@ -1094,6 +1094,31 @@ export const COMMANDS: {
     },
   },
   {
+    text: "IFNOTVAR",
+    help: "Compares the variable with a given value. If the test succeeds, the block is skipped.\n\n1. Variable name\n\n2. Value or Regular Expression",
+    handler: (name = "", ...exp) => {
+      const actual = smartBlocksContext.variables[name];
+      if (typeof actual === "undefined") {
+        if (exp.length > 0) {
+          return "";
+        } else {
+          smartBlocksContext.exitBlock = "yes";
+          return "";
+        }
+      }
+      const expected = exp.join(",");
+      if (expected.startsWith("/") && expected.endsWith("/")) {
+        if (!new RegExp(expected.slice(1, -1)).test(actual)) {
+          return "";
+        }
+      } else if (actual !== expected) {
+        return "";
+      }
+      smartBlocksContext.exitBlock = "yes";
+      return "";
+    },
+  },
+  {
     text: "GET",
     help: "Returns a variable\n\n1. Variable name",
     handler: (name = "") => {
