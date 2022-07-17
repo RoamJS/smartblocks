@@ -570,7 +570,7 @@ export const COMMANDS: {
     help: "Returns a random child block from a block references a page\n\n1: Page name or UID.",
     handler: (titleOrUid = "") => {
       const possibleTitle = extractTag(titleOrUid);
-      const parentUid = getPageUidByPageTitle(possibleTitle) || titleOrUid;
+      const parentUid = getPageUidByPageTitle(possibleTitle) || extractRef(titleOrUid);
       const uids = window.roamAlphaAPI
         .q(
           `[:find (pull ?c [:block/uid]) :where [?b :block/uid "${parentUid}"] [?r :block/refs ?b] [?c :block/parents ?r]]`
