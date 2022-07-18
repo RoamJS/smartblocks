@@ -640,12 +640,17 @@ export default runExtension({
           b.setAttribute("data-roamjs-smartblock-button", "true");
           // We include textcontent here bc there could be multiple smartblocks in a block
           const regex = new RegExp(
-            `{{${b.textContent}:(?:42)?SmartBlock:(.*?)}}`
+            `{{(${b.textContent}):(?:42)?SmartBlock:(.*?)}}`
           );
           const text = getTextByBlockUid(parentUid);
           const match = regex.exec(text);
           if (match) {
-            const { [1]: buttonText = "", index, [0]: full } = match;
+            const {
+              [1]: buttonContent = "",
+              [2]: buttonText = "",
+              index,
+              [0]: full,
+            } = match;
             const [workflowName, args = ""] = buttonText.split(":");
             b.addEventListener("click", () => {
               const workflows = getCustomWorkflows();
@@ -668,6 +673,7 @@ export default runExtension({
                     .map((v) => v.split("="))
                     .map(([k, v = ""]) => [k, v])
                 );
+                variables["ButtonContent"] = buttonContent;
 
                 const keepButton =
                   variables["RemoveButton"] === "false" ||
