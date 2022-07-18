@@ -186,9 +186,10 @@ const Content = ({
           intent={Intent.DANGER}
           setError={setError}
           onClick={() =>
-            apiDelete(
-              `${process.env.API_URL}/smartblocks-store?uuid=${uuid[0]}&graph=${window.roamAlphaAPI.graph.name}`
-            ).then(() => {
+            apiDelete({
+              path: `smartblocks-store`,
+              data: { uuid: uuid[0], graph: window.roamAlphaAPI.graph.name },
+            }).then(() => {
               const ref = `((${blockUid}))`;
               const refUid = publishChildren.find(
                 (t) => t.text.trim() === ref
