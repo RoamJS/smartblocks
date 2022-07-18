@@ -570,7 +570,8 @@ export const COMMANDS: {
     help: "Returns a random child block from a block references a page\n\n1: Page name or UID.",
     handler: (titleOrUid = "") => {
       const possibleTitle = extractTag(titleOrUid);
-      const parentUid = getPageUidByPageTitle(possibleTitle) || extractRef(titleOrUid);
+      const parentUid =
+        getPageUidByPageTitle(possibleTitle) || extractRef(titleOrUid);
       const uids = window.roamAlphaAPI
         .q(
           `[:find (pull ?c [:block/uid]) :where [?b :block/uid "${parentUid}"] [?r :block/refs ?b] [?c :block/parents ?r]]`
@@ -1874,7 +1875,11 @@ const processBlockTextToPromises = (s: string) => {
             }
       )
       .then(({ output, nodeProps }) =>
-        typeof output === "string"
+        typeof output === "undefined"
+          ? Promise.reject(
+              "Command handler output expected a string or array, but instead got undefined"
+            )
+          : typeof output === "string"
           ? [{ text: output, ...nodeProps }]
           : output.map((o: string | InputTextNode) =>
               typeof o === "string" ? { text: o, ...nodeProps } : o
