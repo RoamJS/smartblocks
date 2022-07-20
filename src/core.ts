@@ -512,7 +512,7 @@ export const COMMANDS: {
     help: "Returns a random child block from a page or block ref\n\n1: Page name or UID.\n\n2: Levels Included\n\n3: Format",
     handler: (titleOrUid = "", levelsIncluded = "0", format = "(({uid}))") => {
       const possibleTitle = extractTag(titleOrUid);
-      const parentUid = getPageUidByPageTitle(possibleTitle) || titleOrUid;
+      const parentUid = getPageUidByPageTitle(possibleTitle) || extractRef(titleOrUid);
       const levels = Number(levelsIncluded) || 0;
       const uids = levels
         ? getShallowTreeByParentUid(parentUid).map((u) => u.uid)
@@ -535,7 +535,7 @@ export const COMMANDS: {
         .map(({ titleOrUid, excludes }) => {
           const possibleTitle = extractTag(titleOrUid);
           return {
-            uid: getPageUidByPageTitle(possibleTitle) || titleOrUid,
+            uid: getPageUidByPageTitle(possibleTitle) || extractRef(titleOrUid),
             excludes,
           };
         });
