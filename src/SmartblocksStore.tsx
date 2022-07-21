@@ -28,14 +28,12 @@ import getSubTree from "roamjs-components/util/getSubTree";
 import createBlock from "roamjs-components/writes/createBlock";
 import deleteBlock from "roamjs-components/writes/deleteBlock";
 import getBasicTreeByParentUid from "roamjs-components/queries/getBasicTreeByParentUid";
-import getCurrentUserEmail from "roamjs-components/queries/getCurrentUserEmail";
 import getCurrentUserUid from "roamjs-components/queries/getCurrentUserUid";
 import getDisplayNameByUid from "roamjs-components/queries/getDisplayNameByUid";
 import getPageUidByPageTitle from "roamjs-components/queries/getPageUidByPageTitle";
 import getShallowTreeByParentUid from "roamjs-components/queries/getShallowTreeByParentUid";
 import { InputTextNode } from "roamjs-components/types/native";
 import { getCleanCustomWorkflows } from "./core";
-import lego from "./img/lego3blocks.png";
 import type Marked from "marked-react";
 import apiGet from "roamjs-components/util/apiGet";
 
@@ -52,7 +50,11 @@ type Smartblocks = {
   description?: string;
 };
 
-const Thumbnail = ({ src = lego }: { src?: string }): React.ReactElement => {
+const Thumbnail = ({
+  src = "https://raw.githubusercontent.com/dvargas92495/roamjs-smartblocks/main/src/img/lego3blocks.png",
+}: {
+  src?: string;
+}): React.ReactElement => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [height, setHeight] = useState(80);
   const [width, setWidth] = useState(80);
@@ -206,12 +208,9 @@ const DrawerContent = ({
           setSelectedSmartBlockAuthorDisplayName(
             selectedSmartBlock.author === window.roamAlphaAPI.graph.name
               ? getSettingValueFromTree({
-                  tree: getSubTree({
-                    tree: getBasicTreeByParentUid(
-                      getPageUidByPageTitle("roam/js/smartblocks")
-                    ),
-                    key: "publish",
-                  }).children,
+                  tree: getBasicTreeByParentUid(
+                    getPageUidByPageTitle("roam/js/smartblocks")
+                  ),
                   key: "display name",
                   defaultValue: getDisplayNameByUid(getCurrentUserUid()),
                 })
@@ -273,7 +272,7 @@ const DrawerContent = ({
   const buttonOnClick = () => {
     setLoading(true);
     setError("");
-    apiGet<{secret: string, workflow: string}>({
+    apiGet<{ secret: string; workflow: string }>({
       path: `smartblocks-store`,
       data: {
         uuid: selectedSmartBlockId,

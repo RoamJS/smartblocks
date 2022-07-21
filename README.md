@@ -37,6 +37,8 @@ The following steps dive into all the features SmartBlocks has to offer in incre
 ## Demo
 
 [![](https://cdn.loom.com/sessions/thumbnails/954d916643754027a3889fd5bf7f24dd-with-play.gif)](https://www.loom.com/share/954d916643754027a3889fd5bf7f24dd)
+<!-- <div style="position: relative; padding-bottom: 66.66666666666666%; height: 0;"><iframe src="https://www.loom.com/embed/954d916643754027a3889fd5bf7f24dd" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></iframe></div> -->
+
 
 ## Migration
 

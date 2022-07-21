@@ -9,6 +9,8 @@ on:
 
 env:
   API_URL: https://lambda.roamjs.com
+  ROAMJS_DEVELOPER_TOKEN: ${{ secrets.ROAMJS_DEVELOPER_TOKEN }}
+  ROAMJS_RELEASE_TOKEN: ${{ secrets.ROAMJS_RELEASE_TOKEN }}
 
 jobs:
   deploy:
@@ -18,12 +20,6 @@ jobs:
       - name: install
         run: npm install
       - name: build
-        run: npm run build
-      - name: RoamJS Publish
-        uses: dvargas92495/roamjs-publish@0.4.3
-        with:
-          token: ${{ secrets.ROAMJS_DEVELOPER_TOKEN }}
-          source: build
-          path: smartblocks
-          release_token: ${{ secrets.ROAMJS_RELEASE_TOKEN }}
-          email: dvargas92495@gmail.com
+        run: npx roamjs-scripts build
+      - name: publish
+        run: npx roamjs-scripts publish --branch SmartBlocks --depot

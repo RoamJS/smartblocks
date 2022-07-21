@@ -13,8 +13,6 @@ import getPageUidByPageTitle from "roamjs-components/queries/getPageUidByPageTit
 import getTextByBlockUid from "roamjs-components/queries/getTextByBlockUid";
 import { RoamBasicNode } from "roamjs-components/types";
 import { getCoords } from "./dom";
-import lego from "./img/lego3blocks.png";
-import gear from "./img/gear.png";
 import {
   getVisibleCustomWorkflows,
   predefinedWorkflows,
@@ -205,7 +203,11 @@ const SmartblocksMenu = ({
                   text={
                     <>
                       <img
-                        src={PREDEFINED_REGEX.test(wf.uid) ? gear : lego}
+                        src={
+                          PREDEFINED_REGEX.test(wf.uid)
+                            ? "https://raw.githubusercontent.com/dvargas92495/roamjs-smartblocks/main/src/img/gear.png"
+                            : "https://raw.githubusercontent.com/dvargas92495/roamjs-smartblocks/main/src/img/lego3blocks.png"
+                        }
                         alt={""}
                         width={15}
                         style={{ marginRight: 4 }}

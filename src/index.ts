@@ -47,7 +47,6 @@ import {
   sbBomb,
   smartBlocksContext,
 } from "./core";
-import lego from "./img/lego3blocks.png";
 import { Intent } from "@blueprintjs/core";
 import HotKeyPanel, { SmartblockHotKeys } from "./HotKeyPanel";
 import XRegExp from "xregexp";
@@ -61,9 +60,7 @@ import type {
   CustomField,
   Field,
 } from "roamjs-components/components/ConfigPanels/types";
-import {
-  addTokenDialogCommand
-} from "roamjs-components/components/TokenDialog";
+import { addTokenDialogCommand } from "roamjs-components/components/TokenDialog";
 
 const getLegacy42Setting = (name: string) => {
   const settings = Object.fromEntries(
@@ -81,7 +78,7 @@ const COMMAND_ENTRY_REGEX = /<%$/;
 const COLORS = ["darkblue", "darkred", "darkgreen", "darkgoldenrod"];
 export default runExtension({
   extensionId,
-  run: async () => {
+  run: async ({ extensionAPI }) => {
     const smartblockHotKeys: SmartblockHotKeys = {
       uidToMapping: {},
       mappingToBlock: {},
@@ -184,6 +181,13 @@ export default runExtension({
                 description:
                   "Uses command highlighting to help write SmartBlock Workflows",
               },
+              {
+                Panel: TextPanel,
+                title: "display name",
+                description:
+                  "The display name that will appear in the store next to your workflow. By default, your display name in Roam will be shown. If not set, then your graph name will be shown.",
+                defaultValue: getDisplayNameByUid(getCurrentUserUid()),
+              },
             ],
           },
           {
@@ -215,22 +219,21 @@ export default runExtension({
             ],
             toggleable: true,
           },
-          {
-            id: "publish",
-            fields: [
-              {
-                Panel: TextPanel,
-                title: "display name",
-                description:
-                  "The display name that will appear in the store next to your workflow. By default, your display name in Roam will be shown. If not set, then your graph name will be shown.",
-                defaultValue: getDisplayNameByUid(getCurrentUserUid()),
-              },
-            ],
-          },
         ],
         versioning: true,
       },
     });
+    // extensionAPI.settings.panel.create({
+    //   tabTitle: "SmartBlocks Home",
+    //   settings: [
+    //     {
+    //       id: "foo",
+    //       name: "Foo",
+    //       description: "Foo bar fo fung",
+    //       action: { type: "switch" },
+    //     },
+    //   ],
+    // });
 
     const tree = getBasicTreeByParentUid(pageUid);
     const isCustomOnly = tree.some((t) =>
@@ -729,7 +732,8 @@ export default runExtension({
             });
             if (!hideButtonIcon) {
               const img = new Image();
-              img.src = lego;
+              img.src =
+                "https://raw.githubusercontent.com/dvargas92495/roamjs-smartblocks/main/src/img/lego3blocks.png";
               img.width = 17;
               img.height = 14;
               img.style.marginRight = "7px";

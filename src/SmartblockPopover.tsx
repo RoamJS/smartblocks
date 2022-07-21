@@ -26,8 +26,8 @@ import getSettingValueFromTree from "roamjs-components/util/getSettingValueFromT
 import { render as renderToast } from "roamjs-components/components/Toast";
 import toFlexRegex from "roamjs-components/util/toFlexRegex";
 import useSubTree from "roamjs-components/hooks/useSubTree";
-import lego from "./img/lego3blocks.png";
 import { HIDE_REGEX } from "./core";
+import getBlockUidAndTextIncludingText from "roamjs-components/queries/getBlockUidAndTextIncludingText";
 
 const toInputTextNode = (n: TreeNode): InputTextNode => ({
   text: n.text,
@@ -91,21 +91,12 @@ const Content = ({
     []
   );
   const pageTree = useMemo(() => getBasicTreeByParentUid(pageUid), [pageUid]);
-  const { uid: publishUid, children: publishChildren } = useSubTree({
+  const { text: displayName } = useSubTree({
     tree: pageTree,
-    key: "publish",
+    key: "display name",
     parentUid: pageUid,
     order: 3,
   });
-  const displayName = useMemo(
-    () =>
-      getSettingValueFromTree({
-        tree: publishChildren,
-        key: "display name",
-        defaultValue: getDisplayNameByUid(getCurrentPageUid()),
-      }),
-    [publishChildren]
-  );
   const [error, setError] = useState("");
 
   const {
@@ -148,10 +139,10 @@ const Content = ({
           }).then(async (r) => {
             const ref = `((${blockUid}))`;
             const refUid =
-              publishChildren.find((t) => t.text.trim() === ref)?.uid ||
+              pageTree.find((t) => t.text.trim() === ref)?.uid ||
               (await createBlock({
                 node: { text: ref },
-                parentUid: publishUid,
+                parentUid: pageUid,
                 order: 1,
               }));
             const uuidUid =
@@ -191,15 +182,17 @@ const Content = ({
               data: { uuid: uuid[0], graph: window.roamAlphaAPI.graph.name },
             }).then(() => {
               const ref = `((${blockUid}))`;
-              const refUid = publishChildren.find(
-                (t) => t.text.trim() === ref
-              )?.uid;
-              deleteBlock(refUid);
-              onClose();
-              renderToast({
-                id: "roamjs-smartblock-delete-success",
-                content: `Successfully deleted workflow from the SmartBlocks Store.`,
-                intent: Intent.SUCCESS,
+              Promise.all(
+                getBlockUidAndTextIncludingText(ref).map((b) =>
+                  deleteBlock(b.uid)
+                )
+              ).then(() => {
+                onClose();
+                renderToast({
+                  id: "roamjs-smartblock-delete-success",
+                  content: `Successfully deleted workflow from the SmartBlocks Store.`,
+                  intent: Intent.SUCCESS,
+                });
               });
             })
           }
@@ -222,7 +215,12 @@ const SmartblockPopover = ({
   return (
     <Popover
       target={
-        <img className={"roamjs-smartblocks-popover-target"} src={lego} />
+        <img
+          className={"roamjs-smartblocks-popover-target"}
+          src={
+            "https://raw.githubusercontent.com/dvargas92495/roamjs-smartblocks/main/src/img/lego3blocks.png"
+          }
+        />
       }
       content={<Content blockUid={blockUid} onClose={onClose} />}
       isOpen={isOpen}

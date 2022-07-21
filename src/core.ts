@@ -558,6 +558,16 @@ export const COMMANDS: {
     },
   },
   {
+    text: "RANDOMNUMBER",
+    help: "Return a random number between two values.\n\n1: Min\n2:Max",
+    handler: (min, max) => {
+      return (
+        Math.floor(Math.random() * (Number(max) - Number(min) + 1)) +
+        parseInt(min)
+      ).toString();
+    },
+  },
+  {
     text: "RANDOMPAGE",
     help: "Returns random page from graph",
     handler: () => {
@@ -1004,7 +1014,7 @@ export const COMMANDS: {
     handler: (...args: string[]) => {
       if (process.env.ROAM_MARKETPLACE) {
         return "The ELSE command is no longer available. Visit https://roamjs.com/extensions/smartblocks/migration_guide#1MPiDsoO- for help on how to migrate.";
-      }      
+      }
       if (smartBlocksContext.ifCommand === false) {
         smartBlocksContext.ifCommand = undefined;
         return args.join(",");
