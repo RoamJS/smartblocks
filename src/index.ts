@@ -61,6 +61,9 @@ import type {
   CustomField,
   Field,
 } from "roamjs-components/components/ConfigPanels/types";
+import {
+  addTokenDialogCommand
+} from "roamjs-components/components/TokenDialog";
 
 const getLegacy42Setting = (name: string) => {
   const settings = Object.fromEntries(
@@ -819,6 +822,7 @@ export default runExtension({
           }
         })
       : [];
+    addTokenDialogCommand();
 
     return {
       elements: [style],
