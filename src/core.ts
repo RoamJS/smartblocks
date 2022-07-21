@@ -512,7 +512,8 @@ export const COMMANDS: {
     help: "Returns a random child block from a page or block ref\n\n1: Page name or UID.\n\n2: Levels Included\n\n3: Format",
     handler: (titleOrUid = "", levelsIncluded = "0", format = "(({uid}))") => {
       const possibleTitle = extractTag(titleOrUid);
-      const parentUid = getPageUidByPageTitle(possibleTitle) || extractRef(titleOrUid);
+      const parentUid =
+        getPageUidByPageTitle(possibleTitle) || extractRef(titleOrUid);
       const levels = Number(levelsIncluded) || 0;
       const uids = levels
         ? getShallowTreeByParentUid(parentUid).map((u) => u.uid)
@@ -722,31 +723,53 @@ export const COMMANDS: {
     illegal: true,
     text: "JAVASCRIPT",
     help: "DEPRECATED",
-    handler: javascriptHandler(Function),
+    handler: (...args) => {
+      if (process.env.ROAM_MARKETPLACE) {
+        return "The JAVASCRIPT command is no longer available. Visit https://roamjs.com/extensions/smartblocks/migration_guide#1MPiDsoO- for help on how to migrate.";
+      }
+      return javascriptHandler(Function)(...args);
+    },
   },
   {
     illegal: true,
     text: "J",
     help: "DEPRECATED",
-    handler: javascriptHandler(Function),
+    handler: (...args) => {
+      if (process.env.ROAM_MARKETPLACE) {
+        return "The J command is no longer available. Visit https://roamjs.com/extensions/smartblocks/migration_guide#1MPiDsoO- for help on how to migrate.";
+      }
+      return javascriptHandler(Function)(...args);
+    },
   },
   {
     illegal: true,
     text: "JAVASCRIPTASYNC",
     help: "DEPRECATED",
-    handler: javascriptHandler(AsyncFunction),
+    handler: (...args) => {
+      if (process.env.ROAM_MARKETPLACE) {
+        return "The JAVASCRIPTASYNC command is no longer available. Visit https://roamjs.com/extensions/smartblocks/migration_guide#1MPiDsoO- for help on how to migrate.";
+      }
+      return javascriptHandler(AsyncFunction)(...args);
+    },
   },
   {
     illegal: true,
     text: "JA",
     help: "DEPRECATED",
-    handler: javascriptHandler(AsyncFunction),
+    handler: (...args) => {
+      if (process.env.ROAM_MARKETPLACE) {
+        return "The JA command is no longer available. Visit https://roamjs.com/extensions/smartblocks/migration_guide#1MPiDsoO- for help on how to migrate.";
+      }
+      return javascriptHandler(AsyncFunction)(...args);
+    },
   },
   {
     text: "ONBLOCKEXIT",
     illegal: true,
     help: "DEPRECATED",
-    handler: () => "",
+    // no one used this command anyway...
+    handler: () =>
+      "The ONBLOCKEXIT command is no longer available. Visit https://roamjs.com/extensions/smartblocks/migration_guide#1MPiDsoO- for help on how to migrate.",
   },
   {
     text: "BREADCRUMBS",
@@ -933,6 +956,9 @@ export const COMMANDS: {
     text: "IF",
     help: "DEPRECATED",
     handler: (condition = "false", then, els) => {
+      if (process.env.ROAM_MARKETPLACE) {
+        return "The IF command is no longer available. Visit https://roamjs.com/extensions/smartblocks/migration_guide#1MPiDsoO- for help on how to migrate.";
+      }
       try {
         const evaluated = eval(condition);
         if (evaluated) {
@@ -959,8 +985,11 @@ export const COMMANDS: {
     illegal: true,
     text: "THEN",
     delayArgs: true,
-    help: "Used with IF when IF is true\n\n1: Text to be inserted",
+    help: "DEPRECATED",
     handler: (...args: string[]) => {
+      if (process.env.ROAM_MARKETPLACE) {
+        return "The THEN command is no longer available. Visit https://roamjs.com/extensions/smartblocks/migration_guide#1MPiDsoO- for help on how to migrate.";
+      }
       if (smartBlocksContext.ifCommand) {
         smartBlocksContext.ifCommand = undefined;
         return proccessBlockText(args.join(","));
@@ -971,8 +1000,11 @@ export const COMMANDS: {
   {
     illegal: true,
     text: "ELSE",
-    help: "Used with IF when IF is false\n\n1: Text to be inserted",
+    help: "DEPRECATED",
     handler: (...args: string[]) => {
+      if (process.env.ROAM_MARKETPLACE) {
+        return "The ELSE command is no longer available. Visit https://roamjs.com/extensions/smartblocks/migration_guide#1MPiDsoO- for help on how to migrate.";
+      }      
       if (smartBlocksContext.ifCommand === false) {
         smartBlocksContext.ifCommand = undefined;
         return args.join(",");
@@ -983,8 +1015,11 @@ export const COMMANDS: {
   {
     illegal: true,
     text: "IFTRUE",
-    help: "Test if parameter is true. If true, the block is output.\n\n1: Logic to be evaluated",
+    help: "DEPRECATED",
     handler: (condition) => {
+      if (process.env.ROAM_MARKETPLACE) {
+        return "The IFTRUE command is no longer available. Visit https://roamjs.com/extensions/smartblocks/migration_guide#1MPiDsoO- for help on how to migrate.";
+      }
       try {
         if (!eval(condition)) {
           smartBlocksContext.exitBlock = "yes";
