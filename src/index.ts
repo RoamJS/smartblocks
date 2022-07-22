@@ -359,27 +359,29 @@ export default runExtension({
           });
         } else if (COMMAND_ENTRY_REGEX.test(valueToCursor)) {
           renderCursorMenu({
-            initialItems: COMMANDS.map(({ text, help }) => ({
-              text,
-              id: text,
-              help,
-            })).concat([
-              {
-                text: "NOCURSOR",
-                id: "NOCURSOR",
-                help: "Workflow modifier that removes the cursor from Roam Blocks at the end of the workflow",
-              },
-              {
-                text: "HIDE",
-                id: "HIDE",
-                help: "Workflow modifier that hides this workflow from the standard SmartBlock menu execution",
-              },
-              ...customCommands.map(({ text, help }) => ({
+            initialItems: COMMANDS.filter((c) => !c.illegal)
+              .map(({ text, help }) => ({
                 text,
                 id: text,
                 help,
-              })),
-            ]),
+              }))
+              .concat([
+                {
+                  text: "NOCURSOR",
+                  id: "NOCURSOR",
+                  help: "Workflow modifier that removes the cursor from Roam Blocks at the end of the workflow",
+                },
+                {
+                  text: "HIDE",
+                  id: "HIDE",
+                  help: "Workflow modifier that hides this workflow from the standard SmartBlock menu execution",
+                },
+                ...customCommands.map(({ text, help }) => ({
+                  text,
+                  id: text,
+                  help,
+                })),
+              ]),
             onItemSelect: async (item) => {
               const { blockUid } = getUids(textarea);
               const suffix = textarea.value.substring(textarea.selectionStart);

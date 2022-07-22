@@ -2229,7 +2229,7 @@ export const sbBomb = async ({
           tree: dontShowAgainNode.children,
         });
 
-        if (!exists.uid) {
+        if (!exists.uid && process.env.ROAM_MARKETPLACE !== "true") {
           renderSimpleAlert({
             content: `WARNING: The SmartBlocks workflow you just ran uses the following commands:
 
@@ -2238,7 +2238,7 @@ ${Array.from(smartBlocksContext.illegalCommands)
   .map((c) => `- \`${c}\``)
   .join("\n")}
 
-These commands will soon be removed in a future version of SmartBlocks. Please visit our [migration guide](https://roamjs.com/extensions/smartblocks/migration_guide) on how to migrate away from these commands, or contact the original author of the SmartBlock workflow for an update.
+These commands are removed in the RoamDepot version of SmartBlocks, which will be the primary version maintained going forward. Please visit our [migration guide](https://roamjs.com/extensions/smartblocks/migration_guide) on how to migrate away from these commands, or contact the original author of the SmartBlock workflow for an update.
 `,
             externalLink: true,
             dontShowAgain: dontShowAgainNode.uid,
