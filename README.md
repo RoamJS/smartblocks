@@ -47,6 +47,5 @@ This extension was inspired by and acts as version 2 of the original smartblocks
 
 ## Support
 
-There is an active community at [roamresearch.slack.com](https://join.slack.com/t/roamresearch/shared_invite/zt-ni1vw9yf-HzeWr05ZJBt55j_zfddPsw) channels `#roam42` and `#roamjs` discussing and building SmartBlocks. Stop by if you need help or want to share your ideas.
+There is an active community at [roamresearch.slack.com](https://join.slack.com/t/roamresearch/shared_invite/zt-xy0pd90x-c0KDkgh1BeLKyi0iUlJ1CA) channels `#roam42` and `#roamjs` discussing and building SmartBlocks. Stop by if you need help or want to share your ideas.
 
-[Slack Invite Here](https://join.slack.com/t/roamresearch/shared_invite/zt-ni1vw9yf-HzeWr05ZJBt55j_zfddPsw) 
