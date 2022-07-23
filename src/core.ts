@@ -1421,9 +1421,18 @@ export const COMMANDS: {
       const settings = new Set(args);
       const raw = await navigator.clipboard.readText();
       const postTrim = settings.has("trim") ? raw.trim() : raw;
+      const postCarriage = settings.has("nocarriagereturn")
+        ? postTrim.replace(/\r\n/g, "")
+        : postTrim;
+      const postHyphens = settings.has("nohyphens")
+        ? postCarriage.replace(/- /g, "")
+        : postCarriage;
+      const postSpaces = settings.has("noextraspaces")
+        ? postHyphens.replace(/\s\s+/g, " ")
+        : postHyphens;
       const postSplit = settings.has("split")
-        ? postTrim.split(/(?:\r)?\n/)
-        : [postTrim];
+        ? postSpaces.split(/(?:\r)?\n/)
+        : [postSpaces];
       return postSplit;
     },
   },
