@@ -23,4 +23,4 @@ jobs:
       - name: build
         run: npx roamjs-scripts build
       - name: publish
-        run: npx roamjs-scripts publish --branch SmartBlocks --depot
+        run: npx roamjs-scripts publish --depot

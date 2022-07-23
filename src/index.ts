@@ -50,7 +50,6 @@ import {
 import { Intent } from "@blueprintjs/core";
 import HotKeyPanel, { SmartblockHotKeys } from "./HotKeyPanel";
 import XRegExp from "xregexp";
-import React from "react";
 import TextPanel from "roamjs-components/components/ConfigPanels/TextPanel";
 import FlagPanel from "roamjs-components/components/ConfigPanels/FlagPanel";
 import CustomPanel from "roamjs-components/components/ConfigPanels/CustomPanel";
@@ -77,15 +76,12 @@ const CONFIG = toConfigPageName(extensionId);
 const COMMAND_ENTRY_REGEX = /<%$/;
 const COLORS = ["darkblue", "darkred", "darkgreen", "darkgoldenrod"];
 export default runExtension({
+  migratedTo: "SmartBlocks",
   extensionId,
   run: async ({ extensionAPI }) => {
     const smartblockHotKeys: SmartblockHotKeys = {
       uidToMapping: {},
       mappingToBlock: {},
-    };
-    const nextDailyRun: { current: string; timeout: number } = {
-      current: "Unscheduled",
-      timeout: 0,
     };
     const style = addStyle(`.roamjs-smartblocks-popover-target {
   display:inline-block;
@@ -206,16 +202,6 @@ export default runExtension({
                 description:
                   "The time (24hr format) when the daily workflow is triggered each day.",
               },
-              {
-                title: "scheduled",
-                description:
-                  "Tells you when the next Daily Smartblock is currently scheduled to fire",
-                options: {
-                  component: () =>
-                    React.createElement("p", {}, nextDailyRun.current),
-                },
-                Panel: CustomPanel,
-              } as Field<CustomField>,
             ],
             toggleable: true,
           },
@@ -223,17 +209,57 @@ export default runExtension({
         versioning: true,
       },
     });
-    // extensionAPI.settings.panel.create({
-    //   tabTitle: "SmartBlocks Home",
-    //   settings: [
-    //     {
-    //       id: "foo",
-    //       name: "Foo",
-    //       description: "Foo bar fo fung",
-    //       action: { type: "switch" },
-    //     },
-    //   ],
-    // });
+    extensionAPI.settings.panel.create({
+      tabTitle: "SmartBlocks",
+      settings: [
+        {
+          id: "command-palette",
+          name: "Command Palette",
+          description:
+            "Whether or not your custom workflows are accessible from Roam's command palette",
+          action: {
+            type: "switch",
+            onChange: (e) => toggleCommandPalette((e.target as HTMLInputElement).checked),
+          },
+        },
+      ],
+    });
+    const toggleCommandPalette = (flag: boolean) => {
+      const workflows = getCleanCustomWorkflows();
+      if (flag) {
+        workflows.forEach((wf) => {
+          window.roamAlphaAPI.ui.commandPalette.addCommand({
+            label: `Trigger SmartBlock: ${wf.name}`,
+            callback: () => {
+              const targetUid =
+                window.roamAlphaAPI.ui.getFocusedBlock()?.["block-uid"];
+              if (targetUid) {
+                sbBomb({
+                  srcUid: wf.uid,
+                  target: { uid: targetUid, isPage: false },
+                });
+              } else {
+                window.roamAlphaAPI.ui.mainWindow
+                  .getOpenPageOrBlockUid()
+                  .then((uid) =>
+                    sbBomb({
+                      srcUid: wf.uid,
+                      target: { uid, isPage: true },
+                    })
+                  );
+              }
+            },
+          });
+        });
+      } else {
+        workflows.forEach((wf) => {
+          window.roamAlphaAPI.ui.commandPalette.removeCommand({
+            label: `Trigger SmartBlock: ${wf.name}`,
+          });
+        });
+      }
+    };
+    toggleCommandPalette(!!extensionAPI.settings.get("command-palette"));
 
     const tree = getBasicTreeByParentUid(pageUid);
     const isCustomOnly = tree.some((t) =>
@@ -487,7 +513,7 @@ export default runExtension({
         );
         if (isBefore(today, triggerTime)) {
           const ms = differenceInMilliseconds(triggerTime, today);
-          nextDailyRun.timeout = window.setTimeout(runDaily, ms + 1000);
+          window.setTimeout(runDaily, ms + 1000);
           if (debug) {
             renderToast({
               id: "smartblocks-info",
@@ -569,11 +595,7 @@ export default runExtension({
               }
               const nextRun = addSeconds(addDays(triggerTime, 1), 1);
               const ms = differenceInMilliseconds(nextRun, today);
-              nextDailyRun.timeout = window.setTimeout(runDaily, ms);
-              nextDailyRun.current = `Next Daily SmartBlock scheduled to run at ${dateFnsFormat(
-                nextRun,
-                "yyyy-MM-dd hh:mm:ss a"
-              )}`;
+              window.setTimeout(runDaily, ms);
             })
             .catch((e) =>
               renderToast({
@@ -842,7 +864,6 @@ export default runExtension({
         { type: "input", listener: documentInputListener, el: document },
         { type: "keydown", el: appRoot, listener: appRootKeydownListener },
       ],
-      timeouts: [nextDailyRun],
       commands: [
         OPEN_SMARTBLOCK_STORE_COMMAND_LABEL,
         RUN_MULTIPLE_SMARTBLOCKS_COMMAND_LABEL,

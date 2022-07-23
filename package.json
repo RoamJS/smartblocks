@@ -6,8 +6,7 @@
   "scripts": {
     "prebuild:roam": "npm install",
     "build:roam": "roamjs-scripts build --depot",
-    "dev": "roamjs-scripts dev",
-    "dev:roam": "roamjs-scripts dev --depot",
+    "dev": "roamjs-scripts dev --depot",
     "lambdas": "roamjs-scripts lambdas",
     "preserver": "roamjs-scripts lambdas --build",
     "server": "localhost-lambdas",
