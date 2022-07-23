@@ -10,7 +10,7 @@ SmartBlocks makes it easy to reuse text in a dynamic way in Roam. It can be comp
 
 - **Commands:** Commands are instructions that make your SmartBlock workflow do amazing and dynamic things.
 
-- **Trigger:** The keystrokes you type so that the workflow is run. The default keystroke is `jj`
+- **Trigger:** The keystrokes you type so that the workflow is run. The default keystroke is `jj`.
 
 
 ## Table of Contents
