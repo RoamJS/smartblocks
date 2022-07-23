@@ -43,7 +43,7 @@ The following steps dive into all the features SmartBlocks has to offer in incre
 
 ## Migration
 
-This extension was inspired by and acts as version 2 of the original smartblocks module in the [Roam42](https://roamjs.com/extensions/roam42) extension. It will soon replace the current smartblocks module in Roam42. For a list of all the non-backward compatible changes from V1 to V2, check out out [Migration Guide](/extensions/smartblocks/migration_guide).
+This extension was inspired by and acts as version 2 of the original SmartBlocks module in the [Roam42](https://roamjs.com/extensions/roam42) extension. It will soon replace the current SmartBlocks module in Roam42. For a list of all the non-backward compatible changes from V1 to V2, check out the [Migration Guide](https://roamjs.com/extensions/smartblocks/migration_guide).
 
 ## Support
 
