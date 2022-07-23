@@ -1633,65 +1633,73 @@ export const COMMANDS: {
         ["GOTOBLOCK", "GRAPH"].some((s) => args[args.length - 1].includes(s))
           ? args[args.length - 1]
           : undefined;
-      const pageOrUidArg = (afterNavArg ? args.slice(0, -1) : args)
-        .join(",")
-        .trim();
-      const pageOrUid =
-        smartBlocksContext.variables[pageOrUidArg] || pageOrUidArg;
-      const uid =
-        getPageUidByPageTitle(extractTag(pageOrUid)) || extractRef(pageOrUid);
+      const pageOrUidArgs = afterNavArg ? args.slice(0, -1) : args;
+      const pageOrUids = pageOrUidArgs.map(
+        (pageOrUidArg) =>
+          smartBlocksContext.variables[pageOrUidArg] || pageOrUidArg
+      );
+      const uids = pageOrUids.map((pageOrUid) => ({
+        uid:
+          getPageUidByPageTitle(extractTag(pageOrUid)) || extractRef(pageOrUid),
+        pageOrUid,
+      }));
       const refsToCreate = new Set(
         Object.values(smartBlocksContext.refMapping)
       );
-      return (
-        !getPageTitleByPageUid(uid) &&
-        !getTextByBlockUid(uid) &&
-        !refsToCreate.has(uid)
-          ? createPage({ title: pageOrUid })
-          : Promise.resolve(uid)
-      ).then((navUid) => {
-        const openInSidebar = () =>
-          window.roamAlphaAPI.ui.rightSidebar.open().then(() => {
-            if (/GRAPH/.test(afterNavArg)) {
-              return window.roamAlphaAPI.ui.rightSidebar.addWindow({
-                window: { type: "graph", "block-uid": navUid },
+      return Promise.all(
+        uids.map(({ uid, pageOrUid }) =>
+          (!getPageTitleByPageUid(uid) &&
+          !getTextByBlockUid(uid) &&
+          !refsToCreate.has(uid)
+            ? createPage({ title: pageOrUid })
+            : Promise.resolve(uid)
+          ).then((navUid) => {
+            const openInSidebar = () =>
+              window.roamAlphaAPI.ui.rightSidebar.open().then(() => {
+                if (/GRAPH/.test(afterNavArg)) {
+                  return window.roamAlphaAPI.ui.rightSidebar.addWindow({
+                    window: { type: "graph", "block-uid": navUid },
+                  });
+                } else if (/GOTOBLOCK/.test(afterNavArg)) {
+                  const blockNumber =
+                    Number(afterNavArg.replace(/GOTOBLOCK/, "").trim()) || 1;
+                  const blocks = Array.from(
+                    document.querySelectorAll<HTMLDivElement>(
+                      ".sidebar-content>div:first-child .rm-block-text"
+                    )
+                  );
+                  const index =
+                    blockNumber > 0
+                      ? blockNumber - 1
+                      : blocks.length + blockNumber;
+                  if (index >= 0 && index < blocks.length) {
+                    const { blockUid } = getUids(blocks[index]);
+                    const windowId =
+                      window.roamAlphaAPI.ui.rightSidebar.getWindows()[0][
+                        "window-id"
+                      ];
+                    return window.roamAlphaAPI.ui.setBlockFocusAndSelection({
+                      location: {
+                        "window-id": windowId,
+                        "block-uid": blockUid,
+                      },
+                    });
+                  }
+                } else {
+                  return window.roamAlphaAPI.ui.rightSidebar.addWindow({
+                    window: { type: "block", "block-uid": navUid },
+                  });
+                }
               });
-            } else if (/GOTOBLOCK/.test(afterNavArg)) {
-              const blockNumber =
-                Number(afterNavArg.replace(/GOTOBLOCK/, "").trim()) || 1;
-              const blocks = Array.from(
-                document.querySelectorAll<HTMLDivElement>(
-                  ".sidebar-content>div:first-child .rm-block-text"
-                )
-              );
-              const index =
-                blockNumber > 0 ? blockNumber - 1 : blocks.length + blockNumber;
-              if (index >= 0 && index < blocks.length) {
-                const { blockUid } = getUids(blocks[index]);
-                const windowId =
-                  window.roamAlphaAPI.ui.rightSidebar.getWindows()[0][
-                    "window-id"
-                  ];
-                return window.roamAlphaAPI.ui.setBlockFocusAndSelection({
-                  location: {
-                    "window-id": windowId,
-                    "block-uid": blockUid,
-                  },
-                });
-              }
+            if (refsToCreate.has(navUid)) {
+              smartBlocksContext.afterWorkflowMethods.push(openInSidebar);
             } else {
-              return window.roamAlphaAPI.ui.rightSidebar.addWindow({
-                window: { type: "block", "block-uid": navUid },
-              });
+              openInSidebar();
             }
-          });
-        if (refsToCreate.has(navUid)) {
-          smartBlocksContext.afterWorkflowMethods.push(openInSidebar);
-        } else {
-          openInSidebar();
-        }
-        return "";
-      });
+            return "";
+          })
+        )
+      ).then(() => "");
     },
   },
   {
