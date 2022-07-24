@@ -1531,6 +1531,11 @@ export const COMMANDS: {
     handler: (...args: string[]) => `[[${args.join(",")}]]`,
   },
   {
+    text: "BUTTON",
+    help: "Returns the arguments as a Roam button, so that your workflow definition doesn't create a button.",
+    handler: (...args: string[]) => `{{${args.join(",")}}}`,
+  },
+  {
     text: "OPENPAGE",
     help: "Opens or creates a page or block ref\n\n1. Page name or block ref\n\n2. A behavior to perform after navigating.",
     handler: (...args) => {
