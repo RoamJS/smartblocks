@@ -48,18 +48,12 @@ import {
   smartBlocksContext,
 } from "./core";
 import { Intent } from "@blueprintjs/core";
-import HotKeyPanel, { SmartblockHotKeys } from "./HotKeyPanel";
+import HotKeyPanel from "./HotKeyPanel";
 import XRegExp from "xregexp";
-import TextPanel from "roamjs-components/components/ConfigPanels/TextPanel";
-import FlagPanel from "roamjs-components/components/ConfigPanels/FlagPanel";
-import CustomPanel from "roamjs-components/components/ConfigPanels/CustomPanel";
-import TimePanel from "roamjs-components/components/ConfigPanels/TimePanel";
 import apiPut from "roamjs-components/util/apiPut";
-import type {
-  CustomField,
-  Field,
-} from "roamjs-components/components/ConfigPanels/types";
 import { addTokenDialogCommand } from "roamjs-components/components/TokenDialog";
+import migrateLegacySettings from "roamjs-components/util/migrateLegacySettings";
+import DailyConfig from "./DailyConfig";
 
 const getLegacy42Setting = (name: string) => {
   const settings = Object.fromEntries(
@@ -79,10 +73,29 @@ export default runExtension({
   migratedTo: "SmartBlocks",
   extensionId,
   run: async ({ extensionAPI }) => {
-    const smartblockHotKeys: SmartblockHotKeys = {
-      uidToMapping: {},
-      mappingToBlock: {},
-    };
+    migrateLegacySettings({
+      extensionAPI,
+      extensionId,
+      specialKeys: {
+        "hot keys": (n) =>
+          Object.fromEntries(
+            n.children.map((c) => [c.text, c.children[0]?.text])
+          ),
+        daily: (n) => {
+          return {
+            "workflow name": getSettingValueFromTree({
+              tree: n.children,
+              key: "workflow name",
+            }),
+            latest: getSettingValueFromTree({
+              tree: n.children,
+              key: "latest",
+            }),
+            time: getSettingValueFromTree({ tree: n.children, key: "time" }),
+          };
+        },
+      },
+    });
     const style = addStyle(`.roamjs-smartblocks-popover-target {
   display:inline-block;
   height:14px;
@@ -126,104 +139,10 @@ export default runExtension({
   height: 48px;
 }
 
-.roamjs-smartblock-hotkey-block {
-  max-width: 160px;
-  width: 160px;
-  min-width: 160px;
-  margin: 0 4px;
-}
-
 .roamjs-smartblock-menu {
   width: 300px;
 }`);
-    const { pageUid, observer: configObserver } = await createConfigObserver({
-      title: CONFIG,
-      config: {
-        tabs: [
-          {
-            id: "home",
-            fields: [
-              {
-                Panel: TextPanel,
-                title: "trigger",
-                description:
-                  "The key combination to used to pull up the smart blocks menu",
-                defaultValue: "jj",
-              },
-              {
-                title: "custom only",
-                Panel: FlagPanel,
-                description:
-                  "If checked, will exclude all the predefined workflows from Smart Blocks Menu",
-              },
-              {
-                title: "hide button icon",
-                Panel: FlagPanel,
-                description:
-                  "If checked, there will no longer appear a SmartBlocks logo on SmartBlocks buttons",
-              },
-              {
-                title: "hot keys",
-                description:
-                  "Map specific Smartblock workflows to a given hot key, with either an input combination or global modifier",
-                options: {
-                  component: HotKeyPanel(smartblockHotKeys),
-                },
-                Panel: CustomPanel,
-              } as Field<CustomField>,
-              {
-                title: "highlighting",
-                Panel: FlagPanel,
-                description:
-                  "Uses command highlighting to help write SmartBlock Workflows",
-              },
-              {
-                Panel: TextPanel,
-                title: "display name",
-                description:
-                  "The display name that will appear in the store next to your workflow. By default, your display name in Roam will be shown. If not set, then your graph name will be shown.",
-                defaultValue: getDisplayNameByUid(getCurrentUserUid()),
-              },
-            ],
-          },
-          {
-            id: "daily",
-            fields: [
-              {
-                Panel: TextPanel,
-                title: "workflow name",
-                description:
-                  "The workflow name used to automatically trigger on each day's daily note page.",
-                defaultValue: "Daily",
-              },
-              {
-                Panel: TimePanel,
-                title: "time",
-                description:
-                  "The time (24hr format) when the daily workflow is triggered each day.",
-              },
-            ],
-            toggleable: true,
-          },
-        ],
-        versioning: true,
-      },
-    });
-    extensionAPI.settings.panel.create({
-      tabTitle: "SmartBlocks",
-      settings: [
-        {
-          id: "command-palette",
-          name: "Command Palette",
-          description:
-            "Whether or not your custom workflows are accessible from Roam's command palette",
-          action: {
-            type: "switch",
-            onChange: (e) => toggleCommandPalette((e.target as HTMLInputElement).checked),
-          },
-        },
-      ],
-    });
+
     const toggleCommandPalette = (flag: boolean) => {
       const workflows = getCleanCustomWorkflows();
       if (flag) {
@@ -259,22 +178,117 @@ export default runExtension({
         });
       }
     };
-    toggleCommandPalette(!!extensionAPI.settings.get("command-palette"));
 
-    const tree = getBasicTreeByParentUid(pageUid);
-    const isCustomOnly = tree.some((t) =>
-      toFlexRegex("custom only").test(t.text)
-    );
-    const hideButtonIcon = tree.some((t) =>
-      toFlexRegex("hide button icon").test(t.text)
-    );
-    const dailyConfig = getSubTree({ tree, key: "daily" });
-    const hotkeyConfig = getSubTree({ tree, key: "hot keys" });
-    hotkeyConfig.children.forEach(({ uid, text, children }) => {
-      smartblockHotKeys.uidToMapping[uid] = text;
-      smartblockHotKeys.mappingToBlock[text] = children?.[0]?.text;
+    let trigger = "jj";
+    let triggerRegex = /$^/;
+    const refreshTrigger = (value: string) => {
+      trigger = (getLegacy42Setting("SmartBlockTrigger") || value || "jj")
+        .replace(/"/g, "")
+        .replace(/\\/g, "\\\\")
+        .replace(/\+/g, "\\+")
+        .trim();
+      triggerRegex = new RegExp(`${trigger}(.*)$`);
+    };
+
+    let isCustomOnly = extensionAPI.settings.get("custom-only") as boolean;
+    let hideButtonIcon = extensionAPI.settings.get(
+      "hide-button-icon"
+    ) as boolean;
+    let highlighting = extensionAPI.settings.get("highlighting") as boolean;
+    const defaultDisplayName = getDisplayNameByUid(getCurrentUserUid());
+    let displayName = defaultDisplayName;
+
+    extensionAPI.settings.panel.create({
+      tabTitle: "SmartBlocks",
+      settings: [
+        {
+          id: "command-palette",
+          name: "Command Palette",
+          description:
+            "Whether or not your custom workflows are accessible from Roam's command palette",
+          action: {
+            type: "switch",
+            onChange: (e) =>
+              toggleCommandPalette((e.target as HTMLInputElement).checked),
+          },
+        },
+        {
+          action: {
+            type: "input",
+            onChange: (e) => refreshTrigger(e.target.value),
+            placeholder: "jj",
+          },
+          id: "trigger",
+          name: "Trigger",
+          description:
+            "The key combination to used to pull up the smart blocks menu",
+        },
+        {
+          id: "custom-only",
+          name: "Custom Only",
+          action: {
+            type: "switch",
+            onChange: (e) => (isCustomOnly = e.target.checked),
+          },
+          description:
+            "If checked, will exclude all the predefined workflows from Smart Blocks Menu",
+        },
+        {
+          id: "hide-button-icon",
+          name: "Hide Button Icon",
+          action: {
+            type: "switch",
+            onChange: (e) => (hideButtonIcon = e.target.checked),
+          },
+          description:
+            "If checked, there will no longer appear a SmartBlocks logo on SmartBlocks buttons",
+        },
+        {
+          id: "hot-keys",
+          name: "Hot Keys",
+          description:
+            "Map specific Smartblock workflows to a given hot key, with either an input combination or global modifier",
+          action: {
+            type: "reactComponent",
+            component: HotKeyPanel(extensionAPI),
+          },
+        },
+        {
+          id: "highlighting",
+          name: "Highlighting",
+          action: {
+            type: "switch",
+            onChange: (e) => (highlighting = e.target.checked),
+          },
+          description:
+            "Uses command highlighting to help write SmartBlock Workflows",
+        },
+        {
+          action: {
+            type: "input",
+            onChange: (e) => (displayName = e.target.value),
+            placeholder: defaultDisplayName,
+          },
+          id: "display-name",
+          name: "Display Name",
+          description:
+            "The display name that will appear in the store next to your workflow. By default, your display name in Roam will be shown. If not set, then your graph name will be shown.",
+        },
+        {
+          id: "daily",
+          name: "Daily",
+          description:
+            "Enable to trigger a given workflow at a certain time on each day",
+          action: {
+            type: "reactComponent",
+            component: DailyConfig(extensionAPI),
+          },
+        },
+      ],
     });
-    const highlighting = getSubTree({ tree, key: "highlighting" });
+    toggleCommandPalette(!!extensionAPI.settings.get("command-palette"));
+    refreshTrigger(extensionAPI.settings.get("trigger") as string);
+
     const customCommands: { text: string; help: string }[] = [];
 
     window.roamjs.extension.smartblocks = {
@@ -342,19 +356,7 @@ export default runExtension({
         );
       },
     };
-    const trigger = (
-      getLegacy42Setting("SmartBlockTrigger") ||
-      getSettingValueFromTree({
-        tree,
-        key: "trigger",
-        defaultValue: "jj",
-      })
-    )
-      .replace(/"/g, "")
-      .replace(/\\/g, "\\\\")
-      .replace(/\+/g, "\\+")
-      .trim();
-    const triggerRegex = new RegExp(`${trigger}(.*)$`);
+
     let menuLoaded = false;
 
     const documentInputListener = (e: InputEvent) => {
@@ -378,7 +380,7 @@ export default runExtension({
             triggerRegex,
             triggerStart: match.index,
             isCustomOnly,
-            dailyConfig,
+            extensionAPI,
             onClose: () => {
               menuLoaded = false;
             },
@@ -432,7 +434,7 @@ export default runExtension({
           });
         } else {
           const [k, srcUid] =
-            Object.entries(smartblockHotKeys.mappingToBlock)
+            Object.entries(extensionAPI.settings.get("hot-keys"))
               .map(([k, uid]) => [k.split("+"), uid] as const)
               .filter(([k]) => k.every((l) => l.length === 1))
               .find(([k]) =>
@@ -466,7 +468,9 @@ export default runExtension({
           .sort()
           .concat(e.key.toLowerCase())
           .join("+");
-        const srcUid = smartblockHotKeys.mappingToBlock[mapping];
+        const srcUid = (
+          extensionAPI.settings.get("hot-keys") as Record<string, string>
+        )[mapping];
         if (srcUid) {
           e.preventDefault();
           e.stopPropagation();
@@ -492,19 +496,14 @@ export default runExtension({
     appRoot?.addEventListener("keydown", appRootKeydownListener);
 
     const runDaily = () => {
-      if (!!dailyConfig.uid) {
-        const dailyChildren = getBasicTreeByParentUid(dailyConfig.uid);
-        const time = getSettingValueFromTree({
-          tree: dailyChildren,
-          key: "time",
-          defaultValue: "00:00",
-        });
-        const latest = getSettingValueFromTree({
-          tree: dailyChildren,
-          key: "latest",
-          defaultValue: "01-01-1970",
-        });
-        const debug = !!getSubTree({ tree: dailyChildren, key: "debug" }).uid;
+      const dailyConfig = extensionAPI.settings.get("daily") as Record<
+        string,
+        string
+      >;
+      if (!!dailyConfig) {
+        const time = dailyConfig["time"];
+        const latest = dailyConfig["latest"];
+        const debug = process.env.NODE_ENV === "development";
         const [hours, minutes] = time.split(":").map((s) => Number(s));
         const today = new Date();
         const triggerTime = addMinutes(
@@ -547,11 +546,7 @@ export default runExtension({
                 ? parseRoamDateUid(latestUid)
                 : new Date(1970, 0, 1);
               if (isBefore(startOfDay(latestDate), startOfDay(today))) {
-                const dailyWorkflowName = getSettingValueFromTree({
-                  tree: dailyChildren,
-                  key: "workflow name",
-                  defaultValue: "Daily",
-                });
+                const dailyWorkflowName = dailyConfig["workflow name"];
                 const srcUid = getCleanCustomWorkflows().find(
                   ({ name }) => name === dailyWorkflowName
                 )?.uid;
@@ -621,7 +616,7 @@ export default runExtension({
             parentUid: pageUid,
             node: { text: "workflows" },
           }));
-        renderStore({ parentUid });
+        renderStore({ parentUid, extensionAPI });
       },
     });
 
@@ -656,7 +651,7 @@ export default runExtension({
           const span = document.createElement("span");
           s.insertBefore(span, s.firstChild);
           span.onmousedown = (e) => e.stopPropagation();
-          renderPopover(span);
+          renderPopover(span, extensionAPI);
         }
       },
     });
@@ -768,7 +763,7 @@ export default runExtension({
       },
     });
 
-    const highlightingObservers = !!highlighting.uid
+    const highlightingObservers = !!highlighting
       ? createBlockObserver((b) => {
           let colorIndex = 0;
           const flattenTextNodes = (c: ChildNode): ChildNode[] =>
@@ -854,12 +849,7 @@ export default runExtension({
 
     return {
       elements: [style],
-      observers: [
-        configObserver,
-        logoObserver,
-        buttonLogoObserver,
-        ...highlightingObservers,
-      ],
+      observers: [logoObserver, buttonLogoObserver, ...highlightingObservers],
       domListeners: [
         { type: "input", listener: documentInputListener, el: document },
         { type: "keydown", el: appRoot, listener: appRootKeydownListener },

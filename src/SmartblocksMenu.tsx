@@ -11,7 +11,7 @@ import { DAILY_NOTE_PAGE_REGEX } from "roamjs-components/date/constants";
 import getPageTitleByBlockUid from "roamjs-components/queries/getPageTitleByBlockUid";
 import getPageUidByPageTitle from "roamjs-components/queries/getPageUidByPageTitle";
 import getTextByBlockUid from "roamjs-components/queries/getTextByBlockUid";
-import { RoamBasicNode } from "roamjs-components/types";
+import type { OnloadArgs } from "roamjs-components/types/native";
 import { getCoords } from "./dom";
 import {
   getVisibleCustomWorkflows,
@@ -28,7 +28,7 @@ type Props = {
   triggerStart: number;
   triggerRegex: RegExp;
   isCustomOnly: boolean;
-  dailyConfig?: RoamBasicNode;
+  extensionAPI: OnloadArgs["extensionAPI"];
 };
 
 // The block doesn't always have the trigger saved, causing weird race condition errors
@@ -45,7 +45,7 @@ const SmartblocksMenu = ({
   triggerStart,
   triggerRegex,
   isCustomOnly,
-  dailyConfig,
+  extensionAPI,
 }: { onClose: () => void } & Props) => {
   const { ["block-uid"]: blockUid, ["window-id"]: windowId } = useMemo(
     () => window.roamAlphaAPI.ui.getFocusedBlock(),
@@ -95,20 +95,17 @@ const SmartblocksMenu = ({
             },
             mutableCursor: !srcName.includes("<%NOCURSOR%>"),
           }).then(() => {
+            const dailyConfig = extensionAPI.settings.get("daily") as Record<
+              string,
+              string
+            >;
             if (dailyConfig) {
-              const dailyWorkflowName = getSettingValueFromTree({
-                tree: dailyConfig.children,
-                key: "workflow name",
-                defaultValue: "Daily",
-              });
+              const dailyWorkflowName = dailyConfig["workflow name"];
               if (dailyWorkflowName === srcName) {
                 const title = getPageTitleByBlockUid(blockUid);
                 if (DAILY_NOTE_PAGE_REGEX.test(title)) {
                   const newDate = getPageUidByPageTitle(title);
-                  const uuid = getSettingValueFromTree({
-                    tree: dailyConfig.children,
-                    key: "latest",
-                  });
+                  const uuid = dailyConfig["latest"];
                   apiPut({
                     path: `smartblocks-daily`,
                     data: {

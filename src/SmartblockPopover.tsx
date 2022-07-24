@@ -14,13 +14,15 @@ import deleteBlock from "roamjs-components/writes/deleteBlock";
 import getBasicTreeByParentUid from "roamjs-components/queries/getBasicTreeByParentUid";
 import getBlockUidFromTarget from "roamjs-components/dom/getBlockUidFromTarget";
 import getBlockUidsReferencingBlock from "roamjs-components/queries/getBlockUidsReferencingBlock";
-import getCurrentPageUid from "roamjs-components/dom/getCurrentPageUid";
-import getDisplayNameByUid from "roamjs-components/queries/getDisplayNameByUid";
 import getFirstChildUidByBlockUid from "roamjs-components/queries/getFirstChildUidByBlockUid";
 import getPageUidByPageTitle from "roamjs-components/queries/getPageUidByPageTitle";
 import getShallowTreeByParentUid from "roamjs-components/queries/getShallowTreeByParentUid";
 import getFullTreeByParentUid from "roamjs-components/queries/getFullTreeByParentUid";
-import { InputTextNode, TreeNode } from "roamjs-components/types";
+import type {
+  InputTextNode,
+  OnloadArgs,
+  TreeNode,
+} from "roamjs-components/types";
 import updateBlock from "roamjs-components/writes/updateBlock";
 import getSettingValueFromTree from "roamjs-components/util/getSettingValueFromTree";
 import { render as renderToast } from "roamjs-components/components/Toast";
@@ -28,6 +30,8 @@ import toFlexRegex from "roamjs-components/util/toFlexRegex";
 import useSubTree from "roamjs-components/hooks/useSubTree";
 import { HIDE_REGEX } from "./core";
 import getBlockUidAndTextIncludingText from "roamjs-components/queries/getBlockUidAndTextIncludingText";
+import getPageTitleByBlockUid from "roamjs-components/queries/getPageTitleByBlockUid";
+import getOrderByBlockUid from "roamjs-components/queries/getOrderByBlockUid";
 
 const toInputTextNode = (n: TreeNode): InputTextNode => ({
   text: n.text,
@@ -79,24 +83,19 @@ const ApiButton = ({
   );
 };
 
+type Props = {
+  extensionAPI: OnloadArgs["extensionAPI"];
+  blockUid: string;
+};
+
 const Content = ({
+  extensionAPI,
   blockUid,
   onClose,
-}: {
-  blockUid: string;
+}: Props & {
   onClose: () => void;
 }) => {
-  const pageUid = useMemo(
-    () => getPageUidByPageTitle("roam/js/smartblocks"),
-    []
-  );
-  const pageTree = useMemo(() => getBasicTreeByParentUid(pageUid), [pageUid]);
-  const { text: displayName } = useSubTree({
-    tree: pageTree,
-    key: "display name",
-    parentUid: pageUid,
-    order: 3,
-  });
+  const displayName = extensionAPI.settings.get("display-name");
   const [error, setError] = useState("");
 
   const {
@@ -139,11 +138,13 @@ const Content = ({
           }).then(async (r) => {
             const ref = `((${blockUid}))`;
             const refUid =
-              pageTree.find((t) => t.text.trim() === ref)?.uid ||
+              getBlockUidsReferencingBlock(blockUid)[0] ||
               (await createBlock({
                 node: { text: ref },
-                parentUid: pageUid,
-                order: 1,
+                parentUid: getPageUidByPageTitle(
+                  getPageTitleByBlockUid(blockUid)
+                ),
+                order: getOrderByBlockUid(blockUid) + 1,
               }));
             const uuidUid =
               getShallowTreeByParentUid(refUid).find((t) =>
@@ -205,11 +206,7 @@ const Content = ({
   );
 };
 
-const SmartblockPopover = ({
-  blockUid,
-}: {
-  blockUid: string;
-}): React.ReactElement => {
+const SmartblockPopover = (props: Props): React.ReactElement => {
   const [isOpen, setIsOpen] = useState(false);
   const onClose = useCallback(() => setIsOpen(false), [setIsOpen]);
   return (
@@ -222,16 +219,16 @@ const SmartblockPopover = ({
           }
         />
       }
-      content={<Content blockUid={blockUid} onClose={onClose} />}
+      content={<Content onClose={onClose} {...props} />}
       isOpen={isOpen}
       onInteraction={(n) => setIsOpen(n)}
     />
   );
 };
 
-export const render = (s: HTMLSpanElement) => {
+export const render = (s: HTMLSpanElement, extensionAPI: OnloadArgs['extensionAPI']) => {
   const blockUid = getBlockUidFromTarget(s);
-  ReactDOM.render(<SmartblockPopover blockUid={blockUid} />, s);
+  ReactDOM.render(<SmartblockPopover blockUid={blockUid} extensionAPI={extensionAPI}/>, s);
 };
 
 export default SmartblockPopover;

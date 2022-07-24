@@ -32,13 +32,14 @@ import getCurrentUserUid from "roamjs-components/queries/getCurrentUserUid";
 import getDisplayNameByUid from "roamjs-components/queries/getDisplayNameByUid";
 import getPageUidByPageTitle from "roamjs-components/queries/getPageUidByPageTitle";
 import getShallowTreeByParentUid from "roamjs-components/queries/getShallowTreeByParentUid";
-import { InputTextNode } from "roamjs-components/types/native";
+import { InputTextNode, OnloadArgs } from "roamjs-components/types/native";
 import { getCleanCustomWorkflows } from "./core";
 import type Marked from "marked-react";
 import apiGet from "roamjs-components/util/apiGet";
 
 type Props = {
   parentUid: string;
+  extensionAPI: OnloadArgs["extensionAPI"];
 };
 
 type Smartblocks = {
@@ -117,6 +118,7 @@ const DrawerContent = ({
   parentUid,
   onClose,
   Markdown,
+  extensionAPI,
 }: { onClose: () => void; Markdown: typeof Marked } & Props) => {
   const workflows = useMemo(getCleanCustomWorkflows, []);
   const [smartblocks, setSmartblocks] = useState<Smartblocks[]>([]);
@@ -207,13 +209,7 @@ const DrawerContent = ({
           setNumberOfDownloads(r.count);
           setSelectedSmartBlockAuthorDisplayName(
             selectedSmartBlock.author === window.roamAlphaAPI.graph.name
-              ? getSettingValueFromTree({
-                  tree: getBasicTreeByParentUid(
-                    getPageUidByPageTitle("roam/js/smartblocks")
-                  ),
-                  key: "display name",
-                  defaultValue: getDisplayNameByUid(getCurrentUserUid()),
-                })
+              ? extensionAPI.settings.get("display-name") as string
               : r.displayName
           );
         })

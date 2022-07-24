@@ -1,5 +1,5 @@
 import { Button, InputGroup, Intent, Label } from "@blueprintjs/core";
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useRef, useEffect } from "react";
 import createBlock from "roamjs-components/writes/createBlock";
 import getBasicTreeByParentUid from "roamjs-components/queries/getBasicTreeByParentUid";
 import getFirstChildUidByBlockUid from "roamjs-components/queries/getFirstChildUidByBlockUid";
@@ -7,61 +7,49 @@ import updateBlock from "roamjs-components/writes/updateBlock";
 import MenuItemSelect from "roamjs-components/components/MenuItemSelect";
 import deleteBlock from "roamjs-components/writes/deleteBlock";
 import { getCleanCustomWorkflows } from "./core";
+import type { OnloadArgs } from "roamjs-components/types/native";
 
-export type SmartblockHotKeys = {
-  uidToMapping: Record<string, string>;
-  mappingToBlock: Record<string, string>;
-};
-
-const HotKeyPanel =
-  (smartblockHotKeys: SmartblockHotKeys) =>
-  ({ parentUid, uid: inputUid }: { uid?: string; parentUid: string }) => {
-    const workflows = useMemo(
-      () =>
-        getCleanCustomWorkflows().sort(({ name: a }, { name: b }) =>
-          a.localeCompare(b)
-        ),
-      []
-    );
-    const workflowNamesByUid = useMemo(
-      () => Object.fromEntries(workflows.map((wf) => [wf.uid, wf.name])),
-      []
-    );
-    const uid = useMemo(
-      () => {
-        if (inputUid) return inputUid;
-        const newUid = window.roamAlphaAPI.util.generateUID();
-        createBlock({ node: { text: "hot keys", uid: newUid }, parentUid, order: 4 })
-        return newUid;
-      },
-      [inputUid]
-    );
-    const [keys, setKeys] = useState(() =>
-      inputUid
-        ? getBasicTreeByParentUid(uid).map(
-            ({ text, uid, children: [{ text: smartblock }] = [] }, i, all) => ({
-              text,
-              uid,
-              smartblock,
-              error: all.slice(0, i).some(({ text: other }) => other === text),
-            })
-          )
-        : []
-    );
-    return (
-      <>
-        {keys.map((key) => (
-          <div key={key.uid} style={{ display: "flex", alignItems: "center" }}>
-            <Label>
+const HotKeyPanel = (extensionAPI: OnloadArgs["extensionAPI"]) => () => {
+  const workflows = useMemo(
+    () =>
+      getCleanCustomWorkflows().sort(({ name: a }, { name: b }) =>
+        a.localeCompare(b)
+      ),
+    []
+  );
+  const workflowNamesByUid = useMemo(
+    () => Object.fromEntries(workflows.map((wf) => [wf.uid, wf.name])),
+    []
+  );
+  const [keys, setKeys] = useState(
+    () => extensionAPI.settings.get("hot-keys") as Record<string, string>
+  );
+  return (
+    <div
+      style={{
+        width: "100%",
+        minWidth: 256,
+      }}
+    >
+      {Object.entries(keys).map(([key, value], order) => {
+        const inputRef = useRef(null);
+        useEffect(() => {
+          inputRef.current.className = "rm-extensions-settings";
+        }, [inputRef])
+        return (
+          <div key={order} className={"flex items-center gap-1"}>
+            <Label className="min-w-min">
               Hot Key
               <InputGroup
                 placeholder={"Type the keys themselves"}
-                value={key.text}
+                value={key}
                 onChange={() => true}
+                className={"w-full"}
+                inputRef={inputRef}
                 onKeyDown={(e) => {
                   e.stopPropagation();
                   e.preventDefault();
-                  const parts = key.text ? key.text.split("+") : [];
+                  const parts = key ? key.split("+") : [];
                   const formatValue = (
                     e.key === "Backspace"
                       ? parts.slice(0, -1)
@@ -71,47 +59,34 @@ const HotKeyPanel =
                         ).sort((a, b) => b.length - a.length)
                       : parts.concat(e.key.toLowerCase())
                   ).join("+");
-                  if (formatValue === key.text) return;
-                  const error =
-                    !formatValue ||
-                    !!smartblockHotKeys.mappingToBlock[formatValue];
-                  setKeys(
-                    keys.map((k) =>
-                      k.uid !== key.uid
-                        ? k
-                        : { ...key, text: formatValue, error }
+                  if (formatValue === key) return;
+                  const error = !formatValue || !!keys[formatValue];
+                  const newKeys = Object.fromEntries(
+                    Object.entries(keys).map((k, o) =>
+                      o !== order ? k : [formatValue, k[1]]
                     )
                   );
+                  setKeys(newKeys);
                   if (!error) {
-                    const oldMapping = smartblockHotKeys.uidToMapping[key.uid];
-                    smartblockHotKeys.mappingToBlock[formatValue] =
-                      smartblockHotKeys.mappingToBlock[oldMapping];
-                    smartblockHotKeys.uidToMapping[key.uid] = formatValue;
-                    delete smartblockHotKeys.mappingToBlock[oldMapping];
-                    updateBlock({ text: formatValue, uid: key.uid });
+                    extensionAPI.settings.set("hot-keys", newKeys);
                   }
                 }}
-                intent={key.error ? Intent.DANGER : Intent.NONE}
+                intent={Intent.NONE}
               />
             </Label>
-            <Label className={"roamjs-smartblock-hotkey-block"}>
+            <Label>
               SmartBlock
               <MenuItemSelect
-                activeItem={key.smartblock}
+                activeItem={value}
                 items={workflows.map((w) => w.uid)}
                 onItemSelect={(e) => {
-                  setKeys(
-                    keys.map((k) =>
-                      k.uid !== key.uid ? k : { ...key, smartblock: e }
+                  const newKeys = Object.fromEntries(
+                    Object.entries(keys).map((k, o) =>
+                      o !== order ? k : [k[0], e]
                     )
                   );
-                  smartblockHotKeys.mappingToBlock[
-                    smartblockHotKeys.uidToMapping[key.uid]
-                  ] = e;
-                  updateBlock({
-                    text: e,
-                    uid: getFirstChildUidByBlockUid(key.uid),
-                  });
+                  setKeys(newKeys);
+                  extensionAPI.settings.set("hot-keys", newKeys);
                 }}
                 transformItem={(e) => workflowNamesByUid[e]}
               />
@@ -121,48 +96,34 @@ const HotKeyPanel =
               style={{ width: 32, height: 32 }}
               minimal
               onClick={() => {
-                setKeys(keys.filter((k) => k.uid !== key.uid));
-                delete smartblockHotKeys.mappingToBlock[
-                  smartblockHotKeys.uidToMapping[key.uid]
-                ];
-                delete smartblockHotKeys.uidToMapping[key.uid];
-                deleteBlock(key.uid);
+                const newKeys = Object.fromEntries(
+                  Object.entries(keys).filter((_, o) => o !== order)
+                );
+                setKeys(newKeys);
+                extensionAPI.settings.set("hot-keys", newKeys);
               }}
             />
           </div>
-        ))}
-        <Button
-          text={"Add Hot Key"}
-          intent={Intent.PRIMARY}
-          rightIcon={"plus"}
-          minimal
-          style={{ marginTop: 8 }}
-          onClick={async () => {
-            const randomWorkflow =
-              workflows[Math.floor(Math.random() * workflows.length)];
-            const valueUid = await createBlock({
-              parentUid: uid,
-              order: keys.length,
-              node: {
-                text: "control+o",
-                children: [{ text: randomWorkflow.uid }],
-              },
-            });
-            setTimeout(() => {
-              setKeys([
-                ...keys,
-                {
-                  text: "control+o",
-                  smartblock: randomWorkflow.uid,
-                  uid: valueUid,
-                  error: keys.some(({ text }) => text === "control+o"),
-                },
-              ]);
-            }, 1);
-          }}
-        />
-      </>
-    );
-  };
+        );
+      })}
+      <Button
+        text={"Add Hot Key"}
+        intent={Intent.PRIMARY}
+        rightIcon={"plus"}
+        minimal
+        style={{ marginTop: 8 }}
+        onClick={async () => {
+          const randomWorkflow =
+            workflows[Math.floor(Math.random() * workflows.length)];
+          const newKeys = Object.fromEntries(
+            Object.entries(keys).concat([["control+o", randomWorkflow.uid]])
+          );
+          setKeys(newKeys);
+          extensionAPI.settings.set("hot-keys", newKeys);
+        }}
+      />
+    </div>
+  );
+};
 
 export default HotKeyPanel;
