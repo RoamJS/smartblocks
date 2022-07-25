@@ -182,8 +182,8 @@ export const handler: APIGatewayProxyHandler = awsGetRoamJSUser(
                     }));
             });
         if (
-          !existingAuthor.token?.S ||
-          !existingAuthor.token.S.startsWith("user_")
+          !existingAuthor?.token?.S ||
+          !existingAuthor?.token.S.startsWith("user_")
         ) {
           return dynamo
             .updateItem({
@@ -200,9 +200,9 @@ export const handler: APIGatewayProxyHandler = awsGetRoamJSUser(
               },
             })
             .promise()
-            .then(() => putItem(existingAuthor.description?.S));
-        } else if (existingAuthor.token.S === user.id) {
-          return putItem(existingAuthor.description?.S);
+            .then(() => putItem(existingAuthor?.description?.S));
+        } else if (existingAuthor?.token.S === user.id) {
+          return putItem(existingAuthor?.description?.S);
         }
         return {
           statusCode: 403,
