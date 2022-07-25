@@ -1083,7 +1083,7 @@ export const COMMANDS: {
       const today = parseNlpDate("today", getDateBasisDate());
       const match = dates
         .map((s) => s.trim())
-        .map((s) => (s === "7" ? 0 : Number(s)))
+        .map((s) => Number(s) % 7)
         .includes(today.getDay());
       if (!match) {
         smartBlocksContext.exitBlock = "yes";

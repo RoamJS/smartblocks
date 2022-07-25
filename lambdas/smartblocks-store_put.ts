@@ -99,7 +99,7 @@ export const handler: APIGatewayProxyHandler = awsGetRoamJSUser(
           })
           .promise()
           .then((a) => a.Item);
-        const limit = Number(existingAuthor.limit?.N) || 5;
+        const limit = Number(existingAuthor?.limit?.N) || 5;
         const putItem = (existingDisplayName: string) =>
           dynamo
             .query({
