@@ -39,7 +39,7 @@ const DailyConfig = (extensionAPI: OnloadArgs["extensionAPI"]) => () => {
         onChange={(e) => {
           if ((e.target as HTMLInputElement).checked) {
             extensionAPI.settings.set("daily", {
-              "workflow name": "",
+              "workflow name": "Daily",
               time: "00:00",
               latest: "",
             });
