@@ -497,7 +497,8 @@ export default runExtension({
         string,
         string
       >;
-      if (!!dailyConfig) {
+      const dailyWorkflowName = dailyConfig?.["workflow name"];
+      if (!!dailyConfig && dailyWorkflowName) {
         const time = dailyConfig["time"] || "00:00";
         const latest = dailyConfig["latest"] || "";
         const debug = process.env.NODE_ENV === "development";
@@ -543,7 +544,6 @@ export default runExtension({
                 ? parseRoamDateUid(latestUid)
                 : new Date(1970, 0, 1);
               if (isBefore(startOfDay(latestDate), startOfDay(today))) {
-                const dailyWorkflowName = dailyConfig["workflow name"];
                 const srcUid = getCleanCustomWorkflows().find(
                   ({ name }) => name === dailyWorkflowName
                 )?.uid;
