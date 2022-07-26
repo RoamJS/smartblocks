@@ -23,9 +23,11 @@ const DailyConfig = (extensionAPI: OnloadArgs["extensionAPI"]) => () => {
     }
     return date;
   }, [config]);
-  const inputRef = useRef(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     inputRef.current.className = "rm-extensions-settings";
+    inputRef.current.style.minWidth = "100%";
+    inputRef.current.style.maxWidth = "100%";
   }, [inputRef]);
   return (
     <div
@@ -64,6 +66,7 @@ const DailyConfig = (extensionAPI: OnloadArgs["extensionAPI"]) => () => {
         inputRef={inputRef}
         disabled={disabled}
         placeholder={"Daily"}
+        className={"w-full"}
       />
       <TimePicker
         defaultValue={defaultTime}

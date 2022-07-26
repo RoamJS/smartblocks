@@ -1,11 +1,6 @@
 import { Button, InputGroup, Intent, Label } from "@blueprintjs/core";
 import React, { useMemo, useState, useRef, useEffect } from "react";
-import createBlock from "roamjs-components/writes/createBlock";
-import getBasicTreeByParentUid from "roamjs-components/queries/getBasicTreeByParentUid";
-import getFirstChildUidByBlockUid from "roamjs-components/queries/getFirstChildUidByBlockUid";
-import updateBlock from "roamjs-components/writes/updateBlock";
 import MenuItemSelect from "roamjs-components/components/MenuItemSelect";
-import deleteBlock from "roamjs-components/writes/deleteBlock";
 import { getCleanCustomWorkflows } from "./core";
 import type { OnloadArgs } from "roamjs-components/types/native";
 
@@ -32,13 +27,15 @@ const HotKeyPanel = (extensionAPI: OnloadArgs["extensionAPI"]) => () => {
       }}
     >
       {Object.entries(keys).map(([key, value], order) => {
-        const inputRef = useRef(null);
+        const inputRef = useRef<HTMLInputElement>(null);
         useEffect(() => {
           inputRef.current.className = "rm-extensions-settings";
-        }, [inputRef])
+          inputRef.current.style.minWidth = "100%";
+          inputRef.current.style.maxWidth = "100%";
+        }, [inputRef]);
         return (
           <div key={order} className={"flex items-center gap-1"}>
-            <Label className="min-w-min">
+            <Label className="flex-shrink-0">
               Hot Key
               <InputGroup
                 placeholder={"Type the keys themselves"}
@@ -74,7 +71,7 @@ const HotKeyPanel = (extensionAPI: OnloadArgs["extensionAPI"]) => () => {
                 intent={Intent.NONE}
               />
             </Label>
-            <Label>
+            <Label className={"flex-shrink-1"}>
               SmartBlock
               <MenuItemSelect
                 activeItem={value}
