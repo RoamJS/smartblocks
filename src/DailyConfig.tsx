@@ -12,7 +12,7 @@ const DailyConfig = (extensionAPI: OnloadArgs["extensionAPI"]) => () => {
   const [disabled, setDisabled] = useState(!config);
   const defaultTime = useMemo(() => {
     const date = new Date();
-    if (config) {
+    if (config && config["time"]) {
       const [h, m] = config["time"].split(":").map(Number);
       date.setHours(h);
       date.setMinutes(m);

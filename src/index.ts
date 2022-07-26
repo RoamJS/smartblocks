@@ -11,7 +11,6 @@ import getBlockUidFromTarget from "roamjs-components/dom/getBlockUidFromTarget";
 import getTextByBlockUid from "roamjs-components/queries/getTextByBlockUid";
 import updateBlock from "roamjs-components/writes/updateBlock";
 import parseRoamDateUid from "roamjs-components/date/parseRoamDateUid";
-import getBasicTreeByParentUid from "roamjs-components/queries/getBasicTreeByParentUid";
 import getUids from "roamjs-components/dom/getUids";
 import getCurrentPageUid from "roamjs-components/dom/getCurrentPageUid";
 import getDisplayNameByUid from "roamjs-components/queries/getDisplayNameByUid";
@@ -19,9 +18,7 @@ import getCurrentUserUid from "roamjs-components/queries/getCurrentUserUid";
 import createBlockObserver from "roamjs-components/dom/createBlockObserver";
 import getPageTitleByPageUid from "roamjs-components/queries/getPageTitleByPageUid";
 import deleteBlock from "roamjs-components/writes/deleteBlock";
-import { createConfigObserver } from "roamjs-components/components/ConfigPage";
 import getSettingValueFromTree from "roamjs-components/util/getSettingValueFromTree";
-import getSubTree from "roamjs-components/util/getSubTree";
 import { render as renderCursorMenu } from "roamjs-components/components/CursorMenu";
 import { render as renderToast } from "roamjs-components/components/Toast";
 import setInputSetting from "roamjs-components/util/setInputSetting";
@@ -501,8 +498,8 @@ export default runExtension({
         string
       >;
       if (!!dailyConfig) {
-        const time = dailyConfig["time"];
-        const latest = dailyConfig["latest"];
+        const time = dailyConfig["time"] || "00:00";
+        const latest = dailyConfig["latest"] || "";
         const debug = process.env.NODE_ENV === "development";
         const [hours, minutes] = time.split(":").map((s) => Number(s));
         const today = new Date();
