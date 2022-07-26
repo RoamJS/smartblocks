@@ -209,7 +209,7 @@ const DrawerContent = ({
           setNumberOfDownloads(r.count);
           setSelectedSmartBlockAuthorDisplayName(
             selectedSmartBlock.author === window.roamAlphaAPI.graph.name
-              ? extensionAPI.settings.get("display-name") as string
+              ? extensionAPI.settings.get("display-name") as string || ""
               : r.displayName
           );
         })

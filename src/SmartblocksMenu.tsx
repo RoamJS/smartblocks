@@ -100,7 +100,7 @@ const SmartblocksMenu = ({
               string
             >;
             if (dailyConfig) {
-              const dailyWorkflowName = dailyConfig["workflow name"];
+              const dailyWorkflowName = dailyConfig["workflow name"] || "";
               if (dailyWorkflowName === srcName) {
                 const title = getPageTitleByBlockUid(blockUid);
                 if (DAILY_NOTE_PAGE_REGEX.test(title)) {

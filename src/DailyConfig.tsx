@@ -10,6 +10,7 @@ const DailyConfig = (extensionAPI: OnloadArgs["extensionAPI"]) => () => {
     []
   );
   const [disabled, setDisabled] = useState(!config);
+  const [workflowName, setWorkflowName] = useState(config?.["workflow name"]);
   const defaultTime = useMemo(() => {
     const date = new Date();
     if (config && config["time"]) {
@@ -39,7 +40,7 @@ const DailyConfig = (extensionAPI: OnloadArgs["extensionAPI"]) => () => {
         onChange={(e) => {
           if ((e.target as HTMLInputElement).checked) {
             extensionAPI.settings.set("daily", {
-              "workflow name": "Daily",
+              "workflow name": workflowName || "Daily",
               time: "00:00",
               latest: "",
             });
@@ -52,13 +53,14 @@ const DailyConfig = (extensionAPI: OnloadArgs["extensionAPI"]) => () => {
         className={"rm-extensions-settings"}
       />
       <InputGroup
-        defaultValue={config?.["workflow name"]}
-        onChange={(e) =>
+        value={workflowName}
+        onChange={(e) => {
           extensionAPI.settings.set("daily", {
             ...(extensionAPI.settings.get("daily") as Record<string, string>),
             "workflow name": e.target.value,
-          })
-        }
+          });
+          setWorkflowName(e.target.value);
+        }}
         inputRef={inputRef}
         disabled={disabled}
         placeholder={"Daily"}

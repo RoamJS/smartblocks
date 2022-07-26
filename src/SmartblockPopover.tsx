@@ -95,7 +95,10 @@ const Content = ({
 }: Props & {
   onClose: () => void;
 }) => {
-  const displayName = extensionAPI.settings.get("display-name");
+  const displayName = useMemo(
+    () => (extensionAPI.settings.get("display-name") as string) || "",
+    []
+  );
   const [error, setError] = useState("");
 
   const {
@@ -226,9 +229,15 @@ const SmartblockPopover = (props: Props): React.ReactElement => {
   );
 };
 
-export const render = (s: HTMLSpanElement, extensionAPI: OnloadArgs['extensionAPI']) => {
+export const render = (
+  s: HTMLSpanElement,
+  extensionAPI: OnloadArgs["extensionAPI"]
+) => {
   const blockUid = getBlockUidFromTarget(s);
-  ReactDOM.render(<SmartblockPopover blockUid={blockUid} extensionAPI={extensionAPI}/>, s);
+  ReactDOM.render(
+    <SmartblockPopover blockUid={blockUid} extensionAPI={extensionAPI} />,
+    s
+  );
 };
 
 export default SmartblockPopover;

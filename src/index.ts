@@ -467,7 +467,7 @@ export default runExtension({
           .join("+");
         const srcUid = (
           extensionAPI.settings.get("hot-keys") as Record<string, string>
-        )[mapping];
+        )?.[mapping];
         if (srcUid) {
           e.preventDefault();
           e.stopPropagation();
