@@ -20,7 +20,6 @@ import {
   sbBomb,
 } from "./core";
 import fuzzy from "fuzzy";
-import getSettingValueFromTree from "roamjs-components/util/getSettingValueFromTree";
 import apiPut from "roamjs-components/util/apiPut";
 
 type Props = {

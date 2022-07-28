@@ -1,4 +1,3 @@
-import toConfigPageName from "roamjs-components/util/toConfigPageName";
 import runExtension from "roamjs-components/util/runExtension";
 import getBlockUidsAndTextsReferencingPage from "roamjs-components/queries/getBlockUidsAndTextsReferencingPage";
 import addStyle from "roamjs-components/dom/addStyle";
@@ -63,7 +62,6 @@ const getLegacy42Setting = (name: string) => {
 };
 
 const extensionId = "smartblocks";
-const CONFIG = toConfigPageName(extensionId);
 const COMMAND_ENTRY_REGEX = /<%$/;
 const COLORS = ["darkblue", "darkred", "darkgreen", "darkgoldenrod"];
 export default runExtension({
@@ -74,22 +72,56 @@ export default runExtension({
       extensionAPI,
       extensionId,
       specialKeys: {
-        "hot keys": (n) =>
-          Object.fromEntries(
-            n.children.map((c) => [c.text, c.children[0]?.text])
-          ),
+        "hot keys": (n) => [
+          {
+            value: Object.fromEntries(
+              n.children.map((c) => [c.text, c.children[0]?.text])
+            ),
+            key: "hot-keys",
+          },
+        ],
         daily: (n) => {
-          return {
-            "workflow name": getSettingValueFromTree({
-              tree: n.children,
-              key: "workflow name",
-            }),
-            latest: getSettingValueFromTree({
-              tree: n.children,
-              key: "latest",
-            }),
-            time: getSettingValueFromTree({ tree: n.children, key: "time" }),
-          };
+          return [
+            {
+              value: {
+                "workflow name": getSettingValueFromTree({
+                  tree: n.children,
+                  key: "workflow name",
+                }),
+                latest: getSettingValueFromTree({
+                  tree: n.children,
+                  key: "latest",
+                }),
+                time: getSettingValueFromTree({
+                  tree: n.children,
+                  key: "time",
+                }),
+              },
+              key: "daily",
+            },
+          ];
+        },
+        workflows: (n) => {
+          const move = (uid: string) =>
+            n.children.forEach((c, order) =>
+              window.roamAlphaAPI.moveBlock({
+                location: { "parent-uid": uid, order },
+                block: { uid: c.uid },
+              })
+            );
+          const existingUid = getPageUidByPageTitle(
+            "roam/js/smartblocks/workflows"
+          );
+          if (existingUid) {
+            move(existingUid);
+          } else {
+            const uid = window.roamAlphaAPI.util.generateUID();
+            window.roamAlphaAPI.createPage({
+              page: { uid, title: "roam/js/smartblocks/workflows" },
+            });
+            move(uid);
+          }
+          return [];
         },
       },
     });
@@ -534,7 +566,7 @@ export default runExtension({
             path: `smartblocks-daily`,
             data: {
               newDate: todayUid,
-              uuid: latest.length < 36 ? undefined : latest,
+              uuid: latest,
             },
             anonymous: true,
           })
@@ -577,14 +609,6 @@ export default runExtension({
                   intent: Intent.PRIMARY,
                 });
               }
-              if (latest.length < 36) {
-                setInputSetting({
-                  blockUid: dailyConfig.uid,
-                  value: r.uuid,
-                  key: "latest",
-                  index: 2,
-                });
-              }
               const nextRun = addSeconds(addDays(triggerTime, 1), 1);
               const ms = differenceInMilliseconds(nextRun, today);
               window.setTimeout(runDaily, ms);
@@ -605,14 +629,9 @@ export default runExtension({
     window.roamAlphaAPI.ui.commandPalette.addCommand({
       label: OPEN_SMARTBLOCK_STORE_COMMAND_LABEL,
       callback: async () => {
-        const pageUid = getPageUidByPageTitle(CONFIG);
-        const tree = getShallowTreeByParentUid(pageUid);
-        const parentUid =
-          tree?.find((t) => toFlexRegex("workflows").test(t.text))?.uid ||
-          (await createBlock({
-            parentUid: pageUid,
-            node: { text: "workflows" },
-          }));
+        const parentUid = getPageUidByPageTitle(
+          `roam/js/smartblocks/workflows`
+        );
         renderStore({ parentUid, extensionAPI });
       },
     });
