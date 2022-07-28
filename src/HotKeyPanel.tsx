@@ -35,7 +35,7 @@ const HotKeyPanel = (extensionAPI: OnloadArgs["extensionAPI"]) => () => {
         }, [inputRef]);
         return (
           <div key={order} className={"flex items-center gap-1"}>
-            <Label className="flex-shrink-0">
+            <Label className="flex-shrink-1">
               Hot Key
               <InputGroup
                 placeholder={"Type the keys themselves"}
@@ -71,7 +71,7 @@ const HotKeyPanel = (extensionAPI: OnloadArgs["extensionAPI"]) => () => {
                 intent={Intent.NONE}
               />
             </Label>
-            <Label className={"flex-shrink-1"}>
+            <Label className={"flex-shrink-0"}>
               SmartBlock
               <MenuItemSelect
                 activeItem={value}
