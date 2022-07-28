@@ -23,7 +23,7 @@
   },
   "dependencies": {
     "lodash": "^4.17.21",
-    "roamjs-components": "^0.70.13",
+    "roamjs-components": "^0.70.14",
     "xregexp": "^5.1.0"
   }
 }
