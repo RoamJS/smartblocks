@@ -850,6 +850,11 @@ export const COMMANDS: {
       "No Diplay Name for Current User",
   },
   {
+    text: "CURRENTURL",
+    help: "Return the current URL of the page",
+    handler: () => window.location.href,
+  },
+  {
     text: "PAGEMENTIONS",
     help: "Returns list of pages that mention the input title\n\n1: Max blocks to return\n\n2: Page or Tag Name",
     handler: (limitArg = "20", ...search: string[]) => {
