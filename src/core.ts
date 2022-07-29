@@ -1659,7 +1659,9 @@ export const COMMANDS: {
         ["GOTOBLOCK", "GRAPH"].some((s) => args[args.length - 1].includes(s))
           ? args[args.length - 1]
           : undefined;
-      const pageOrUidArgs = afterNavArg ? args.slice(0, -1) : args;
+      const pageOrUidArgs = (afterNavArg ? args.slice(0, -1) : args).map((s) =>
+        s.trim()
+      );
       const pageOrUids = pageOrUidArgs.map(
         (pageOrUidArg) =>
           smartBlocksContext.variables[pageOrUidArg] || pageOrUidArg
