@@ -4,7 +4,6 @@ import addStyle from "roamjs-components/dom/addStyle";
 import createPage from "roamjs-components/writes/createPage";
 import createBlock from "roamjs-components/writes/createBlock";
 import getPageUidByPageTitle from "roamjs-components/queries/getPageUidByPageTitle";
-import getShallowTreeByParentUid from "roamjs-components/queries/getShallowTreeByParentUid";
 import createHTMLObserver from "roamjs-components/dom/createHTMLObserver";
 import getBlockUidFromTarget from "roamjs-components/dom/getBlockUidFromTarget";
 import getTextByBlockUid from "roamjs-components/queries/getTextByBlockUid";
@@ -20,8 +19,6 @@ import deleteBlock from "roamjs-components/writes/deleteBlock";
 import getSettingValueFromTree from "roamjs-components/util/getSettingValueFromTree";
 import { render as renderCursorMenu } from "roamjs-components/components/CursorMenu";
 import { render as renderToast } from "roamjs-components/components/Toast";
-import setInputSetting from "roamjs-components/util/setInputSetting";
-import toFlexRegex from "roamjs-components/util/toFlexRegex";
 import addDays from "date-fns/addDays";
 import addHours from "date-fns/addHours";
 import addMinutes from "date-fns/addMinutes";
@@ -571,9 +568,8 @@ export default runExtension({
             anonymous: true,
           })
             .then((r) => {
-              const latestUid = r.oldDate || latest;
-              const latestDate = latestUid
-                ? parseRoamDateUid(latestUid)
+              const latestDate = r.oldDate
+                ? parseRoamDateUid(r.oldDate)
                 : new Date(1970, 0, 1);
               if (isBefore(startOfDay(latestDate), startOfDay(today))) {
                 const srcUid = getCleanCustomWorkflows().find(
@@ -605,7 +601,7 @@ export default runExtension({
               } else if (debug) {
                 renderToast({
                   id: "smartblocks-info",
-                  content: `Smartblocks: No need to run daily workflow on ${todayUid}. Last run on ${latestUid}.`,
+                  content: `Smartblocks: No need to run daily workflow on ${todayUid}. Last run on ${r.oldDate}.`,
                   intent: Intent.PRIMARY,
                 });
               }

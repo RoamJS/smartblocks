@@ -78,7 +78,7 @@ const DailyConfig = (extensionAPI: OnloadArgs["extensionAPI"]) => () => {
         }
         showArrowButtons
         disabled={disabled}
-        className={"rm-extensions-settings w-full"}
+        className={"rm-extensions-settings w-full user-select-none"}
       />
     </div>
   );

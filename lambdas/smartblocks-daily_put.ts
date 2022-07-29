@@ -3,16 +3,17 @@ import { dynamo, headers, toStatus } from "./common";
 import nanoid from "nanoid";
 
 export const handler: APIGatewayProxyHandler = async (event) => {
-  const { uuid = nanoid(), newDate } = JSON.parse(event.body) as {
+  const { uuid, newDate } = JSON.parse(event.body) as {
     uuid?: string;
     newDate: string;
   };
+  const dailyUuid = uuid || nanoid();
   return dynamo
     .getItem({
       TableName: "RoamJSSmartBlocks",
       Key: {
         uuid: {
-          S: uuid,
+          S: dailyUuid,
         },
       },
     })
@@ -23,7 +24,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
         .putItem({
           TableName: "RoamJSSmartBlocks",
           Item: {
-            uuid: { S: uuid },
+            uuid: { S: dailyUuid },
             name: { S: newDate },
             status: { S: toStatus("DAILY") },
           },
@@ -31,7 +32,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
         .promise()
         .then(() => ({
           statusCode: 200,
-          body: JSON.stringify({ oldDate, uuid }),
+          body: JSON.stringify({ oldDate, uuid: dailyUuid }),
           headers,
         }));
     })
