@@ -1335,6 +1335,22 @@ export const COMMANDS: {
     },
   },
   {
+    text: "FLOOR",
+    help: "Returns the input value rounded down\n1: An number to floor.",
+    handler: (arg) =>
+      Math.floor(
+        Number(smartBlocksContext.variables[arg]) || Number(arg) || 0
+      ).toString(),
+  },
+  {
+    text: "ROUND",
+    help: "Returns the input value rounded\n1: An number to round.",
+    handler: (arg) =>
+      Math.round(
+        Number(smartBlocksContext.variables[arg]) || Number(arg) || 0
+      ).toString(),
+  },
+  {
     text: "SUM",
     help: "Add all of the parameters together\n1: An addend to sum.",
     handler: (...args) =>
