@@ -460,7 +460,7 @@ export default runExtension({
           });
         } else {
           const [k, srcUid] =
-            Object.entries(extensionAPI.settings.get("hot-keys"))
+            Object.entries(extensionAPI.settings.get("hot-keys") || {})
               .map(([k, uid]) => [k.split("+"), uid] as const)
               .filter(([k]) => k.every((l) => l.length === 1))
               .find(([k]) =>

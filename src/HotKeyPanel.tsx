@@ -112,7 +112,7 @@ const HotKeyPanel = (extensionAPI: OnloadArgs["extensionAPI"]) => () => {
     []
   );
   const [keys, setKeys] = useState(
-    () => extensionAPI.settings.get("hot-keys") as Record<string, string> // || {}
+    () => extensionAPI.settings.get("hot-keys") as Record<string, string> || {}
   );
   return (
     <div
