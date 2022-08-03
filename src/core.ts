@@ -1103,7 +1103,7 @@ export const COMMANDS: {
       const uid =
         getPageUidByPageTitle(extractTag(pageOrUid)) || extractRef(pageOrUid);
       const present = !!window.roamAlphaAPI.q(
-        `[:find ?b :where [?p :block/uid "${uid}"] [?b :block/refs ?p] [?b :block/uid ${blockUid}]]`
+        `[:find ?b :where [?p :block/uid "${uid}"] [?b :block/refs ?p] [?b :block/uid "${blockUid}"]]`
       )[0]?.[0];
       if (!present) {
         smartBlocksContext.exitBlock = "yes";
