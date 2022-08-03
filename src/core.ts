@@ -1236,8 +1236,22 @@ export const COMMANDS: {
         format === "true"
           ? `((${smartBlocksContext.currentUid}))`
           : smartBlocksContext.currentUid;
-      if (name) {
-        smartBlocksContext.variables[name] = ref;
+      if (name.trim()) {
+        smartBlocksContext.variables[name.trim()] = ref;
+        return "";
+      }
+      return ref;
+    },
+  },
+  {
+    text: "PARENT",
+    help: "Return the block UID that is the parent of the current block\n\n1. Block ref or uid\n\n2. Variable name\n\n3. Set to false for no formatting",
+    handler: (child = "", name = "", format = "true") => {
+      const blockUid = extractRef(smartBlocksContext.variables[child] || child);
+      const parentRef = getParentUidByBlockUid(blockUid);
+      const ref = format === "true" ? `((${parentRef}))` : parentRef;
+      if (name.trim()) {
+        smartBlocksContext.variables[name.trim()] = ref;
         return "";
       }
       return ref;
