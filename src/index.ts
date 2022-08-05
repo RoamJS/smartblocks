@@ -625,9 +625,9 @@ export default runExtension({
     window.roamAlphaAPI.ui.commandPalette.addCommand({
       label: OPEN_SMARTBLOCK_STORE_COMMAND_LABEL,
       callback: async () => {
-        const parentUid = getPageUidByPageTitle(
-          `roam/js/smartblocks/workflows`
-        );
+        const parentUid =
+          getPageUidByPageTitle(`roam/js/smartblocks/workflows`) ||
+          (await createPage({ title: `roam/js/smartblocks/workflows` }));
         renderStore({ parentUid, extensionAPI });
       },
     });
@@ -705,9 +705,12 @@ export default runExtension({
               } else {
                 const variables = Object.fromEntries(
                   args
+                    .replace(/\[\[[^\]]+\]\]/g, (m) =>
+                      m.replace(/,/g, "ESCAPE_COMMA")
+                    )
                     .split(",")
                     .filter((s) => !!s)
-                    .map((v) => v.split("="))
+                    .map((v) => v.replace(/ESCAPE_COMMA/g, ",").split("="))
                     .map(([k, v = ""]) => [k, v])
                 );
                 variables["ButtonContent"] = buttonContent;
@@ -715,7 +718,6 @@ export default runExtension({
                 const keepButton =
                   variables["RemoveButton"] === "false" ||
                   variables["42RemoveButton"] === "false";
-
                 const clearBlock = variables["Clear"] === "true";
 
                 const props = {

@@ -229,7 +229,7 @@ const predefinedChildrenByUid = Object.fromEntries(
   predefinedWorkflows.map((pw) => [pw.uid, pw.children])
 );
 
-export const HIDE_REGEX = /<%HIDE%>/;
+export const HIDE_REGEX = /<%HIDE%>/i;
 
 export const getCustomWorkflows = () =>
   window.roamAlphaAPI
@@ -1245,7 +1245,7 @@ export const COMMANDS: {
   },
   {
     text: "PARENT",
-    help: "Return the block UID that is the parent of the current block\n\n1. Block ref or uid\n\n2. Variable name\n\n3. Set to false for no formatting",
+    help: "Return the block UID that is the parent of the input block\n\n1. Block ref or uid\n\n2. Variable name\n\n3. Set to false for no formatting",
     handler: (child = "", name = "", format = "true") => {
       const blockUid = extractRef(smartBlocksContext.variables[child] || child);
       const parentRef = getParentUidByBlockUid(blockUid);
