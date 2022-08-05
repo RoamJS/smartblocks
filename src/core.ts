@@ -131,14 +131,21 @@ const getTreeAtLevel = (
   }));
 };
 
-const getLevelsBelowParentUid = (
-  titleOrUid: string,
-  levelsIncluded: string
-) => {
+const getUidFromText = (titleOrUid: string) => {
   const normText = smartBlocksContext.variables[titleOrUid] || titleOrUid;
   const possibleTitle = extractTag(normText);
   const parentUid =
     getPageUidByPageTitle(possibleTitle) || extractRef(possibleTitle);
+  return !!window.roamAlphaAPI.pull("[:db/id]", [":block/uid", parentUid])
+    ? parentUid
+    : "";
+};
+
+const getLevelsBelowParentUid = (
+  titleOrUid: string,
+  levelsIncluded: string
+) => {
+  const parentUid = getUidFromText(titleOrUid);
   const levels = Number(levelsIncluded) || 0;
   const tree = getBasicTreeByParentUid(parentUid);
   return levels <= 0 || !levels ? tree : getTreeAtLevel(tree, levels);
@@ -176,11 +183,6 @@ addNlpDateParser({
     }
   },
 });
-
-const getUidFromParentArg = (arg: string) => {
-  const pageOrUid = smartBlocksContext.variables[arg] || arg;
-  return getPageUidByPageTitle(extractTag(pageOrUid)) || extractRef(pageOrUid);
-};
 
 const AsyncFunction: FunctionConstructor = new Function(
   `return Object.getPrototypeOf(async function(){}).constructor`
@@ -560,9 +562,8 @@ export const COMMANDS: {
           excludes: /^-/.test(titleOrUid),
         }))
         .map(({ titleOrUid, excludes }) => {
-          const possibleTitle = extractTag(titleOrUid);
           return {
-            uid: getPageUidByPageTitle(possibleTitle) || extractRef(titleOrUid),
+            uid: getUidFromText(titleOrUid),
             excludes,
           };
         });
@@ -604,11 +605,9 @@ export const COMMANDS: {
   },
   {
     text: "RANDOMCHILDOF",
-    help: "Returns a random child block from a block references a page\n\n1: Page name or UID.",
+    help: "Returns a random child block from a block references or page\n\n1: Page name or UID.",
     handler: (titleOrUid = "") => {
-      const possibleTitle = extractTag(titleOrUid);
-      const parentUid =
-        getPageUidByPageTitle(possibleTitle) || extractRef(titleOrUid);
+      const parentUid = getUidFromText(titleOrUid);
       const uids = window.roamAlphaAPI
         .q(
           `[:find (pull ?c [:block/uid]) :where [?b :block/uid "${parentUid}"] [?r :block/refs ?b] [?c :block/parents ?r]]`
@@ -1499,22 +1498,22 @@ export const COMMANDS: {
   },
   {
     text: "SMARTBLOCK",
-    help: "Runs another SmartBlock\n\n1. SmartBlock name\n\n2. Optional page name to execute the workflow remotely",
-    handler: (inputName = "", ...pageName) => {
+    help: "Runs another SmartBlock\n\n1. SmartBlock name\n\n2. Optional page name or ref to execute the workflow remotely",
+    handler: (inputName = "", ...pageNameOrUid) => {
       const srcUid = getCleanCustomWorkflows().find(
         ({ name }) => name === inputName.trim()
       )?.uid;
       if (srcUid) {
-        if (pageName.length) {
-          const title = extractTag(pageName.join(","));
-          const targetUid = getPageUidByPageTitle(title);
+        if (pageNameOrUid.length) {
+          const title = extractTag(pageNameOrUid.join(","));
+          const targetUid = getUidFromText(title);
           return (
             targetUid ? Promise.resolve(targetUid) : createPage({ title })
           ).then((targetUid) => {
             const parentContext = { ...smartBlocksContext };
             return sbBomb({
               srcUid,
-              target: { uid: targetUid, isPage: true },
+              target: { uid: targetUid, isParent: true },
               variables: smartBlocksContext.variables,
             }).then((uid) => {
               resetContext(parentContext);
@@ -1574,7 +1573,7 @@ export const COMMANDS: {
     text: "GETATTRIBUTE",
     help: "Returns the attribute value nested under the input block with a given input name.\n\n1. Page name or block ref\n\n2. A behavior to perform after navigating.",
     handler: (block, name) => {
-      const uid = getUidFromParentArg(block);
+      const uid = getUidFromText(block);
       return getAttributeValueByBlockAndName({ uid, name });
     },
   },
@@ -1607,7 +1606,7 @@ export const COMMANDS: {
       const pageOrUidArg = (blockNumberArg ? args.slice(0, -1) : args)
         .join(",")
         .trim();
-      const uid = getUidFromParentArg(pageOrUidArg);
+      const uid = getUidFromText(pageOrUidArg);
       const refsToCreate = new Set(
         Object.values(smartBlocksContext.refMapping)
       );
@@ -2180,7 +2179,7 @@ const count = (t: InputTextNode[]): number =>
 
 export const sbBomb = async ({
   srcUid,
-  target: { uid, start = 0, end = start, isPage = false, windowId },
+  target: { uid, start = 0, end = start, isParent = false, windowId },
   variables = {},
   mutableCursor,
   triggerUid = uid,
@@ -2190,7 +2189,7 @@ export const sbBomb = async ({
     uid: string;
     start?: number;
     end?: number;
-    isPage?: boolean;
+    isParent?: boolean;
     windowId?: string;
   };
   variables?: Record<string, string>;
@@ -2204,7 +2203,7 @@ export const sbBomb = async ({
     : getFullTreeByParentUid(srcUid).children;
   const props: { introUid?: string; introContent?: string; suffix?: string } =
     {};
-  if (!isPage) {
+  if (!isParent) {
     const originalText = getTextByBlockUid(uid);
     const prefix = originalText.substring(0, start);
     const suffix = originalText.substring(end);
@@ -2224,11 +2223,11 @@ export const sbBomb = async ({
     .then(async (tree) => {
       const [firstChild, ...next] = tree;
       if (firstChild) {
-        const startingOrder = isPage
+        const startingOrder = isParent
           ? getChildrenLengthByPageUid(uid)
           : getOrderByBlockUid(uid);
-        const parentUid = isPage ? uid : getParentUidByBlockUid(uid);
-        const outputUid = await (isPage
+        const parentUid = isParent ? uid : getParentUidByBlockUid(uid);
+        const outputUid = await (isParent
           ? createBlock({
               node: firstChild,
               parentUid,

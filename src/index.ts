@@ -182,7 +182,7 @@ export default runExtension({
               if (targetUid) {
                 sbBomb({
                   srcUid: wf.uid,
-                  target: { uid: targetUid, isPage: false },
+                  target: { uid: targetUid, isParent: false },
                 });
               } else {
                 window.roamAlphaAPI.ui.mainWindow
@@ -190,7 +190,7 @@ export default runExtension({
                   .then((uid) =>
                     sbBomb({
                       srcUid: wf.uid,
-                      target: { uid, isPage: true },
+                      target: { uid, isParent: true },
                     })
                   );
               }
@@ -374,7 +374,7 @@ export default runExtension({
                 srcUid,
                 target: {
                   uid: targetUid,
-                  isPage: !!(targetName || getPageTitleByPageUid(targetUid)),
+                  isParent: !!(targetName || getPageTitleByPageUid(targetUid)),
                 },
                 variables,
               }).then(resolve),
@@ -589,7 +589,7 @@ export default runExtension({
                   }).then(() =>
                     sbBomb({
                       srcUid,
-                      target: { uid: todayUid, isPage: true },
+                      target: { uid: todayUid, isParent: true },
                     })
                   );
                 } else {
