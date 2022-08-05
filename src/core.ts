@@ -7,7 +7,11 @@ import getParentUidByBlockUid from "roamjs-components/queries/getParentUidByBloc
 import updateBlock from "roamjs-components/writes/updateBlock";
 import createBlock from "roamjs-components/writes/createBlock";
 import getTextByBlockUid from "roamjs-components/queries/getTextByBlockUid";
-import { InputTextNode, PullBlock } from "roamjs-components/types";
+import {
+  InputTextNode,
+  PullBlock,
+  RoamBasicNode,
+} from "roamjs-components/types/native";
 import getBlockUidsAndTextsReferencingPage from "roamjs-components/queries/getBlockUidsAndTextsReferencingPage";
 import getBlockUidsWithParentUid from "roamjs-components/queries/getBlockUidsWithParentUid";
 import createTagRegex from "roamjs-components/util/createTagRegex";
@@ -112,6 +116,32 @@ const getDateBasisDate = () => {
   } else {
     return new Date();
   }
+};
+
+const getTreeAtLevel = (
+  tree: RoamBasicNode[],
+  level: number
+): RoamBasicNode[] => {
+  if (!level) {
+    return [];
+  }
+  return tree.map((t) => ({
+    ...t,
+    children: getTreeAtLevel(tree, level - 1),
+  }));
+};
+
+const getLevelsBelowParentUid = (
+  titleOrUid: string,
+  levelsIncluded: string
+) => {
+  const normText = smartBlocksContext.variables[titleOrUid] || titleOrUid;
+  const possibleTitle = extractTag(normText);
+  const parentUid =
+    getPageUidByPageTitle(possibleTitle) || extractRef(possibleTitle);
+  const levels = Number(levelsIncluded) || 0;
+  const tree = getBasicTreeByParentUid(parentUid);
+  return levels <= 0 || !levels ? tree : getTreeAtLevel(tree, levels);
 };
 
 addNlpDateParser({
@@ -511,13 +541,9 @@ export const COMMANDS: {
     text: "RANDOMBLOCKFROM",
     help: "Returns a random child block from a page or block ref\n\n1: Page name or UID.\n\n2: Levels Included\n\n3: Format",
     handler: (titleOrUid = "", levelsIncluded = "0", format = "(({uid}))") => {
-      const possibleTitle = extractTag(titleOrUid);
-      const parentUid =
-        getPageUidByPageTitle(possibleTitle) || extractRef(titleOrUid);
-      const levels = Number(levelsIncluded) || 0;
-      const uids = levels
-        ? getShallowTreeByParentUid(parentUid).map((u) => u.uid)
-        : getBlockUidsWithParentUid(parentUid);
+      const uids = flattenUids(
+        getLevelsBelowParentUid(titleOrUid, levelsIncluded)
+      );
       const uid = uids[Math.floor(Math.random() * uids.length)];
       return uids.length
         ? getFormatter(format)({ uid }).text
@@ -1845,13 +1871,17 @@ export const COMMANDS: {
   {
     text: "CHILDREN",
     help: "Gets the block tree nested under the input block reference\n\n1. Block reference\n\n2. Start index, inclusive\n\n3. End index, inclusive\n\n4. Format",
-    handler: (text, start = "1", endArg = "0", format = "{text}") => {
-      const normText = smartBlocksContext.variables[text] || text;
-      const uid = extractRef(normText);
-      const tree = getBasicTreeByParentUid(uid);
+    handler: (
+      text,
+      start = "1",
+      endArg = "0",
+      format = "{text}",
+      levelsIncluded = "0"
+    ) => {
+      const tree = getLevelsBelowParentUid(text, levelsIncluded);
       const end = Number(endArg) || 0;
       return tree
-        .slice(Number(start) - 1, end <= 0 ? tree.length : end)
+        .slice(Number(start) - 1, end <= 0 ? tree.length - end : end)
         .map((n) => formatTree(n, format));
     },
   },
@@ -1895,6 +1925,9 @@ export const proccessBlockText = async (
 
 const flattenText = (blocks: InputTextNode[]): string[] =>
   blocks.flatMap((block) => [block.text, ...flattenText(block.children || [])]);
+
+const flattenUids = (blocks: RoamBasicNode[]): string[] =>
+  blocks.flatMap((block) => [block.uid, ...flattenUids(block.children || [])]);
 
 const processBlockTextToPromises = (s: string) => {
   const matches = XRegExp.matchRecursive(s, "<%", "%>", "g", {
