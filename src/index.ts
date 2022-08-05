@@ -35,6 +35,7 @@ import {
   COMMANDS,
   getCleanCustomWorkflows,
   getCustomWorkflows,
+  getVisibleCustomWorkflows,
   handlerByCommand,
   proccessBlockText,
   sbBomb,
@@ -170,7 +171,7 @@ export default runExtension({
 }`);
 
     const toggleCommandPalette = (flag: boolean) => {
-      const workflows = getCleanCustomWorkflows();
+      const workflows = getCleanCustomWorkflows(getVisibleCustomWorkflows());
       if (flag) {
         workflows.forEach((wf) => {
           window.roamAlphaAPI.ui.commandPalette.addCommand({
