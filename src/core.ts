@@ -1481,8 +1481,11 @@ export const COMMANDS: {
       const settings = new Set(args);
       const raw = await navigator.clipboard.readText();
       const postTrim = settings.has("trim") ? raw.trim() : raw;
-      const postCarriage = settings.has("nocarriagereturn")
+      const postCarriageOne = settings.has("nocarriagereturn")
         ? postTrim.replace(/\r\n/g, "")
+        : postTrim;
+      const postCarriage = settings.has("returnasspace")
+        ? postCarriageOne.replace(/(\r)?\n(\r)?/g, " ")
         : postTrim;
       const postHyphens = settings.has("nohyphens")
         ? postCarriage.replace(/- /g, "")
