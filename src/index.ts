@@ -94,6 +94,7 @@ export default runExtension({
                   tree: n.children,
                   key: "time",
                 }),
+                lastRun: "",
               },
               key: "daily",
             },
@@ -223,7 +224,6 @@ export default runExtension({
     ) as boolean;
     let highlighting = extensionAPI.settings.get("highlighting") as boolean;
     const defaultDisplayName = getDisplayNameByUid(getCurrentUserUid());
-    let displayName = defaultDisplayName;
 
     extensionAPI.settings.panel.create({
       tabTitle: "SmartBlocks",
@@ -293,7 +293,6 @@ export default runExtension({
         {
           action: {
             type: "input",
-            onChange: (e) => (displayName = e.target.value),
             placeholder: defaultDisplayName,
           },
           id: "display-name",
@@ -531,6 +530,7 @@ export default runExtension({
       if (!!dailyConfig && dailyWorkflowName) {
         const time = dailyConfig["time"] || "00:00";
         const latest = dailyConfig["latest"] || "";
+        const lastRun = dailyConfig["last-run"] || "";
         const debug = process.env.NODE_ENV === "development";
         const [hours, minutes] = time.split(":").map((s) => Number(s));
         const today = new Date();
@@ -560,14 +560,19 @@ export default runExtension({
             });
           }
           const todayUid = window.roamAlphaAPI.util.dateToPageUid(today);
-          apiPut<{ oldDate: string; uuid: string }>({
-            path: `smartblocks-daily`,
-            data: {
-              newDate: todayUid,
-              uuid: latest,
-            },
-            anonymous: true,
-          })
+          (lastRun
+            ? Promise.resolve({
+                oldDate: lastRun,
+              })
+            : apiPut<{ oldDate: string }>({
+                path: `smartblocks-daily`,
+                data: {
+                  newDate: todayUid,
+                  uuid: latest,
+                },
+                anonymous: true,
+              })
+          )
             .then((r) => {
               const latestDate = r.oldDate
                 ? parseRoamDateUid(r.oldDate)
@@ -586,12 +591,16 @@ export default runExtension({
                   }
                   createPage({
                     title: window.roamAlphaAPI.util.dateToPageTitle(today),
-                  }).then(() =>
-                    sbBomb({
-                      srcUid,
-                      target: { uid: todayUid, isParent: true },
-                    })
-                  );
+                  })
+                    .then(() =>
+                      sbBomb({
+                        srcUid,
+                        target: { uid: todayUid, isParent: true },
+                      })
+                    )
+                    .then(() => {
+                      extensionAPI.settings.set("last-run", todayUid);
+                    });
                 } else {
                   renderToast({
                     id: "smartblocks-error",

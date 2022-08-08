@@ -24,6 +24,7 @@ const DailyConfig = (extensionAPI: OnloadArgs["extensionAPI"]) => () => {
     return date;
   }, [config]);
   const inputRef = useRef<HTMLInputElement>(null);
+  const lastRun = extensionAPI.settings.get("last-run");
   useEffect(() => {
     inputRef.current.className = "rm-extensions-settings";
     inputRef.current.style.minWidth = "100%";
@@ -45,6 +46,7 @@ const DailyConfig = (extensionAPI: OnloadArgs["extensionAPI"]) => () => {
               "workflow name": workflowName || "Daily",
               time: "00:00",
               latest: "",
+              lastRun: "",
             });
             setDisabled(false);
           } else {
@@ -80,6 +82,7 @@ const DailyConfig = (extensionAPI: OnloadArgs["extensionAPI"]) => () => {
         disabled={disabled}
         className={"rm-extensions-settings w-full user-select-none"}
       />
+      <span>{extensionAPI.settings.get("last-run") && `Last ran daily workflow on page ${lastRun}.`}</span>
     </div>
   );
 };
