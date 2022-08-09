@@ -1844,12 +1844,22 @@ export const COMMANDS: {
     text: "UPDATEBLOCK",
     help: "Updates the block referenced by the first argument with the text in the rest.\n\n1. Block reference\n\n2. Text to update with",
     handler: (ref = "", ...rest) => {
-      const normRef = smartBlocksContext.variables[ref] || ref;
+      const uid = getUidFromText(ref);
       const text = rest.join(",");
       const normOut = smartBlocksContext.variables[text] || text;
-      const uid = extractRef(normRef);
-      updateBlock({ uid, text: normOut });
-      return "";
+      return updateBlock({ uid, text: normOut }).then(() => "");
+    },
+  },
+  {
+    text: "UPDATEPAGE",
+    help: "Updates the page title from the first argument to the second\n\n1. Block reference\n\n2. Text to update with",
+    handler: (from = "", title = "") => {
+      const uid = getPageUidByPageTitle(from);
+      return uid
+        ? window.roamAlphaAPI
+            .updatePage({ page: { title, uid } })
+            .then(() => "")
+        : `Could not find page titled ${from}`;
     },
   },
   {
