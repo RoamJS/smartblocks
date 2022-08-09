@@ -1,5 +1,5 @@
 import { OnloadArgs } from "roamjs-components/types";
-import { InputGroup, Switch } from "@blueprintjs/core";
+import { InputGroup, Label, Switch } from "@blueprintjs/core";
 import { TimePicker } from "@blueprintjs/datetime";
 import { useMemo, useState, useRef, useEffect } from "react";
 
@@ -55,34 +55,44 @@ const DailyConfig = (extensionAPI: OnloadArgs["extensionAPI"]) => () => {
           }
         }}
         className={"rm-extensions-settings"}
+        label={config ? "Enabled" : "Disabled"}
       />
-      <InputGroup
-        value={workflowName}
-        onChange={(e) => {
-          extensionAPI.settings.set("daily", {
-            ...(extensionAPI.settings.get("daily") as Record<string, string>),
-            "workflow name": e.target.value,
-          });
-          setWorkflowName(e.target.value);
-        }}
-        inputRef={inputRef}
-        disabled={disabled}
-        placeholder={"Daily"}
-        className={"w-full"}
-      />
-      <TimePicker
-        defaultValue={defaultTime}
-        onChange={(e) =>
-          extensionAPI.settings.set("daily", {
-            ...(extensionAPI.settings.get("daily") as Record<string, string>),
-            time: `${e.getHours()}:${e.getMinutes()}`,
-          })
-        }
-        showArrowButtons
-        disabled={disabled}
-        className={"rm-extensions-settings w-full user-select-none"}
-      />
-      <span>{extensionAPI.settings.get("last-run") && `Last ran daily workflow on page ${lastRun}.`}</span>
+      <Label>
+        Workflow Name
+        <InputGroup
+          value={workflowName}
+          onChange={(e) => {
+            extensionAPI.settings.set("daily", {
+              ...(extensionAPI.settings.get("daily") as Record<string, string>),
+              "workflow name": e.target.value,
+            });
+            setWorkflowName(e.target.value);
+          }}
+          inputRef={inputRef}
+          disabled={disabled}
+          placeholder={"Daily"}
+          className={"w-full"}
+        />
+      </Label>
+      <Label>
+        Time To Run
+        <TimePicker
+          defaultValue={defaultTime}
+          onChange={(e) =>
+            extensionAPI.settings.set("daily", {
+              ...(extensionAPI.settings.get("daily") as Record<string, string>),
+              time: `${e.getHours()}:${e.getMinutes()}`,
+            })
+          }
+          showArrowButtons
+          disabled={disabled}
+          className={"rm-extensions-settings w-full user-select-none"}
+        />
+      </Label>
+      <span>
+        {extensionAPI.settings.get("last-run") &&
+          `Last ran daily workflow on page ${lastRun}.`}
+      </span>
     </div>
   );
 };
