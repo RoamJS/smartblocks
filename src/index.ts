@@ -180,21 +180,32 @@ export default runExtension({
             callback: () => {
               const targetUid =
                 window.roamAlphaAPI.ui.getFocusedBlock()?.["block-uid"];
-              if (targetUid) {
-                sbBomb({
-                  srcUid: wf.uid,
-                  target: { uid: targetUid, isParent: false },
-                });
-              } else {
-                window.roamAlphaAPI.ui.mainWindow
-                  .getOpenPageOrBlockUid()
-                  .then((uid) =>
-                    sbBomb({
-                      srcUid: wf.uid,
-                      target: { uid, isParent: true },
-                    })
-                  );
-              }
+              // Because the command palette does a blur event on close,
+              // we want a slight delay so that we could keep focus
+              setTimeout(() => {
+                if (targetUid) {
+                  sbBomb({
+                    srcUid: wf.uid,
+                    target: { uid: targetUid, isParent: false },
+                    mutableCursor: true,
+                  });
+                } else {
+                  window.roamAlphaAPI.ui.mainWindow
+                    .getOpenPageOrBlockUid()
+                    .then((uid) =>
+                      sbBomb({
+                        srcUid: wf.uid,
+                        target: {
+                          uid:
+                            uid ||
+                            window.roamAlphaAPI.util.dateToPageUid(new Date()),
+                          isParent: true,
+                        },
+                        mutableCursor: true,
+                      })
+                    );
+                }
+              }, 500);
             },
           });
         });
