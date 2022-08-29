@@ -94,7 +94,7 @@ export default runExtension({
                   tree: n.children,
                   key: "time",
                 }),
-                lastRun: "",
+                "last-run": "",
               },
               key: "daily",
             },
@@ -610,7 +610,10 @@ export default runExtension({
                       })
                     )
                     .then(() => {
-                      extensionAPI.settings.set("last-run", todayUid);
+                      extensionAPI.settings.set("daily", {
+                        ...dailyConfig,
+                        "last-run": todayUid,
+                      });
                     });
                 } else {
                   renderToast({

@@ -46,7 +46,7 @@ const DailyConfig = (extensionAPI: OnloadArgs["extensionAPI"]) => () => {
               "workflow name": workflowName || "Daily",
               time: "00:00",
               latest: "",
-              lastRun: "",
+              "last-run": "",
             });
             setDisabled(false);
           } else {

@@ -104,8 +104,11 @@ const SmartblocksMenu = ({
                 const title = getPageTitleByBlockUid(blockUid);
                 if (DAILY_NOTE_PAGE_REGEX.test(title)) {
                   const newDate = getPageUidByPageTitle(title);
-                  extensionAPI.settings.set("last-run", newDate);
-                  
+                  extensionAPI.settings.set("daily", {
+                    ...dailyConfig,
+                    "last-run": newDate,
+                  });
+
                   // @deprecated
                   const uuid = dailyConfig["latest"];
                   apiPut({
