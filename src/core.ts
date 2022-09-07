@@ -1195,6 +1195,42 @@ export const COMMANDS: {
     },
   },
   {
+    text: "IFMATCH",
+    help: "Compares the first argument with the second. If the test fails, the block is skipped.\n\n1. Variable name or value\n\n2. Variable name, value or Regular Expression",
+    handler: (name = "", ...exp) => {
+      const actual = smartBlocksContext.variables[name] || name;
+      const expectedArg = exp.join(",");
+      const expected = smartBlocksContext.variables[expectedArg] || expectedArg;
+      if (expected.startsWith("/") && expected.endsWith("/")) {
+        if (new RegExp(expected.slice(1, -1)).test(actual)) {
+          return "";
+        }
+      } else if (actual === expected) {
+        return "";
+      }
+      smartBlocksContext.exitBlock = "yes";
+      return "";
+    },
+  },
+  {
+    text: "IFNOTMATCH",
+    help: "Compares the first argument with the second. If the test succeeds, the block is skipped.\n\n1. Variable name or value\n\n2. Variable name, value or Regular Expression",
+    handler: (name = "", ...exp) => {
+      const actual = smartBlocksContext.variables[name] || name;
+      const expectedArg = exp.join(",");
+      const expected = smartBlocksContext.variables[expectedArg] || expectedArg;
+      if (expected.startsWith("/") && expected.endsWith("/")) {
+        if (!new RegExp(expected.slice(1, -1)).test(actual)) {
+          return "";
+        }
+      } else if (actual !== expected) {
+        return "";
+      }
+      smartBlocksContext.exitBlock = "yes";
+      return "";
+    },
+  },
+  {
     text: "GET",
     help: "Returns a variable\n\n1. Variable name",
     handler: (name = "") => {
