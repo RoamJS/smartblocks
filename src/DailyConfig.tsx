@@ -1,7 +1,7 @@
 import { OnloadArgs } from "roamjs-components/types";
 import { InputGroup, Label, Switch } from "@blueprintjs/core";
 import { TimePicker } from "@blueprintjs/datetime";
-import { useMemo, useState, useRef, useEffect } from "react";
+import { useMemo, useState, } from "react";
 
 const DailyConfig = (extensionAPI: OnloadArgs["extensionAPI"]) => () => {
   const config = useMemo(
@@ -23,13 +23,7 @@ const DailyConfig = (extensionAPI: OnloadArgs["extensionAPI"]) => () => {
     }
     return date;
   }, [config]);
-  const inputRef = useRef<HTMLInputElement>(null);
   const lastRun = extensionAPI.settings.get("last-run");
-  useEffect(() => {
-    inputRef.current.className = "rm-extensions-settings";
-    inputRef.current.style.minWidth = "100%";
-    inputRef.current.style.maxWidth = "100%";
-  }, [inputRef]);
   return (
     <div
       className="flex items-start gap-2 flex-col"
@@ -54,8 +48,7 @@ const DailyConfig = (extensionAPI: OnloadArgs["extensionAPI"]) => () => {
             setDisabled(true);
           }
         }}
-        className={"rm-extensions-settings"}
-        label={config ? "Enabled" : "Disabled"}
+        label={disabled ? "Disabled" : "Enabled"}
       />
       <Label>
         Workflow Name
@@ -68,7 +61,6 @@ const DailyConfig = (extensionAPI: OnloadArgs["extensionAPI"]) => () => {
             });
             setWorkflowName(e.target.value);
           }}
-          inputRef={inputRef}
           disabled={disabled}
           placeholder={"Daily"}
           className={"w-full"}
@@ -86,7 +78,7 @@ const DailyConfig = (extensionAPI: OnloadArgs["extensionAPI"]) => () => {
           }
           showArrowButtons
           disabled={disabled}
-          className={"rm-extensions-settings w-full user-select-none"}
+          className={"w-full user-select-none"}
         />
       </Label>
       <span>

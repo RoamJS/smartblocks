@@ -715,9 +715,10 @@ export default runExtension({
             const [workflowName, args = ""] = buttonText.split(":");
             b.addEventListener("click", () => {
               const workflows = getCustomWorkflows();
-              const { uid: srcUid } = getCleanCustomWorkflows(workflows).find(
-                ({ name }) => name === workflowName
-              );
+              const { uid: srcUid } =
+                getCleanCustomWorkflows(workflows).find(
+                  ({ name }) => name === workflowName
+                ) || {};
               if (!srcUid) {
                 createBlock({
                   node: {
