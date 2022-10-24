@@ -1610,7 +1610,7 @@ export const COMMANDS: {
   },
   {
     text: "GETATTRIBUTE",
-    help: "Returns the attribute value nested under the input block with a given input name.\n\n1. Page name or block ref\n\n2. A behavior to perform after navigating.",
+    help: "Returns the attribute value nested under the input block with a given input name.\n\n1. Page name or block ref\n\n2. The name of the attribute to fetch.",
     handler: (block, name) => {
       const uid = getUidFromText(block);
       return getAttributeValueByBlockAndName({ uid, name });
@@ -1866,7 +1866,7 @@ export const COMMANDS: {
       const blockText = getTextByBlockUid(uid);
       const regex = /^`(.*?)`$/.test(reg)
         ? new RegExp(reg.slice(1, -1), flags)
-        : new RegExp(reg, flags);
+        : new RegExp(reg.replace(/([.+*?^$()[\]{}|\\])/g, "\\\\$1"), flags);
       if (blockText) {
         return updateBlock({
           uid,
