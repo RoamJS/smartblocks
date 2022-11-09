@@ -101,7 +101,7 @@ const getPageUidByBlockUid = (blockUid: string): string =>
   )?.uid || "";
 
 const getDateBasisDate = () => {
-  if (smartBlocksContext.dateBasisMethod === "DNP") {
+  if (smartBlocksContext.variables["DATEBASISMETHOD"] === "DNP") {
     const title =
       getPageTitleByBlockUid(smartBlocksContext.targetUid) ||
       getPageTitleByPageUid(smartBlocksContext.targetUid);
@@ -111,8 +111,8 @@ const getDateBasisDate = () => {
     dnp.setHours(new Date().getHours());
     dnp.setMinutes(new Date().getMinutes());
     return dnp;
-  } else if (smartBlocksContext.dateBasisMethod) {
-    return new Date(smartBlocksContext.dateBasisMethod);
+  } else if (smartBlocksContext.variables["DATEBASISMETHOD"]) {
+    return new Date(smartBlocksContext.variables["DATEBASISMETHOD"]);
   } else {
     return new Date();
   }
@@ -367,7 +367,6 @@ export type SmartBlocksContext = {
   indent: Set<string>;
   unindent: Set<string>;
   focusOnBlock?: string;
-  dateBasisMethod?: string;
   refMapping: Record<string, string>;
   afterWorkflowMethods: (() => void | Promise<void>)[];
   illegalCommands: Set<string>;
@@ -386,7 +385,7 @@ export const smartBlocksContext: SmartBlocksContext = {
   triggerUid: "",
   illegalCommands: new Set(),
 };
-const resetContext = (context: Partial<SmartBlocksContext>) => {
+const resetContext = (context: Partial<SmartBlocksContext> = {}) => {
   smartBlocksContext.triggerUid = context.triggerUid || context.targetUid || "";
   smartBlocksContext.targetUid = context.targetUid || "";
   smartBlocksContext.ifCommand = context.ifCommand || undefined;
@@ -399,7 +398,6 @@ const resetContext = (context: Partial<SmartBlocksContext>) => {
   smartBlocksContext.currentContent = context.currentContent || "";
   smartBlocksContext.indent = context.indent || new Set();
   smartBlocksContext.unindent = context.unindent || new Set();
-  smartBlocksContext.dateBasisMethod = context.dateBasisMethod;
   smartBlocksContext.refMapping = context.refMapping || {};
   smartBlocksContext.afterWorkflowMethods = context.afterWorkflowMethods || [];
   smartBlocksContext.illegalCommands = context.illegalCommands || new Set();
@@ -414,14 +412,9 @@ const javascriptHandler =
       .replace(/(\n)?```\s*$/, "")
       .replace(/^\s*`/, "")
       .replace(/`\s*$/, "");
-    const justVariables = Object.entries(smartBlocksContext.variables)
+    const variables = Object.entries(smartBlocksContext.variables)
       .map(([k, v]) => [k.replace(/^\d+/, ""), v])
       .filter(([s]) => !!s);
-    const variables = smartBlocksContext.dateBasisMethod
-      ? justVariables.concat([
-          ["DATEBASISMETHOD", smartBlocksContext.dateBasisMethod],
-        ])
-      : justVariables;
     return Promise.resolve(
       new fcn(...variables.map((v) => v[0]), code)(
         ...variables.map((v) => v[1])
@@ -1561,10 +1554,18 @@ export const COMMANDS: {
           });
         }
         const nodes = getFullTreeByParentUid(srcUid).children;
+        const parentContext = { ...smartBlocksContext };
+        resetContext({ variables: parentContext.variables });
         return processChildren({
           nodes,
-          introUid: smartBlocksContext.currentUid,
-          introContent: smartBlocksContext.currentContent,
+          introUid: parentContext.currentUid,
+          introContent: parentContext.currentContent,
+        }).then((nodes) => {
+          resetContext({
+            ...parentContext,
+            variables: smartBlocksContext.variables,
+          });
+          return nodes;
         });
       } else {
         return inputName.trim();
@@ -1597,8 +1598,7 @@ export const COMMANDS: {
     text: "DATEBASIS",
     help: "Time machine mode\n\n1: Date basis for date commands\nDNP for daily page\nNLP for other dates\nDefaults to TODAY at start of each workflow.",
     handler: (mode = "DNP") => {
-      smartBlocksContext.dateBasisMethod = undefined;
-      smartBlocksContext.dateBasisMethod =
+      smartBlocksContext.variables["DATEBASISMETHOD"] =
         mode === "DNP" ? mode : parseNlpDate(mode, getDateBasisDate()).toJSON();
       return "";
     },
