@@ -600,9 +600,14 @@ export default runExtension({
                       intent: Intent.PRIMARY,
                     });
                   }
-                  createPage({
-                    title: window.roamAlphaAPI.util.dateToPageTitle(today),
-                  })
+                  const todayTitle =
+                    window.roamAlphaAPI.util.dateToPageTitle(today);
+                  Promise.resolve(
+                    getPageUidByPageTitle(todayTitle) ||
+                      createPage({
+                        title: window.roamAlphaAPI.util.dateToPageTitle(today),
+                      })
+                  )
                     .then(() =>
                       sbBomb({
                         srcUid,
