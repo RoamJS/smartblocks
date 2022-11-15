@@ -162,7 +162,7 @@ const BulkTrigger = ({
   );
 };
 
-export const render = createOverlayRender(
+export const render = createOverlayRender<Props>(
   "smartblocks-bulk-trigger",
   BulkTrigger
 );

@@ -314,14 +314,15 @@ const getFormatter =
       )
       .replace(/{attr:([^}:]*)(?::([^}]*))?}/g, (_, name, format = "VALUE") => {
         const value = (
-          window.roamAlphaAPI
-            .q(
+          (
+            window.roamAlphaAPI.data.fast.q(
               `[:find (pull ?b [:block/string]) :where [?r :node/title "${normalizePageTitle(
                 name
               )}"] [?t :block/uid "${uid}"] [?b :block/refs ?r] [?b :block/page ?p] [?t :block/page ?p]]]`
-            )
-            .find((a) => new RegExp(`^${name}::`).test(a?.[0]?.string))?.[0]
-            ?.string || ""
+            ) as [PullBlock][]
+          ).find((a) =>
+            new RegExp(`^${name}::`).test(a?.[0]?.[":block/string"])
+          )?.[0]?.[":block/string"] || ""
         )
           .slice(name.length + 2)
           .trim();
@@ -601,11 +602,11 @@ export const COMMANDS: {
     help: "Returns a random child block from a block references or page\n\n1: Page name or UID.",
     handler: (titleOrUid = "") => {
       const parentUid = getUidFromText(titleOrUid);
-      const uids = window.roamAlphaAPI
+      const uids = window.roamAlphaAPI.data.fast
         .q(
           `[:find (pull ?c [:block/uid]) :where [?b :block/uid "${parentUid}"] [?r :block/refs ?b] [?c :block/parents ?r]]`
         )
-        .map((r) => r[0]?.uid as string);
+        .map((r) => (r as [PullBlock])[0]?.[":block/uid"] as string);
       const uid = uids[Math.floor(Math.random() * uids.length)];
       return uids.length ? `((${uid}))` : "No blocks on page!";
     },
@@ -630,7 +631,7 @@ export const COMMANDS: {
             [?r :block/refs ?p] [?p :node/title "TODO"] [?d :node/title "${today}"]
         ]`
         )
-        .map(([uid, text]) => ({ uid, text }));
+        .map(([uid, text]: [string, string]) => ({ uid, text }));
       return outputTodoBlocks(todos, ...args);
     },
   },

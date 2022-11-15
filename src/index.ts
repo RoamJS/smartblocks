@@ -48,6 +48,7 @@ import apiPut from "roamjs-components/util/apiPut";
 import { addTokenDialogCommand } from "roamjs-components/components/TokenDialog";
 import migrateLegacySettings from "roamjs-components/util/migrateLegacySettings";
 import DailyConfig from "./DailyConfig";
+import { PullBlock } from "roamjs-components/types";
 
 const getLegacy42Setting = (name: string) => {
   const settings = Object.fromEntries(
@@ -66,6 +67,7 @@ export default runExtension({
   migratedTo: "SmartBlocks",
   extensionId,
   run: async ({ extensionAPI }) => {
+    const timeouts = new Set<number>();
     migrateLegacySettings({
       extensionAPI,
       extensionId,
@@ -182,7 +184,8 @@ export default runExtension({
                 window.roamAlphaAPI.ui.getFocusedBlock()?.["block-uid"];
               // Because the command palette does a blur event on close,
               // we want a slight delay so that we could keep focus
-              setTimeout(() => {
+              const timeout = window.setTimeout(() => {
+                timeouts.delete(timeout);
                 if (targetUid) {
                   sbBomb({
                     srcUid: wf.uid,
@@ -206,6 +209,7 @@ export default runExtension({
                     );
                 }
               }, 500);
+              timeouts.add(timeout);
             },
           });
         });
@@ -342,6 +346,12 @@ export default runExtension({
           delayArgs,
         };
         customCommands.push({ text: command, help });
+        return () => {
+          customCommands.splice(
+            customCommands.findIndex((c) => c.text === command),
+            1
+          );
+        };
       },
       unregisterCommand: (text: string) => {
         const command = text.toUpperCase();
@@ -551,7 +561,11 @@ export default runExtension({
         );
         if (isBefore(today, triggerTime)) {
           const ms = differenceInMilliseconds(triggerTime, today);
-          window.setTimeout(runDaily, ms + 1000);
+          const timeout = window.setTimeout(() => {
+            timeouts.delete(timeout);
+            runDaily();
+          }, ms + 1000);
+          timeouts.add(timeout);
           if (debug) {
             renderToast({
               id: "smartblocks-info",
@@ -636,7 +650,11 @@ export default runExtension({
               }
               const nextRun = addSeconds(addDays(triggerTime, 1), 1);
               const ms = differenceInMilliseconds(nextRun, today);
-              window.setTimeout(runDaily, ms);
+              const timeout = window.setTimeout(() => {
+                timeouts.delete(timeout);
+                runDaily();
+              }, ms);
+              timeouts.add(timeout);
             })
             .catch((e) =>
               renderToast({
@@ -669,11 +687,11 @@ export default runExtension({
           window.roamAlphaAPI.ui.getFocusedBlock()?.["block-uid"];
         renderBulk({
           initialLocations: parentUid
-            ? window.roamAlphaAPI
+            ? window.roamAlphaAPI.data.fast
                 .q(
                   `[:find (pull ?p [:node/title]) :where [?b :block/uid "${parentUid}"] [?c :block/parents ?b] [?c :block/refs ?p]]`
                 )
-                .map((a) => a[0]?.title as string)
+                .map((a) => (a as [PullBlock])[0]?.[":node/title"])
             : [],
         });
       },
@@ -902,9 +920,9 @@ export default runExtension({
         OPEN_SMARTBLOCK_STORE_COMMAND_LABEL,
         RUN_MULTIPLE_SMARTBLOCKS_COMMAND_LABEL,
       ],
+      unload: () => {
+        timeouts.forEach((t) => window.clearTimeout(t));
+      },
     };
-  },
-  unload: () => {
-    delete window.roamjs.extension.smartblocks;
   },
 });
