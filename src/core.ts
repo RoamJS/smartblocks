@@ -1556,7 +1556,10 @@ export const COMMANDS: {
         }
         const nodes = getFullTreeByParentUid(srcUid).children;
         const parentContext = { ...smartBlocksContext };
-        resetContext({ variables: parentContext.variables });
+        resetContext({
+          variables: parentContext.variables,
+          triggerUid: parentContext.triggerUid,
+        });
         return processChildren({
           nodes,
           introUid: parentContext.currentUid,
