@@ -1559,6 +1559,7 @@ export const COMMANDS: {
         resetContext({
           variables: parentContext.variables,
           triggerUid: parentContext.triggerUid,
+          targetUid: parentContext.currentUid,
         });
         return processChildren({
           nodes,
