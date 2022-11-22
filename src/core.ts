@@ -1559,7 +1559,8 @@ export const COMMANDS: {
         resetContext({
           variables: parentContext.variables,
           triggerUid: parentContext.triggerUid,
-          targetUid: parentContext.currentUid,
+          // `currentUid` doesn't exist yet, so can't do queries based off of it
+          targetUid: parentContext.targetUid,
         });
         return processChildren({
           nodes,
