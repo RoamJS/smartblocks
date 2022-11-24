@@ -1,7 +1,7 @@
 import { OnloadArgs } from "roamjs-components/types";
 import { InputGroup, Label, Switch } from "@blueprintjs/core";
 import { TimePicker } from "@blueprintjs/datetime";
-import { useMemo, useState, } from "react";
+import { useMemo, useState } from "react";
 
 const DailyConfig = (extensionAPI: OnloadArgs["extensionAPI"]) => () => {
   const config = useMemo(
@@ -23,7 +23,7 @@ const DailyConfig = (extensionAPI: OnloadArgs["extensionAPI"]) => () => {
     }
     return date;
   }, [config]);
-  const lastRun = extensionAPI.settings.get("last-run");
+  const lastRun = config?.["last-run"];
   return (
     <div
       className="flex items-start gap-2 flex-col"
@@ -81,10 +81,7 @@ const DailyConfig = (extensionAPI: OnloadArgs["extensionAPI"]) => () => {
           className={"w-full user-select-none"}
         />
       </Label>
-      <span>
-        {extensionAPI.settings.get("last-run") &&
-          `Last ran daily workflow on page ${lastRun}.`}
-      </span>
+      <span>{lastRun && `Last ran daily workflow on page ${lastRun}.`}</span>
     </div>
   );
 };
