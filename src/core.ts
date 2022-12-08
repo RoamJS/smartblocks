@@ -929,7 +929,7 @@ export const COMMANDS: {
   },
   {
     text: "BLOCKMENTIONSDATED",
-    help: "Returns list of blocks mentioned based on date range\n\n1: Max blocks to return\n\n2: Page or Tag Name\n\n3: Start Date\n\n4. End Date\n\n5: Sort (ASC,DESC,NONE)\n\n6:Format of Output\n\n7: (opt) filtering ",
+    help: "Returns list of blocks mentioned based on date range\n\n1: Max blocks to return\n\n2: Page or Tag Name\n\n3: Start Date\n\n4: End Date\n\n5: Sort (ASC,DESC,NONE)\n\n6:Format of Output\n\n7: (opt) filtering ",
     handler: (
       limitArg = "20",
       titleArg = "",
@@ -942,11 +942,11 @@ export const COMMANDS: {
       const referenceDate = getDateBasisDate();
       const undated = startArg === "-1" && endArg === "-1";
       const start =
-        !undated && startArg
+        !undated && startArg && startArg !== "0"
           ? startOfDay(parseNlpDate(startArg, referenceDate))
           : new Date(0);
       const end =
-        !undated && endArg
+        !undated && endArg && endArg !== "0"
           ? endOfDay(parseNlpDate(endArg, referenceDate))
           : new Date(9999, 11, 31);
       const limit = Number(limitArg);
@@ -1935,7 +1935,7 @@ export const COMMANDS: {
       const tree = getLevelsBelowParentUid(text, levelsIncluded);
       const end = Number(endArg) || 0;
       return tree
-        .slice(Number(start) - 1, end <= 0 ? tree.length - end : end)
+        .slice(Number(start) - 1, end <= 0 ? tree.length + end : end)
         .map((n) => formatTree(n, format));
     },
   },
