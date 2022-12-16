@@ -13,7 +13,6 @@ import {
   RoamBasicNode,
 } from "roamjs-components/types/native";
 import getBlockUidsAndTextsReferencingPage from "roamjs-components/queries/getBlockUidsAndTextsReferencingPage";
-import getBlockUidsWithParentUid from "roamjs-components/queries/getBlockUidsWithParentUid";
 import createTagRegex from "roamjs-components/util/createTagRegex";
 import getAllBlockUids from "roamjs-components/queries/getAllBlockUids";
 import getAllPageNames from "roamjs-components/queries/getAllPageNames";
@@ -36,7 +35,6 @@ import getBlockUidsReferencingBlock from "roamjs-components/queries/getBlockUids
 import getBasicTreeByParentUid from "roamjs-components/queries/getBasicTreeByParentUid";
 import datefnsFormat from "date-fns/format";
 import addDays from "date-fns/addDays";
-import addWeeks from "date-fns/addWeeks";
 import addMonths from "date-fns/addMonths";
 import addYears from "date-fns/addYears";
 import subDays from "date-fns/subDays";
@@ -44,17 +42,15 @@ import isBefore from "date-fns/isBefore";
 import isAfter from "date-fns/isAfter";
 import endOfDay from "date-fns/endOfDay";
 import startOfDay from "date-fns/startOfDay";
-import startOfWeek from "date-fns/startOfWeek";
 import startOfMonth from "date-fns/startOfMonth";
 import startOfYear from "date-fns/startOfYear";
-import endOfWeek from "date-fns/endOfWeek";
 import endOfMonth from "date-fns/endOfMonth";
 import endOfYear from "date-fns/endOfYear";
 import differenceInDays from "date-fns/differenceInDays";
 import XRegExp from "xregexp";
 import { renderPrompt } from "./Prompt";
 import { render as renderToast } from "roamjs-components/components/Toast";
-import { Intent, ToasterPosition } from "@blueprintjs/core";
+import { ToasterPosition } from "@blueprintjs/core";
 import { renderLoading } from "roamjs-components/components/Loading";
 import lodashGet from "lodash/get";
 import getUids from "roamjs-components/dom/getUids";
@@ -64,8 +60,6 @@ import parseNlpDate, {
 } from "roamjs-components/date/parseNlpDate";
 import apiGet from "roamjs-components/util/apiGet";
 import { render as renderSimpleAlert } from "roamjs-components/components/SimpleAlert";
-import getSubTree from "roamjs-components/util/getSubTree";
-import getShallowTreeByParentUid from "roamjs-components/queries/getShallowTreeByParentUid";
 
 export const PREDEFINED_REGEX = /#\d*-predefined/;
 const PAGE_TITLE_REGEX = /^(?:#?\[\[(.*)\]\]|#([^\s]*))$/;
@@ -404,44 +398,6 @@ const resetContext = (context: Partial<SmartBlocksContext> = {}) => {
   smartBlocksContext.illegalCommands = context.illegalCommands || new Set();
 };
 
-const javascriptHandler =
-  (fcn: FunctionConstructor): CommandHandler =>
-  (...args) => {
-    const content = args.join(",");
-    const code = content
-      .replace(/^\s*```javascript(\n)?/, "")
-      .replace(/(\n)?```\s*$/, "")
-      .replace(/^\s*`/, "")
-      .replace(/`\s*$/, "");
-    const variables = Object.entries(smartBlocksContext.variables)
-      .map(([k, v]) => [k.replace(/^\d+/, ""), v])
-      .filter(([s]) => !!s);
-    return Promise.resolve(
-      new fcn(...variables.map((v) => v[0]), code)(
-        ...variables.map((v) => v[1])
-      )
-    ).then((result) => {
-      if (typeof result === "undefined" || result === null) {
-        return "";
-      } else if (Array.isArray(result)) {
-        return result.map((r) => {
-          if (typeof r === "undefined" || r === null) {
-            return "";
-          } else if (typeof r === "object") {
-            return {
-              text: (r.text || "").toString(),
-              children: [...r.children],
-            };
-          } else {
-            return r.toString();
-          }
-        });
-      } else {
-        return result.toString();
-      }
-    });
-  };
-
 const formatTree = (
   { uid, children, text, ...rest }: InputTextNode,
   format: string
@@ -752,44 +708,32 @@ export const COMMANDS: {
     illegal: true,
     text: "JAVASCRIPT",
     help: "DEPRECATED",
-    handler: (...args) => {
-      if (process.env.ROAM_MARKETPLACE) {
-        return "The JAVASCRIPT command is no longer available. Visit https://roamjs.com/extensions/smartblocks/migration_guide#1MPiDsoO- for help on how to migrate.";
-      }
-      return javascriptHandler(Function)(...args);
+    handler: () => {
+      return "The JAVASCRIPT command is no longer available. Visit https://roamjs.com/extensions/smartblocks/migration_guide#1MPiDsoO- for help on how to migrate.";
     },
   },
   {
     illegal: true,
     text: "J",
     help: "DEPRECATED",
-    handler: (...args) => {
-      if (process.env.ROAM_MARKETPLACE) {
-        return "The J command is no longer available. Visit https://roamjs.com/extensions/smartblocks/migration_guide#1MPiDsoO- for help on how to migrate.";
-      }
-      return javascriptHandler(Function)(...args);
+    handler: () => {
+      return "The J command is no longer available. Visit https://roamjs.com/extensions/smartblocks/migration_guide#1MPiDsoO- for help on how to migrate.";
     },
   },
   {
     illegal: true,
     text: "JAVASCRIPTASYNC",
     help: "DEPRECATED",
-    handler: (...args) => {
-      if (process.env.ROAM_MARKETPLACE) {
-        return "The JAVASCRIPTASYNC command is no longer available. Visit https://roamjs.com/extensions/smartblocks/migration_guide#1MPiDsoO- for help on how to migrate.";
-      }
-      return javascriptHandler(AsyncFunction)(...args);
+    handler: () => {
+      return "The JAVASCRIPTASYNC command is no longer available. Visit https://roamjs.com/extensions/smartblocks/migration_guide#1MPiDsoO- for help on how to migrate.";
     },
   },
   {
     illegal: true,
     text: "JA",
     help: "DEPRECATED",
-    handler: (...args) => {
-      if (process.env.ROAM_MARKETPLACE) {
-        return "The JA command is no longer available. Visit https://roamjs.com/extensions/smartblocks/migration_guide#1MPiDsoO- for help on how to migrate.";
-      }
-      return javascriptHandler(AsyncFunction)(...args);
+    handler: () => {
+      return "The JA command is no longer available. Visit https://roamjs.com/extensions/smartblocks/migration_guide#1MPiDsoO- for help on how to migrate.";
     },
   },
   {
@@ -989,30 +933,8 @@ export const COMMANDS: {
     illegal: true,
     text: "IF",
     help: "DEPRECATED",
-    handler: (condition = "false", then, els) => {
-      if (process.env.ROAM_MARKETPLACE) {
-        return "The IF command is no longer available. Visit https://roamjs.com/extensions/smartblocks/migration_guide#1MPiDsoO- for help on how to migrate.";
-      }
-      try {
-        const evaluated = eval(condition);
-        if (evaluated) {
-          if (then) {
-            return then;
-          } else {
-            smartBlocksContext.ifCommand = true;
-            return "";
-          }
-        } else {
-          if (els) {
-            return els;
-          } else {
-            smartBlocksContext.ifCommand = false;
-            return "";
-          }
-        }
-      } catch (e) {
-        return `Failed to evaluate IF condition: ${e.message}`;
-      }
+    handler: () => {
+      return "The IF command is no longer available. Visit https://roamjs.com/extensions/smartblocks/migration_guide#1MPiDsoO- for help on how to migrate.";
     },
   },
   {
@@ -1020,48 +942,24 @@ export const COMMANDS: {
     text: "THEN",
     delayArgs: true,
     help: "DEPRECATED",
-    handler: (...args: string[]) => {
-      if (process.env.ROAM_MARKETPLACE) {
-        return "The THEN command is no longer available. Visit https://roamjs.com/extensions/smartblocks/migration_guide#1MPiDsoO- for help on how to migrate.";
-      }
-      if (smartBlocksContext.ifCommand) {
-        smartBlocksContext.ifCommand = undefined;
-        return proccessBlockText(args.join(","));
-      }
-      return "";
+    handler: () => {
+      return "The THEN command is no longer available. Visit https://roamjs.com/extensions/smartblocks/migration_guide#1MPiDsoO- for help on how to migrate.";
     },
   },
   {
     illegal: true,
     text: "ELSE",
     help: "DEPRECATED",
-    handler: (...args: string[]) => {
-      if (process.env.ROAM_MARKETPLACE) {
-        return "The ELSE command is no longer available. Visit https://roamjs.com/extensions/smartblocks/migration_guide#1MPiDsoO- for help on how to migrate.";
-      }
-      if (smartBlocksContext.ifCommand === false) {
-        smartBlocksContext.ifCommand = undefined;
-        return args.join(",");
-      }
-      return "";
+    handler: () => {
+      return "The ELSE command is no longer available. Visit https://roamjs.com/extensions/smartblocks/migration_guide#1MPiDsoO- for help on how to migrate.";
     },
   },
   {
     illegal: true,
     text: "IFTRUE",
     help: "DEPRECATED",
-    handler: (condition) => {
-      if (process.env.ROAM_MARKETPLACE) {
-        return "The IFTRUE command is no longer available. Visit https://roamjs.com/extensions/smartblocks/migration_guide#1MPiDsoO- for help on how to migrate.";
-      }
-      try {
-        if (!eval(condition)) {
-          smartBlocksContext.exitBlock = "yes";
-        }
-        return "";
-      } catch (e) {
-        return `Failed to evaluate IFTRUE condition: ${e.message}`;
-      }
+    handler: () => {
+      return "The IFTRUE command is no longer available. Visit https://roamjs.com/extensions/smartblocks/migration_guide#1MPiDsoO- for help on how to migrate.";
     },
   },
   {
@@ -1570,6 +1468,7 @@ export const COMMANDS: {
           resetContext({
             ...parentContext,
             variables: smartBlocksContext.variables,
+            cursorPosition: smartBlocksContext.cursorPosition,
           });
           return nodes;
         });

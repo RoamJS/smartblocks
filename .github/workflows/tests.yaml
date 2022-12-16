@@ -1,0 +1,24 @@
+name: Test Extension
+on:
+  pull_request:
+  workflow_dispatch:
+  push:
+    branches: main
+    paths:
+      - "tests/**"
+      - ".github/workflows/tests.yaml"
+
+env:
+  PLAYWRIGHT_HTML_REPORT: playwright-report
+
+jobs:
+  test-mac:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: install
+        run: npm install
+      # - name: install playwright
+      #   run: npx playwright install
+      - name: test
+        run: npm t
