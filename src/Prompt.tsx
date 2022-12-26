@@ -13,6 +13,7 @@ import BlockInput from "roamjs-components/components/BlockInput";
 import createOverlayRender from "roamjs-components/util/createOverlayRender";
 import MenuItemSelect from "roamjs-components/components/MenuItemSelect";
 import PageInput from "roamjs-components/components/PageInput";
+import AutocompleteInput from "roamjs-components/components/AutocompleteInput";
 
 type Props = {
   display?: string;
@@ -116,18 +117,28 @@ const Prompt = ({
               getAllBlocks={getAllBlocks}
             />
           ) : formattedOptions.length ? (
-            <MenuItemSelect
-              activeItem={value}
-              onItemSelect={(v) => setValue(v)}
-              items={[formattedInitialValue, ...formattedOptions]}
-              popoverProps={{ portalClassName: "roamjs-prompt-dropdown" }}
-              ButtonProps={{ autoFocus: true }}
-            />
+            formattedOptions.length < 10 ? (
+              <MenuItemSelect
+                activeItem={value}
+                onItemSelect={(v) => setValue(v)}
+                items={[formattedInitialValue, ...formattedOptions]}
+                popoverProps={{ portalClassName: "roamjs-prompt-dropdown" }}
+                ButtonProps={{ autoFocus: true }}
+              />
+            ) : (
+              <AutocompleteInput
+                value={value}
+                setValue={setValue}
+                options={formattedOptions}
+                autoFocus
+              />
+            )
           ) : isPageInput ? (
             <PageInput
               value={value}
               setValue={setValue}
               onConfirm={() => resolveAndClose(value)}
+              autoFocus
             />
           ) : (
             <InputGroup
