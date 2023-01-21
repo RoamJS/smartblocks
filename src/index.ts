@@ -189,7 +189,7 @@ export default runExtension({
                 if (targetUid) {
                   sbBomb({
                     srcUid: wf.uid,
-                    target: { uid: targetUid, isParent: false },
+                    target: { uid: targetUid, isParent: false, start: getTextByBlockUid(targetUid).length },
                     mutableCursor: true,
                   });
                 } else {
