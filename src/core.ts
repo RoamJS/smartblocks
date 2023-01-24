@@ -1771,7 +1771,12 @@ export const COMMANDS: {
       const blockText = getTextByBlockUid(uid);
       const regex = /^`(.*?)`$/.test(reg)
         ? new RegExp(reg.slice(1, -1), flags)
-        : new RegExp(reg.replace(/([.+*?^$()[\]{}|\\])/g, "\\\\$1"), flags);
+        : new RegExp(
+            reg.replace(/([.+*?^$()[\]{}|\\])/g, (_, cap, ind) =>
+              ind === 0 || reg[ind - 1] !== "\\" ? `\\${cap}` : cap
+            ),
+            flags
+          );
       if (blockText) {
         return updateBlock({
           uid,
