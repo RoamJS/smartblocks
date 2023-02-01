@@ -129,7 +129,7 @@ const Prompt = ({
               <AutocompleteInput
                 value={value}
                 setValue={setValue}
-                options={formattedOptions}
+                options={formattedOptions.concat(value)}
                 autoFocus
               />
             )
