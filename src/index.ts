@@ -49,6 +49,8 @@ import { addTokenDialogCommand } from "roamjs-components/components/TokenDialog"
 import migrateLegacySettings from "roamjs-components/util/migrateLegacySettings";
 import DailyConfig from "./DailyConfig";
 import { PullBlock } from "roamjs-components/types";
+import getParentUidByBlockUid from "roamjs-components/queries/getParentUidByBlockUid";
+import getShallowTreeByParentUid from "roamjs-components/queries/getShallowTreeByParentUid";
 
 const getLegacy42Setting = (name: string) => {
   const settings = Object.fromEntries(
@@ -767,6 +769,7 @@ export default runExtension({
                   variables["RemoveButton"] === "false" ||
                   variables["42RemoveButton"] === "false";
                 const clearBlock = variables["Clear"] === "true";
+                const applyToSibling = variables["Sibling"];
 
                 const props = {
                   srcUid,
@@ -776,10 +779,47 @@ export default runExtension({
                   ).includes("<%NOCURSOR%>"),
                   triggerUid: parentUid,
                 };
+
+                // TODO, refactor this
+                // so we can have both keepButton and applyToSibling
+                
+                // also clear up
+                // keepButton
+                // clearBlock
+                // applyToSibling
+
                 if (keepButton) {
                   createBlock({
                     node: { text: "" },
                     parentUid,
+                  }).then((targetUid) =>
+                    sbBomb({
+                      ...props,
+                      target: {
+                        uid: targetUid,
+                        start: 0,
+                        end: 0,
+                      },
+                    }).then((n) => n === 0 && deleteBlock(targetUid))
+                  );
+                }  else if (applyToSibling) {
+
+                  // creates child of sibling
+
+                  const sbParentTree = getShallowTreeByParentUid(getParentUidByBlockUid(parentUid));
+                  const siblingIndex = sbParentTree.findIndex(obj => obj.uid === parentUid) + (applyToSibling === "previous" ? -1 : 1)
+                  const siblingUid = sbParentTree[siblingIndex]?.uid;
+                  updateBlock({
+                    uid: parentUid,
+                    text: clearBlock
+                      ? ""
+                      : `${text.substring(0, index)}${text.substring(
+                          index + full.length
+                        )}`,
+                  });
+                  createBlock({
+                    node: { text: "" },
+                    parentUid: siblingUid,
                   }).then((targetUid) =>
                     sbBomb({
                       ...props,
