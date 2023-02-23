@@ -779,16 +779,36 @@ export default runExtension({
                   ).includes("<%NOCURSOR%>"),
                   triggerUid: parentUid,
                 };
+                                  
+                if (applyToSibling) {
+                  const sbParentTree = getShallowTreeByParentUid(getParentUidByBlockUid(parentUid));
+                  const siblingIndex = sbParentTree.findIndex(obj => obj.uid === parentUid) + (applyToSibling === "previous" ? -1 : 1)
+                  const siblingUid = sbParentTree[siblingIndex]?.uid;
+                  const siblingText = getTextByBlockUid(siblingUid);
 
-                // TODO, refactor this
-                // so we can have both keepButton and applyToSibling
-                
-                // also clear up
-                // keepButton
-                // clearBlock
-                // applyToSibling
-
-                if (keepButton) {
+                  updateBlock({
+                    uid: parentUid,
+                    text: clearBlock && keepButton
+                      ? full
+                      : clearBlock
+                      ? ""
+                      : `${text.substring(0, index)}${text.substring(
+                          index + full.length
+                        )}`,
+                  });
+                  updateBlock({
+                      uid: siblingUid,
+                    }).then(() =>
+                      sbBomb({
+                        ...props,
+                        target: {
+                          uid: siblingUid,
+                          start: siblingText.length,
+                          end: siblingText.length,
+                        },
+                      })
+                    );
+                } else if (keepButton) {
                   createBlock({
                     node: { text: "" },
                     parentUid,
@@ -801,35 +821,13 @@ export default runExtension({
                         end: 0,
                       },
                     }).then((n) => n === 0 && deleteBlock(targetUid))
-                  );
-                }  else if (applyToSibling) {
-
-                  // creates child of sibling
-
-                  const sbParentTree = getShallowTreeByParentUid(getParentUidByBlockUid(parentUid));
-                  const siblingIndex = sbParentTree.findIndex(obj => obj.uid === parentUid) + (applyToSibling === "previous" ? -1 : 1)
-                  const siblingUid = sbParentTree[siblingIndex]?.uid;
-                  updateBlock({
-                    uid: parentUid,
-                    text: clearBlock
-                      ? ""
-                      : `${text.substring(0, index)}${text.substring(
-                          index + full.length
-                        )}`,
-                  });
-                  createBlock({
-                    node: { text: "" },
-                    parentUid: siblingUid,
-                  }).then((targetUid) =>
-                    sbBomb({
-                      ...props,
-                      target: {
-                        uid: targetUid,
-                        start: 0,
-                        end: 0,
-                      },
-                    }).then((n) => n === 0 && deleteBlock(targetUid))
-                  );
+                  ),
+                  clearBlock 
+                    ? updateBlock({
+                      uid: parentUid,
+                      text: full
+                    })       
+                    : ""        
                 } else {
                   updateBlock({
                     uid: parentUid,
