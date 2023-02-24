@@ -789,26 +789,44 @@ export default runExtension({
 
                   updateBlock({
                     uid: parentUid,
-                    text: clearBlock && keepButton
-                      ? full
-                      : clearBlock
-                      ? ""
-                      : `${text.substring(0, index)}${text.substring(
-                          index + full.length
-                        )}`,
+                    text:
+                      clearBlock && keepButton
+                        ? full
+                        : clearBlock
+                        ? ""
+                        : keepButton
+                        ? text
+                        : `${text.substring(0, index)}${text.substring(
+                            index + full.length
+                          )}`,
                   });
-                  updateBlock({
-                      uid: siblingUid,
-                    }).then(() =>
-                      sbBomb({
-                        ...props,
-                        target: {
-                          uid: siblingUid,
-                          start: siblingText.length,
-                          end: siblingText.length,
-                        },
-                      })
-                    );
+                  !!siblingUid
+                    ? updateBlock({
+                        uid: siblingUid,
+                      }).then(() =>
+                        sbBomb({
+                          ...props,
+                          target: {
+                            uid: siblingUid,
+                            start: siblingText.length,
+                            end: siblingText.length,
+                          },
+                        })
+                      )
+                    : createBlock({
+                        node: { text: "" },
+                        parentUid: getParentUidByBlockUid(parentUid),
+                        order: siblingIndex === -1 ? 0 : siblingIndex,
+                      }).then((targetUid) =>
+                        sbBomb({
+                          ...props,
+                          target: {
+                            uid: targetUid,
+                            start: 0,
+                            end: 0,
+                          },
+                        })
+                      );
                 } else if (keepButton) {
                   outputNowhere
                     ? sbBomb({
