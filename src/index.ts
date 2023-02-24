@@ -770,6 +770,7 @@ export default runExtension({
                   variables["42RemoveButton"] === "false";
                 const clearBlock = variables["Clear"] === "true";
                 const applyToSibling = variables["Sibling"];
+                const outputNowhere = variables["Output"] === "false";
 
                 const props = {
                   srcUid,
@@ -809,25 +810,34 @@ export default runExtension({
                       })
                     );
                 } else if (keepButton) {
-                  createBlock({
-                    node: { text: "" },
-                    parentUid,
-                  }).then((targetUid) =>
-                    sbBomb({
-                      ...props,
-                      target: {
-                        uid: targetUid,
-                        start: 0,
-                        end: 0,
-                      },
-                    }).then((n) => n === 0 && deleteBlock(targetUid))
-                  ),
-                  clearBlock 
-                    ? updateBlock({
-                      uid: parentUid,
-                      text: full
-                    })       
-                    : ""        
+                  outputNowhere
+                    ? sbBomb({
+                        ...props,
+                        target: {
+                          uid: parentUid,
+                          start: 0,
+                          end: 0,
+                        },
+                      })
+                    : createBlock({
+                        node: { text: "" },
+                        parentUid,
+                      }).then((targetUid) =>
+                        sbBomb({
+                          ...props,
+                          target: {
+                            uid: targetUid,
+                            start: 0,
+                            end: 0,
+                          },
+                        }).then((n) => n === 0 && deleteBlock(targetUid))
+                      ),
+                    clearBlock
+                      ? updateBlock({
+                          uid: parentUid,
+                          text: full,
+                        })
+                      : "";        
                 } else {
                   updateBlock({
                     uid: parentUid,
