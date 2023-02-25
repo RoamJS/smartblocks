@@ -49,6 +49,8 @@ import { addTokenDialogCommand } from "roamjs-components/components/TokenDialog"
 import migrateLegacySettings from "roamjs-components/util/migrateLegacySettings";
 import DailyConfig from "./DailyConfig";
 import { PullBlock } from "roamjs-components/types";
+import getParentUidByBlockUid from "roamjs-components/queries/getParentUidByBlockUid";
+import getShallowTreeByParentUid from "roamjs-components/queries/getShallowTreeByParentUid";
 
 const getLegacy42Setting = (name: string) => {
   const settings = Object.fromEntries(
@@ -767,6 +769,8 @@ export default runExtension({
                   variables["RemoveButton"] === "false" ||
                   variables["42RemoveButton"] === "false";
                 const clearBlock = variables["Clear"] === "true";
+                const applyToSibling = variables["Sibling"];
+                const outputNowhere = variables["Output"] === "false";
 
                 const props = {
                   srcUid,
@@ -776,20 +780,82 @@ export default runExtension({
                   ).includes("<%NOCURSOR%>"),
                   triggerUid: parentUid,
                 };
-                if (keepButton) {
-                  createBlock({
-                    node: { text: "" },
-                    parentUid,
-                  }).then((targetUid) =>
-                    sbBomb({
-                      ...props,
-                      target: {
-                        uid: targetUid,
-                        start: 0,
-                        end: 0,
-                      },
-                    }).then((n) => n === 0 && deleteBlock(targetUid))
-                  );
+                                  
+                if (applyToSibling) {
+                  const sbParentTree = getShallowTreeByParentUid(getParentUidByBlockUid(parentUid));
+                  const siblingIndex = sbParentTree.findIndex(obj => obj.uid === parentUid) + (applyToSibling === "previous" ? -1 : 1)
+                  const siblingUid = sbParentTree[siblingIndex]?.uid;
+                  const siblingText = getTextByBlockUid(siblingUid);
+
+                  updateBlock({
+                    uid: parentUid,
+                    text:
+                      clearBlock && keepButton
+                        ? full
+                        : clearBlock
+                        ? ""
+                        : keepButton
+                        ? text
+                        : `${text.substring(0, index)}${text.substring(
+                            index + full.length
+                          )}`,
+                  });
+                  !!siblingUid
+                    ? updateBlock({
+                        uid: siblingUid,
+                      }).then(() =>
+                        sbBomb({
+                          ...props,
+                          target: {
+                            uid: siblingUid,
+                            start: siblingText.length,
+                            end: siblingText.length,
+                          },
+                        })
+                      )
+                    : createBlock({
+                        node: { text: "" },
+                        parentUid: getParentUidByBlockUid(parentUid),
+                        order: siblingIndex === -1 ? 0 : siblingIndex,
+                      }).then((targetUid) =>
+                        sbBomb({
+                          ...props,
+                          target: {
+                            uid: targetUid,
+                            start: 0,
+                            end: 0,
+                          },
+                        })
+                      );
+                } else if (keepButton) {
+                  outputNowhere
+                    ? sbBomb({
+                        ...props,
+                        target: {
+                          uid: parentUid,
+                          start: 0,
+                          end: 0,
+                        },
+                      })
+                    : createBlock({
+                        node: { text: "" },
+                        parentUid,
+                      }).then((targetUid) =>
+                        sbBomb({
+                          ...props,
+                          target: {
+                            uid: targetUid,
+                            start: 0,
+                            end: 0,
+                          },
+                        }).then((n) => n === 0 && deleteBlock(targetUid))
+                      ),
+                    clearBlock
+                      ? updateBlock({
+                          uid: parentUid,
+                          text: full,
+                        })
+                      : "";        
                 } else {
                   updateBlock({
                     uid: parentUid,
