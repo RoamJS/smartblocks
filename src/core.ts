@@ -1129,6 +1129,8 @@ export const COMMANDS: {
       if (!name) return "--> Variable name required for GET <--";
       return typeof smartBlocksContext.variables[name] === "undefined"
         ? `--> Variable ${name} not SET <--`
+        : smartBlocksContext.variables[name].includes(",")
+        ? smartBlocksContext.variables[name].split(",")
         : smartBlocksContext.variables[name];
     },
   },
