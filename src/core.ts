@@ -1774,14 +1774,13 @@ export const COMMANDS: {
       const regex = /^`(.*?)`$/.test(reg)
         ? new RegExp(reg.slice(1, -1), flags)
         : new RegExp(
-            reg
+            reg,
             // TODO - this logic got too complicated and doesn't solve the intended problem - need a better solution
             // for whatever this was trying to solve: https://github.com/dvargas92495/roamjs-smartblocks/commit/f0519b666aab52af4b3c5fb6a7ed766052da7aca
             //
             // .replace(/([.+*?^$()[\]{}|\\])/g, (_, cap, ind) =>
             //   ind === 0 || reg[ind - 1] !== "\\" ? `\\${cap}` : cap
             // )
-            ,
             flags
           );
       if (blockText) {
@@ -2100,7 +2099,10 @@ const processChildren = ({
         return Promise.resolve();
       }
       const uid =
-        (i === 0 && introUid) || window.roamAlphaAPI.util.generateUID();
+        (i === 0 && introUid) ||
+        (prev.every((arr) => arr.length === 0) && introUid) ||
+        window.roamAlphaAPI.util.generateUID();
+
       smartBlocksContext.refMapping[n.uid] = uid;
       smartBlocksContext.currentUid = uid;
       smartBlocksContext.currentContent = introContent || "";

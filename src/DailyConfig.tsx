@@ -1,7 +1,7 @@
 import { OnloadArgs } from "roamjs-components/types";
 import { InputGroup, Label, Switch } from "@blueprintjs/core";
 import { TimePicker } from "@blueprintjs/datetime";
-import { useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 
 const DailyConfig = (extensionAPI: OnloadArgs["extensionAPI"]) => () => {
   const config = useMemo(
