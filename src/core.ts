@@ -1124,12 +1124,12 @@ export const COMMANDS: {
   },
   {
     text: "GET",
-    help: "Returns a variable\n\n1. Variable name",
-    handler: (name = "") => {
+    help: "Returns a variable\n\n1. Variable name\n\n2. Mode: 'normal' or 'split'",
+    handler: (name = "", mode = "normal") => {
       if (!name) return "--> Variable name required for GET <--";
       return typeof smartBlocksContext.variables[name] === "undefined"
         ? `--> Variable ${name} not SET <--`
-        : smartBlocksContext.variables[name].includes(",")
+        : mode === "split"
         ? smartBlocksContext.variables[name].split(",")
         : smartBlocksContext.variables[name];
     },
