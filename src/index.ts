@@ -191,7 +191,11 @@ export default runExtension({
                 if (targetUid) {
                   sbBomb({
                     srcUid: wf.uid,
-                    target: { uid: targetUid, isParent: false, start: getTextByBlockUid(targetUid).length },
+                    target: {
+                      uid: targetUid,
+                      isParent: false,
+                      start: getTextByBlockUid(targetUid).length,
+                    },
                     mutableCursor: true,
                   });
                 } else {
@@ -505,8 +509,7 @@ export default runExtension({
     };
     document.addEventListener("input", documentInputListener);
 
-    const appRoot = document.querySelector<HTMLDivElement>(".roam-app");
-    const appRootKeydownListener = async (e: KeyboardEvent) => {
+    const globalHotkeyListener = async (e: KeyboardEvent) => {
       const modifiers = new Set();
       if (e.altKey) modifiers.add("alt");
       if (e.shiftKey) modifiers.add("shift");
@@ -523,8 +526,10 @@ export default runExtension({
         if (srcUid) {
           e.preventDefault();
           e.stopPropagation();
+          const focusedUid =
+            window.roamAlphaAPI.ui.getFocusedBlock()?.["block-uid"];
           const target =
-            window.roamAlphaAPI.ui.getFocusedBlock()?.["block-uid"] ||
+            focusedUid ||
             (await createBlock({
               node: { text: "" },
               parentUid: getCurrentPageUid(),
@@ -538,11 +543,11 @@ export default runExtension({
               end: start,
             },
             mutableCursor: true,
-          });
+          }).then((n) => n === 0 && !focusedUid && deleteBlock(target));
         }
       }
     };
-    appRoot?.addEventListener("keydown", appRootKeydownListener);
+    document.addEventListener("keydown", globalHotkeyListener);
 
     const runDaily = () => {
       const dailyConfig = extensionAPI.settings.get("daily") as Record<
@@ -780,10 +785,14 @@ export default runExtension({
                   ).includes("<%NOCURSOR%>"),
                   triggerUid: parentUid,
                 };
-                                  
+
                 if (applyToSibling) {
-                  const sbParentTree = getShallowTreeByParentUid(getParentUidByBlockUid(parentUid));
-                  const siblingIndex = sbParentTree.findIndex(obj => obj.uid === parentUid) + (applyToSibling === "previous" ? -1 : 1)
+                  const sbParentTree = getShallowTreeByParentUid(
+                    getParentUidByBlockUid(parentUid)
+                  );
+                  const siblingIndex =
+                    sbParentTree.findIndex((obj) => obj.uid === parentUid) +
+                    (applyToSibling === "previous" ? -1 : 1);
                   const siblingUid = sbParentTree[siblingIndex]?.uid;
                   const siblingText = getTextByBlockUid(siblingUid);
 
@@ -855,7 +864,7 @@ export default runExtension({
                           uid: parentUid,
                           text: full,
                         })
-                      : "";        
+                      : "";
                 } else {
                   updateBlock({
                     uid: parentUid,
@@ -980,7 +989,7 @@ export default runExtension({
       observers: [logoObserver, buttonLogoObserver, ...highlightingObservers],
       domListeners: [
         { type: "input", listener: documentInputListener, el: document },
-        { type: "keydown", el: appRoot, listener: appRootKeydownListener },
+        { type: "keydown", listener: globalHotkeyListener, el: document },
       ],
       commands: [
         OPEN_SMARTBLOCK_STORE_COMMAND_LABEL,
