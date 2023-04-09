@@ -260,7 +260,13 @@ export const HIDE_REGEX = /<%HIDE%>/i;
 export const getCustomWorkflows = () =>
   window.roamAlphaAPI.data.fast
     .q(
-      `[:find (pull ?r [:block/uid :block/string]) :where [?sb :node/title "SmartBlock"] [?old :node/title "42SmartBlock"] (or [?r :block/refs ?old] [?r :block/refs ?sb])]`
+      `[:find
+(pull ?r [:block/uid :block/string])
+:where
+  (or
+    (and [?sb :node/title "SmartBlock"] [?r :block/refs ?sb])
+    (and [?sb :node/title "42SmartBlock"] [?r :block/refs ?sb])
+)]`
     )
     .map(([block]: [PullBlock]) => ({
       uid: block?.[":block/uid"],
