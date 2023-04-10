@@ -258,13 +258,19 @@ const predefinedChildrenByUid = Object.fromEntries(
 export const HIDE_REGEX = /<%HIDE%>/i;
 
 export const getCustomWorkflows = () =>
-  window.roamAlphaAPI
+  window.roamAlphaAPI.data.fast
     .q(
-      `[:find ?s ?u :where [?r :block/uid ?u] [?r :block/string ?s] [?r :block/refs ?p] (or [?p :node/title "SmartBlock"] [?p :node/title "42SmartBlock"])]`
+      `[:find
+(pull ?r [:block/uid :block/string])
+:where
+  (or
+    (and [?sb :node/title "SmartBlock"] [?r :block/refs ?sb])
+    (and [?sb :node/title "42SmartBlock"] [?r :block/refs ?sb])
+)]`
     )
-    .map(([text, uid]: string[]) => ({
-      uid,
-      name: text
+    .map(([block]: [PullBlock]) => ({
+      uid: block?.[":block/uid"],
+      name: (block?.[":block/string"] || "")
         .replace(createTagRegex("SmartBlock"), "")
         .replace(createTagRegex("42SmartBlock"), "")
         .trim(),
