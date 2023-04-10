@@ -38,6 +38,7 @@ import {
   getVisibleCustomWorkflows,
   handlerByCommand,
   proccessBlockText,
+  proccessBlockWithSmartness,
   sbBomb,
   smartBlocksContext,
 } from "./core";
@@ -348,7 +349,11 @@ export default runExtension({
         const command = text.toUpperCase();
         handlerByCommand[command] = {
           handler: (...args) =>
-            handler({ ...smartBlocksContext, proccessBlockText })(...args),
+            handler({
+              ...smartBlocksContext,
+              proccessBlockText,
+              processBlock: proccessBlockWithSmartness,
+            })(...args),
           delayArgs,
         };
         customCommands.push({ text: command, help });
