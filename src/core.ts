@@ -2021,7 +2021,7 @@ const processPromisesToBlockProps = async (
 };
 
 // ridiculous method names in this file are a tribute to the original author of SmartBlocks, RoamHacker 🙌
-const proccessBlockWithSmartness = async (
+export const proccessBlockWithSmartness = async (
   n: InputTextNode
 ): Promise<InputTextNode[]> => {
   try {
