@@ -352,7 +352,6 @@ export default runExtension({
             handler({
               ...smartBlocksContext,
               proccessBlockText,
-              // @ts-ignore TODO - update roamjs-components
               processBlock: proccessBlockWithSmartness,
             })(...args),
           delayArgs,
