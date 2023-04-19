@@ -60,6 +60,18 @@ import parseNlpDate, {
 } from "roamjs-components/date/parseNlpDate";
 import apiGet from "roamjs-components/util/apiGet";
 import { render as renderSimpleAlert } from "roamjs-components/components/SimpleAlert";
+import FormDialog from "roamjs-components/components/FormDialog";
+import createOverlayRender from "roamjs-components/util/createOverlayRender";
+import getSubTree from "roamjs-components/util/getSubTree";
+import getSettingValueFromTree from "roamjs-components/util/getSettingValueFromTree";
+import getSettingValuesFromTree from "roamjs-components/util/getSettingValuesFromTree";
+import toFlexRegex from "roamjs-components/util/toFlexRegex";
+
+type FormDialogProps = Parameters<typeof FormDialog>[0];
+const renderFormDialog = createOverlayRender<FormDialogProps>(
+  "form-dialog",
+  FormDialog
+);
 
 export const PREDEFINED_REGEX = /#\d*-predefined/;
 const PAGE_TITLE_REGEX = /^(?:#?\[\[(.*)\]\]|#([^\s]*))$/;
@@ -708,6 +720,80 @@ export const COMMANDS: {
     handler: async (...args) => {
       const [display, initialValue, ...options] = args.join("%%").split("%%");
       return await renderPrompt({ display, initialValue, options });
+    },
+  },
+  {
+    text: "FORM",
+    help: "Prompts the user for a series of inputs, which then will be inserted into a series of blocks\n\n1: Block reference to the form configuration",
+    handler: async (uidOrVar = "") => {
+      const blockUid = getUidFromText(uidOrVar);
+      const [formConfig] = await processBlockUid(blockUid);
+      if (!formConfig) return "";
+      const fieldsConfig =
+        (formConfig.children || []).find((s) =>
+          toFlexRegex("fields").test(s.text.trim())
+        ).children || [];
+      const fieldEntries = fieldsConfig.map(
+        (f) =>
+          [
+            f.text,
+            {
+              type: getSettingValueFromTree({
+                tree: f.children,
+                key: "type",
+              }),
+              label: getSettingValueFromTree({
+                tree: f.children,
+                key: "label",
+                defaultValue: f.text,
+              }),
+              options: getSettingValuesFromTree({
+                tree: f.children,
+                key: "options",
+              }),
+              defaultValue:
+                getSettingValueFromTree({
+                  tree: f.children,
+                  key: "default",
+                }) ||
+                smartBlocksContext.variables[f.text] ||
+                undefined,
+            } as FormDialogProps["fields"][number],
+          ] as const
+      );
+      const title =
+        getTextByBlockUid(blockUid) ||
+        getSettingValueFromTree({
+          tree: formConfig.children,
+          key: "title",
+          defaultValue: "SmartBlocks Form",
+        });
+      return new Promise<Record<string, unknown>>((resolve) =>
+        renderFormDialog({
+          fields: Object.fromEntries(fieldEntries),
+          onSubmit: resolve,
+          isOpen: true,
+          onClose: () => resolve({}),
+          title,
+        })
+      ).then((values) => {
+        const outputMode = getSettingValueFromTree({
+          tree: formConfig.children,
+          key: "output",
+          defaultValue: "inline",
+        });
+        if (toFlexRegex("inline").test(outputMode)) {
+          return fieldEntries.map((t) => values[t[0]].toString());
+        } else if (toFlexRegex("variables").test(outputMode)) {
+          fieldEntries.forEach(
+            (t) =>
+              (smartBlocksContext.variables[t[0]] = values[t[0]].toString())
+          );
+          return "";
+        } else {
+          return "";
+        }
+      });
     },
   },
   {
@@ -2079,6 +2165,13 @@ export const proccessBlockWithSmartness = async (
     ];
   }
 };
+
+const processBlockUid = async (uid: string) =>
+  proccessBlockWithSmartness({
+    text: getTextByBlockUid(uid),
+    uid,
+    children: getBasicTreeByParentUid(uid),
+  });
 
 const processPromises = (
   nodes: ((prev: InputTextNode[][]) => Promise<void>)[] = []
