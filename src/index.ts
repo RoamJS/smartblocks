@@ -47,7 +47,6 @@ import HotKeyPanel from "./HotKeyPanel";
 import XRegExp from "xregexp";
 import apiPut from "roamjs-components/util/apiPut";
 import { addTokenDialogCommand } from "roamjs-components/components/TokenDialog";
-import migrateLegacySettings from "roamjs-components/util/migrateLegacySettings";
 import DailyConfig from "./DailyConfig";
 import { PullBlock } from "roamjs-components/types";
 import getParentUidByBlockUid from "roamjs-components/queries/getParentUidByBlockUid";
@@ -67,68 +66,9 @@ const extensionId = "smartblocks";
 const COMMAND_ENTRY_REGEX = /<%$/;
 const COLORS = ["darkblue", "darkred", "darkgreen", "darkgoldenrod"];
 export default runExtension({
-  migratedTo: "SmartBlocks",
   extensionId,
   run: async ({ extensionAPI }) => {
     const timeouts = new Set<number>();
-    migrateLegacySettings({
-      extensionAPI,
-      extensionId,
-      specialKeys: {
-        "hot keys": (n) => [
-          {
-            value: Object.fromEntries(
-              n.children.map((c) => [c.text, c.children[0]?.text])
-            ),
-            key: "hot-keys",
-          },
-        ],
-        daily: (n) => {
-          return [
-            {
-              value: {
-                "workflow name": getSettingValueFromTree({
-                  tree: n.children,
-                  key: "workflow name",
-                }),
-                latest: getSettingValueFromTree({
-                  tree: n.children,
-                  key: "latest",
-                }),
-                time: getSettingValueFromTree({
-                  tree: n.children,
-                  key: "time",
-                }),
-                "last-run": "",
-              },
-              key: "daily",
-            },
-          ];
-        },
-        workflows: (n) => {
-          const move = (uid: string) =>
-            n.children.forEach((c, order) =>
-              window.roamAlphaAPI.moveBlock({
-                location: { "parent-uid": uid, order },
-                block: { uid: c.uid },
-              })
-            );
-          const existingUid = getPageUidByPageTitle(
-            "roam/js/smartblocks/workflows"
-          );
-          if (existingUid) {
-            move(existingUid);
-          } else {
-            const uid = window.roamAlphaAPI.util.generateUID();
-            window.roamAlphaAPI.createPage({
-              page: { uid, title: "roam/js/smartblocks/workflows" },
-            });
-            move(uid);
-          }
-          return [];
-        },
-      },
-    });
     const style = addStyle(`.roamjs-smartblocks-popover-target {
   display:inline-block;
   height:14px;

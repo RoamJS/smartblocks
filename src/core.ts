@@ -62,7 +62,6 @@ import apiGet from "roamjs-components/util/apiGet";
 import { render as renderSimpleAlert } from "roamjs-components/components/SimpleAlert";
 import FormDialog from "roamjs-components/components/FormDialog";
 import createOverlayRender from "roamjs-components/util/createOverlayRender";
-import getSubTree from "roamjs-components/util/getSubTree";
 import getSettingValueFromTree from "roamjs-components/util/getSettingValueFromTree";
 import getSettingValuesFromTree from "roamjs-components/util/getSettingValuesFromTree";
 import toFlexRegex from "roamjs-components/util/toFlexRegex";
@@ -864,6 +863,31 @@ export const COMMANDS: {
         return "";
       }
       return smartBlocksContext.currentContent;
+    },
+  },
+  {
+    text: "TRIGGERBLOCKAUTHOR",
+    help: "Sets a variable to the user display name for the triggered block\n\n1. Variable name",
+    handler: (name = "") => {
+      const user = window.roamAlphaAPI.pull("[:create/user]", [
+        ":block/uid",
+        smartBlocksContext.triggerUid,
+      ])?.[":create/user"]?.[":db/id"];
+      if (!user) return "";
+      const displayPage = window.roamAlphaAPI.pull(
+        "[:user/display-page]",
+        user
+      )?.[":user/display-page"]?.[":db/id"];
+      if (!displayPage) return "";
+      const username =
+        window.roamAlphaAPI.pull("[:node/title :block/uid]", displayPage)?.[
+          ":node/title"
+        ] || "Anonymous";
+      if (username) {
+        smartBlocksContext.variables[name] = username;
+        return "";
+      }
+      return username;
     },
   },
   {
