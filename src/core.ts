@@ -781,12 +781,14 @@ export const COMMANDS: {
           key: "output",
           defaultValue: "inline",
         });
+        const validFields = fieldEntries
+          .map((t) => t[0])
+          .filter((t) => values[t]);
         if (toFlexRegex("inline").test(outputMode)) {
-          return fieldEntries.map((t) => values[t[0]].toString());
+          return validFields.map((t) => values[t].toString());
         } else if (toFlexRegex("variables").test(outputMode)) {
-          fieldEntries.forEach(
-            (t) =>
-              (smartBlocksContext.variables[t[0]] = values[t[0]].toString())
+          validFields.forEach(
+            (t) => (smartBlocksContext.variables[t] = values[t].toString())
           );
           return "";
         } else {

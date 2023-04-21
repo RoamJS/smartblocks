@@ -6,11 +6,11 @@
   "scripts": {
     "prebuild:roam": "npm install",
     "build:roam": "roamjs-scripts build --labs",
-    "dev": "roamjs-scripts dev --labs",
+    "start": "roamjs-scripts dev --labs",
     "lambdas": "roamjs-scripts lambdas",
     "preserver": "roamjs-scripts lambdas --build",
     "server": "localhost-lambdas",
-    "start": "concurrently npm:dev npm:server",
+    "start:full": "concurrently npm:start npm:server",
     "test": "roamjs-scripts test"
   },
   "license": "MIT",
@@ -26,7 +26,7 @@
   },
   "dependencies": {
     "lodash": "^4.17.21",
-    "roamjs-components": "^0.77.7",
+    "roamjs-components": "^0.77.14",
     "xregexp": "^5.1.0"
   }
 }
