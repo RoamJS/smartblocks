@@ -767,15 +767,18 @@ export const COMMANDS: {
           key: "title",
           defaultValue: "SmartBlocks Form",
         });
-      return new Promise<Record<string, unknown>>((resolve) =>
+      return new Promise<Record<string, unknown> | false>((resolve) =>
         renderFormDialog({
           fields: Object.fromEntries(fieldEntries),
           onSubmit: resolve,
           isOpen: true,
-          onClose: () => resolve({}),
+          onClose: () => resolve(false),
           title,
         })
       ).then((values) => {
+        if (!values) {
+          return "false";
+        }
         const outputMode = getSettingValueFromTree({
           tree: formConfig.children,
           key: "output",
@@ -790,9 +793,9 @@ export const COMMANDS: {
           validFields.forEach(
             (t) => (smartBlocksContext.variables[t] = values[t].toString())
           );
-          return "";
+          return "true";
         } else {
-          return "";
+          return "true";
         }
       });
     },
