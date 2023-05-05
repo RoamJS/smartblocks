@@ -1989,6 +1989,27 @@ export const COMMANDS: {
       return users;
     },
   },
+  {
+    text: "SETPROPS",
+    help: "Sets the current block's Roam props based on the tree of values referenced by the first argument\n\n1. Block reference",
+    handler: async (uidOrVar = "") => {
+      const blockUid = getUidFromText(uidOrVar);
+      const [formConfig] = await processBlockUid(blockUid);
+      if (!formConfig) return "";
+      const toObject = (node: InputTextNode): Record<string, unknown> =>
+        Object.fromEntries(
+          node.children.map((c) => [
+            c.text,
+            c.children.length === 1 && c.children[0].children.length === 0
+              ? c.children[0].text
+              : c.children.every((cc) => cc.children.length === 0)
+              ? c.children.map((cc) => cc.text)
+              : toObject(c),
+          ])
+        );
+      return [{ props: toObject(formConfig), text: "" }];
+    },
+  },
 ];
 export const handlerByCommand = Object.fromEntries(
   COMMANDS.map(({ text, help, ...rest }) => [text, rest])
