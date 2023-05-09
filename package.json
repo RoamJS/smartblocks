@@ -5,13 +5,9 @@
   "main": "./build/main.js",
   "scripts": {
     "prebuild:roam": "npm install",
-    "build:roam": "roamjs-scripts build --labs",
-    "start": "roamjs-scripts dev --labs",
-    "lambdas": "roamjs-scripts lambdas",
-    "preserver": "roamjs-scripts lambdas --build",
-    "server": "localhost-lambdas",
-    "start:full": "concurrently npm:start npm:server",
-    "test": "roamjs-scripts test"
+    "build:roam": "samepage build --dry",
+    "start": "samepage dev",
+    "test": "samepage test"
   },
   "license": "MIT",
   "devDependencies": {
@@ -21,12 +17,14 @@
     "concurrently": "^7.1.0",
     "jsdom": "^20.0.3",
     "localhost-lambdas": "^0.4.2",
-    "roamjs-scripts": "^0.26.27",
     "typescript": "^4.3.2"
   },
   "dependencies": {
     "lodash": "^4.17.21",
-    "roamjs-components": "^0.77.23",
+    "roamjs-components": "^0.78.2",
     "xregexp": "^5.1.0"
+  },
+  "samepage": {
+    "extends": "node_modules/roamjs-components/package.json"
   }
 }

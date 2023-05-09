@@ -1,19 +1,11 @@
 name: Publish Extension
-on:
-  push:
-    branches: main
-    paths:
-      - "src/**"
-      - "package.json"
-      - ".github/workflows/main.yaml"
+on: pull_request
 
 env:
-  API_URL: https://lambda.roamjs.com
   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
   AWS_REGION: us-east-1
   ROAMJS_EXTENSION_ID: smartblocks
-  GITHUB_TOKEN: ${{ secrets.ROAMJS_RELEASE_TOKEN }}
 
 jobs:
   deploy:
