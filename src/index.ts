@@ -181,9 +181,8 @@ export default runExtension({
     };
 
     let isCustomOnly = extensionAPI.settings.get("custom-only") as boolean;
-    let hideButtonIcon = extensionAPI.settings.get(
-      "hide-button-icon"
-    ) as boolean;
+    let hideButtonIcon =
+      (extensionAPI.settings.get("hide-button-icon") as boolean);
     let highlighting = extensionAPI.settings.get("highlighting") as boolean;
     const defaultDisplayName = getDisplayNameByUid(getCurrentUserUid());
 
@@ -667,181 +666,223 @@ export default runExtension({
       },
     });
 
+    const registerElAsSmartBlockTrigger = ({
+      textContent,
+      text,
+      el,
+      parentUid,
+      hideIcon,
+    }: {
+      textContent: string;
+      text: string;
+      el: HTMLElement;
+      parentUid: string;
+      hideIcon?: false,
+    }) => {
+      // We include textcontent here bc there could be multiple smartblocks in a block
+      const regex = new RegExp(`{{(${textContent}):(?:42)?SmartBlock:(.*?)}}`);
+      const match = regex.exec(text);
+      if (match) {
+        const {
+          [1]: buttonContent = "",
+          [2]: buttonText = "",
+          index,
+          [0]: full,
+        } = match;
+        const [workflowName, args = ""] = buttonText.split(":");
+        el.addEventListener("click", () => {
+          const workflows = getCustomWorkflows();
+          const { uid: srcUid } =
+            getCleanCustomWorkflows(workflows).find(
+              ({ name }) => name === workflowName
+            ) || {};
+          if (!srcUid) {
+            createBlock({
+              node: {
+                text: "Could not find custom workflow with the name:",
+                children: [{ text: workflowName }],
+              },
+              parentUid,
+            });
+          } else {
+            const variables = Object.fromEntries(
+              args
+                .replace(/\[\[[^\]]+\]\]/g, (m) =>
+                  m.replace(/,/g, "ESCAPE_COMMA")
+                )
+                .split(",")
+                .filter((s) => !!s)
+                .map((v) => v.replace(/ESCAPE_COMMA/g, ",").split("="))
+                .map(([k, v = ""]) => [k, v])
+            );
+            variables["ButtonContent"] = buttonContent;
+
+            const keepButton =
+              variables["RemoveButton"] === "false" ||
+              variables["42RemoveButton"] === "false";
+            const clearBlock = variables["Clear"] === "true";
+            const applyToSibling = variables["Sibling"];
+            const outputNowhere = variables["Output"] === "false";
+
+            const props = {
+              srcUid,
+              variables,
+              mutableCursor: !(
+                workflows.find((w) => w.uid === srcUid)?.name || ""
+              ).includes("<%NOCURSOR%>"),
+              triggerUid: parentUid,
+            };
+
+            if (applyToSibling) {
+              const sbParentTree = getShallowTreeByParentUid(
+                getParentUidByBlockUid(parentUid)
+              );
+              const siblingIndex =
+                sbParentTree.findIndex((obj) => obj.uid === parentUid) +
+                (applyToSibling === "previous" ? -1 : 1);
+              const siblingUid = sbParentTree[siblingIndex]?.uid;
+              const siblingText = getTextByBlockUid(siblingUid);
+
+              updateBlock({
+                uid: parentUid,
+                text:
+                  clearBlock && keepButton
+                    ? full
+                    : clearBlock
+                    ? ""
+                    : keepButton
+                    ? text
+                    : `${text.substring(0, index)}${text.substring(
+                        index + full.length
+                      )}`,
+              });
+              !!siblingUid
+                ? updateBlock({
+                    uid: siblingUid,
+                  }).then(() =>
+                    sbBomb({
+                      ...props,
+                      target: {
+                        uid: siblingUid,
+                        start: siblingText.length,
+                        end: siblingText.length,
+                      },
+                    })
+                  )
+                : createBlock({
+                    node: { text: "" },
+                    parentUid: getParentUidByBlockUid(parentUid),
+                    order: siblingIndex === -1 ? 0 : siblingIndex,
+                  }).then((targetUid) =>
+                    sbBomb({
+                      ...props,
+                      target: {
+                        uid: targetUid,
+                        start: 0,
+                        end: 0,
+                      },
+                    })
+                  );
+            } else if (keepButton) {
+              outputNowhere
+                ? sbBomb({
+                    ...props,
+                    target: {
+                      uid: parentUid,
+                      start: 0,
+                      end: 0,
+                    },
+                  })
+                : createBlock({
+                    node: { text: "" },
+                    parentUid,
+                  }).then((targetUid) =>
+                    sbBomb({
+                      ...props,
+                      target: {
+                        uid: targetUid,
+                        start: 0,
+                        end: 0,
+                      },
+                    }).then((n) => n === 0 && deleteBlock(targetUid))
+                  ),
+                clearBlock
+                  ? updateBlock({
+                      uid: parentUid,
+                      text: full,
+                    })
+                  : "";
+            } else {
+              updateBlock({
+                uid: parentUid,
+                text: clearBlock
+                  ? ""
+                  : `${text.substring(0, index)}${text.substring(
+                      index + full.length
+                    )}`,
+              }).then(() =>
+                sbBomb({
+                  ...props,
+                  target: {
+                    uid: parentUid,
+                    start: index,
+                    end: index,
+                  },
+                })
+              );
+            }
+          }
+        });
+        if (!hideButtonIcon && !hideIcon) {
+          const img = new Image();
+          img.src =
+            "https://raw.githubusercontent.com/dvargas92495/roamjs-smartblocks/main/src/img/lego3blocks.png";
+          img.width = 17;
+          img.height = 14;
+          img.style.marginRight = "7px";
+          el.insertBefore(img, el.firstChild);
+        }
+      }
+    };
+
     const buttonLogoObserver = createHTMLObserver({
       className: "bp3-button",
       tag: "BUTTON",
       callback: (b: HTMLButtonElement) => {
         const parentUid = getBlockUidFromTarget(b);
         if (parentUid && !b.hasAttribute("data-roamjs-smartblock-button")) {
-          b.setAttribute("data-roamjs-smartblock-button", "true");
-          // We include textcontent here bc there could be multiple smartblocks in a block
-          const regex = new RegExp(
-            `{{(${b.textContent}):(?:42)?SmartBlock:(.*?)}}`
-          );
           const text = getTextByBlockUid(parentUid);
-          const match = regex.exec(text);
-          if (match) {
-            const {
-              [1]: buttonContent = "",
-              [2]: buttonText = "",
-              index,
-              [0]: full,
-            } = match;
-            const [workflowName, args = ""] = buttonText.split(":");
-            b.addEventListener("click", () => {
-              const workflows = getCustomWorkflows();
-              const { uid: srcUid } =
-                getCleanCustomWorkflows(workflows).find(
-                  ({ name }) => name === workflowName
-                ) || {};
-              if (!srcUid) {
-                createBlock({
-                  node: {
-                    text: "Could not find custom workflow with the name:",
-                    children: [{ text: workflowName }],
-                  },
-                  parentUid,
-                });
-              } else {
-                const variables = Object.fromEntries(
-                  args
-                    .replace(/\[\[[^\]]+\]\]/g, (m) =>
-                      m.replace(/,/g, "ESCAPE_COMMA")
-                    )
-                    .split(",")
-                    .filter((s) => !!s)
-                    .map((v) => v.replace(/ESCAPE_COMMA/g, ",").split("="))
-                    .map(([k, v = ""]) => [k, v])
-                );
-                variables["ButtonContent"] = buttonContent;
+          b.setAttribute("data-roamjs-smartblock-button", "true");
 
-                const keepButton =
-                  variables["RemoveButton"] === "false" ||
-                  variables["42RemoveButton"] === "false";
-                const clearBlock = variables["Clear"] === "true";
-                const applyToSibling = variables["Sibling"];
-                const outputNowhere = variables["Output"] === "false";
-
-                const props = {
-                  srcUid,
-                  variables,
-                  mutableCursor: !(
-                    workflows.find((w) => w.uid === srcUid)?.name || ""
-                  ).includes("<%NOCURSOR%>"),
-                  triggerUid: parentUid,
-                };
-
-                if (applyToSibling) {
-                  const sbParentTree = getShallowTreeByParentUid(
-                    getParentUidByBlockUid(parentUid)
-                  );
-                  const siblingIndex =
-                    sbParentTree.findIndex((obj) => obj.uid === parentUid) +
-                    (applyToSibling === "previous" ? -1 : 1);
-                  const siblingUid = sbParentTree[siblingIndex]?.uid;
-                  const siblingText = getTextByBlockUid(siblingUid);
-
-                  updateBlock({
-                    uid: parentUid,
-                    text:
-                      clearBlock && keepButton
-                        ? full
-                        : clearBlock
-                        ? ""
-                        : keepButton
-                        ? text
-                        : `${text.substring(0, index)}${text.substring(
-                            index + full.length
-                          )}`,
-                  });
-                  !!siblingUid
-                    ? updateBlock({
-                        uid: siblingUid,
-                      }).then(() =>
-                        sbBomb({
-                          ...props,
-                          target: {
-                            uid: siblingUid,
-                            start: siblingText.length,
-                            end: siblingText.length,
-                          },
-                        })
-                      )
-                    : createBlock({
-                        node: { text: "" },
-                        parentUid: getParentUidByBlockUid(parentUid),
-                        order: siblingIndex === -1 ? 0 : siblingIndex,
-                      }).then((targetUid) =>
-                        sbBomb({
-                          ...props,
-                          target: {
-                            uid: targetUid,
-                            start: 0,
-                            end: 0,
-                          },
-                        })
-                      );
-                } else if (keepButton) {
-                  outputNowhere
-                    ? sbBomb({
-                        ...props,
-                        target: {
-                          uid: parentUid,
-                          start: 0,
-                          end: 0,
-                        },
-                      })
-                    : createBlock({
-                        node: { text: "" },
-                        parentUid,
-                      }).then((targetUid) =>
-                        sbBomb({
-                          ...props,
-                          target: {
-                            uid: targetUid,
-                            start: 0,
-                            end: 0,
-                          },
-                        }).then((n) => n === 0 && deleteBlock(targetUid))
-                      ),
-                    clearBlock
-                      ? updateBlock({
-                          uid: parentUid,
-                          text: full,
-                        })
-                      : "";
-                } else {
-                  updateBlock({
-                    uid: parentUid,
-                    text: clearBlock
-                      ? ""
-                      : `${text.substring(0, index)}${text.substring(
-                          index + full.length
-                        )}`,
-                  }).then(() =>
-                    sbBomb({
-                      ...props,
-                      target: {
-                        uid: parentUid,
-                        start: index,
-                        end: index,
-                      },
-                    })
-                  );
-                }
-              }
-            });
-            if (!hideButtonIcon) {
-              const img = new Image();
-              img.src =
-                "https://raw.githubusercontent.com/dvargas92495/roamjs-smartblocks/main/src/img/lego3blocks.png";
-              img.width = 17;
-              img.height = 14;
-              img.style.marginRight = "7px";
-              b.insertBefore(img, b.firstChild);
-            }
-          }
+          // We include textcontent here bc there could be multiple smartblocks in a block
+          registerElAsSmartBlockTrigger({
+            textContent: b.textContent,
+            text,
+            el: b,
+            parentUid,
+          });
         }
+      },
+    });
+
+    const todoObserver = createHTMLObserver({
+      tag: "LABEL",
+      className: "check-container",
+      callback: (l: HTMLLabelElement) => {
+        if (l.hasAttribute("data-roamjs-smartblock-button")) return;
+        l.setAttribute("data-roamjs-smartblock-button", "true");
+        const inputTarget = l.querySelector("input");
+        if (inputTarget.type !== "checkbox") return;
+        const blockUid = getBlockUidFromTarget(inputTarget);
+        const text = getTextByBlockUid(blockUid);
+        if (!/^{{\[\[TODO\]\]:[^}]+}}/.test(text)) return;
+        // We include textcontent here bc there could be multiple smartblocks in a block
+        registerElAsSmartBlockTrigger({
+          textContent: "\\[\\[TODO\\]\\]",
+          text,
+          el: inputTarget,
+          parentUid: blockUid,
+        });
       },
     });
 
@@ -931,7 +972,12 @@ export default runExtension({
 
     return {
       elements: [style],
-      observers: [logoObserver, buttonLogoObserver, ...highlightingObservers],
+      observers: [
+        logoObserver,
+        buttonLogoObserver,
+        todoObserver,
+        ...highlightingObservers,
+      ],
       domListeners: [
         { type: "input", listener: documentInputListener, el: document },
         { type: "keydown", listener: globalHotkeyListener, el: document },
