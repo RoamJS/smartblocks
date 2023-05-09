@@ -1,5 +1,5 @@
 {
-  "extends": "./node_modules/@samepage/scripts/default.tsconfig",
+  "extends": "./node_modules/@samepage/scripts/tsconfig",
   "include": ["src", "lambdas"],
   "exclude": ["node_modules"]
 }
