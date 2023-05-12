@@ -85,11 +85,14 @@ const getBlockUidTextAndPageReferencingTag = (title: string) =>
         title
       )}"] [?r :block/refs ?p] [?r :block/page ?t]]`
     )
-    .map(([block, page]: PullBlock[]) => ({
-      text: block?.[":block/string"] || "",
-      uid: block?.[":block/uid"] || "",
-      title: page?.[":node/title"] || "",
-    }));
+    .map((r) => {
+      const [block, page] = r as PullBlock[];
+      return {
+        text: block?.[":block/string"] || "",
+        uid: block?.[":block/uid"] || "",
+        title: page?.[":node/title"] || "",
+      };
+    });
 
 const getDateFromBlock = (args: { text: string; title: string }) => {
   const fromText = DAILY_REF_REGEX.exec(args.text)?.[1];
@@ -111,7 +114,7 @@ const getDateBasisDate = () => {
       getPageTitleByBlockUid(smartBlocksContext.targetUid) ||
       getPageTitleByPageUid(smartBlocksContext.targetUid);
     const dnp = DAILY_NOTE_PAGE_REGEX.test(title)
-      ? window.roamAlphaAPI.util.pageTitleToDate(title)
+      ? window.roamAlphaAPI.util.pageTitleToDate(title) || new Date()
       : new Date();
     dnp.setHours(new Date().getHours());
     dnp.setMinutes(new Date().getMinutes());
@@ -279,13 +282,16 @@ export const getCustomWorkflows = () =>
     (and [?sb :node/title "42SmartBlock"] [?r :block/refs ?sb])
 )]`
     )
-    .map(([block]: [PullBlock]) => ({
-      uid: block?.[":block/uid"],
-      name: (block?.[":block/string"] || "")
-        .replace(createTagRegex("SmartBlock"), "")
-        .replace(createTagRegex("42SmartBlock"), "")
-        .trim(),
-    }));
+    .map((r) => {
+      const [block] = r as [PullBlock];
+      return {
+        uid: block?.[":block/uid"],
+        name: (block?.[":block/string"] || "")
+          .replace(createTagRegex("SmartBlock"), "")
+          .replace(createTagRegex("42SmartBlock"), "")
+          .trim(),
+      };
+    });
 
 export const getVisibleCustomWorkflows = () =>
   getCustomWorkflows()
@@ -303,7 +309,15 @@ export const getCleanCustomWorkflows = (workflows = getCustomWorkflows()) =>
 
 const getFormatter =
   (format: string, search: RegExp = /$^/) =>
-  ({ uid, text, title }: { uid: string; text?: string; title?: string }) => ({
+  ({
+    uid = "",
+    text,
+    title,
+  }: {
+    uid?: string;
+    text?: string;
+    title?: string;
+  }) => ({
     text: format
       .replace(/{text(?::([^}]+))?}/g, (_, arg) => {
         const output = text || getTextByBlockUid(uid);
@@ -332,7 +346,7 @@ const getFormatter =
               )}"] [?t :block/uid "${uid}"] [?b :block/refs ?r] [?b :block/page ?p] [?t :block/page ?p]]]`
             ) as [PullBlock][]
           ).find((a) =>
-            new RegExp(`^${name}::`).test(a?.[0]?.[":block/string"])
+            new RegExp(`^${name}::`).test(a?.[0]?.[":block/string"] || "")
           )?.[0]?.[":block/string"] || ""
         )
           .slice(name.length + 2)
@@ -420,7 +434,7 @@ const formatTree = (
   format: string
 ): InputTextNode => ({
   ...rest,
-  children: children.map((c) => formatTree(c, format)),
+  children: (children || []).map((c) => formatTree(c, format)),
   text: getFormatter(format)({ uid, text }).text,
 });
 
@@ -604,7 +618,10 @@ export const COMMANDS: {
             [?r :block/refs ?p] [?p :node/title "TODO"] [?d :node/title "${today}"]
         ]`
         )
-        .map(([uid, text]: [string, string]) => ({ uid, text }));
+        .map((r) => {
+          const [uid, text] = r as [string, string];
+          return { uid, text };
+        });
       return outputTodoBlocks(todos, ...args);
     },
   },
@@ -620,11 +637,14 @@ export const COMMANDS: {
           text,
           uid,
           date: window.roamAlphaAPI.util.pageTitleToDate(
-            DAILY_REF_REGEX.exec(text)[1]
+            DAILY_REF_REGEX.exec(text)?.[1] || ""
           ),
         }))
-        .filter(({ date }) => isBefore(date, today))
-        .sort(({ date: a }, { date: b }) => a.valueOf() - b.valueOf());
+        .filter(({ date }) => date && isBefore(date, today))
+        .sort(
+          ({ date: a }, { date: b }) =>
+            (a?.valueOf() || 0) - (b?.valueOf() || 0)
+        );
       return outputTodoBlocks(todos, ...args);
     },
   },
@@ -648,8 +668,11 @@ export const COMMANDS: {
           uid,
           date: window.roamAlphaAPI.util.pageTitleToDate(date),
         }))
-        .filter(({ date }) => isBefore(date, today))
-        .sort(({ date: a }, { date: b }) => a.valueOf() - b.valueOf());
+        .filter(({ date }) => date && isBefore(date, today))
+        .sort(
+          ({ date: a }, { date: b }) =>
+            (a?.valueOf() || 0) - (b?.valueOf() || 0)
+        );
       return outputTodoBlocks(todos, ...args);
     },
   },
@@ -658,18 +681,21 @@ export const COMMANDS: {
     help: "Returns a list of block refs of TODOs that are due in the future\n\n1. Max # blocks\n\n2. Format of output.\n\n3. optional filter values",
     handler: (...args) => {
       const blocks = getBlockUidsAndTextsReferencingPage("TODO");
-      const today = parseNlpDate("today", getDateBasisDate());
+      const today = parseNlpDate("today", getDateBasisDate() || undefined);
       const todos = blocks
         .filter(({ text }) => DAILY_REF_REGEX.test(text))
         .map(({ text, uid }) => ({
           text,
           uid,
           date: window.roamAlphaAPI.util.pageTitleToDate(
-            DAILY_REF_REGEX.exec(text)[1]
+            DAILY_REF_REGEX.exec(text)?.[1] || ""
           ),
         }))
-        .filter(({ date }) => isAfter(date, today))
-        .sort(({ date: a }, { date: b }) => a.valueOf() - b.valueOf());
+        .filter(({ date }) => date && isAfter(date, today))
+        .sort(
+          ({ date: a }, { date: b }) =>
+            (a?.valueOf() || 0) - (b?.valueOf() || 0)
+        );
       return outputTodoBlocks(todos, ...args);
     },
   },
@@ -693,8 +719,11 @@ export const COMMANDS: {
           uid,
           date: window.roamAlphaAPI.util.pageTitleToDate(date),
         }))
-        .filter(({ date }) => isAfter(date, today))
-        .sort(({ date: a }, { date: b }) => a.valueOf() - b.valueOf());
+        .filter(({ date }) => date && isAfter(date, today))
+        .sort(
+          ({ date: a }, { date: b }) =>
+            (a?.valueOf() || 0) - (b?.valueOf() || 0)
+        );
       return outputTodoBlocks(todos, ...args);
     },
   },
@@ -731,7 +760,7 @@ export const COMMANDS: {
       const fieldsConfig =
         (formConfig.children || []).find((s) =>
           toFlexRegex("fields").test(s.text.trim())
-        ).children || [];
+        )?.children || [];
       const fieldEntries = fieldsConfig.map(
         (f) =>
           [
@@ -747,7 +776,7 @@ export const COMMANDS: {
                 defaultValue: f.text,
               }),
               options: getSettingValuesFromTree({
-                tree: f.children,
+                tree: f.children || [],
                 key: "options",
               }),
               defaultValue:
@@ -757,7 +786,7 @@ export const COMMANDS: {
                 }) ||
                 smartBlocksContext.variables[f.text] ||
                 undefined,
-            } as FormDialogProps["fields"][number],
+            } as Required<FormDialogProps>["fields"][string],
           ] as const
       );
       const title =
@@ -788,10 +817,11 @@ export const COMMANDS: {
           .map((t) => t[0])
           .filter((t) => values[t]);
         if (toFlexRegex("inline").test(outputMode)) {
-          return validFields.map((t) => values[t].toString());
+          return validFields.map((t) => values[t]?.toString() || "");
         } else if (toFlexRegex("variables").test(outputMode)) {
           validFields.forEach(
-            (t) => (smartBlocksContext.variables[t] = values[t].toString())
+            (t) =>
+              (smartBlocksContext.variables[t] = values[t]?.toString() || "")
           );
           return "true";
         } else {
@@ -1023,7 +1053,7 @@ export const COMMANDS: {
             DAILY_NOTE_PAGE_TITLE_REGEX.exec(title)?.[0];
           if (ref) {
             const d = window.roamAlphaAPI.util.pageTitleToDate(ref);
-            return !undated && !isBefore(d, start) && !isAfter(d, end);
+            return d && !undated && !isBefore(d, start) && !isAfter(d, end);
           } else {
             return undated;
           }
@@ -1042,9 +1072,11 @@ export const COMMANDS: {
             ? (a, b) => a.text.localeCompare(b.text)
             : sort === "DESC"
             ? (a, b) =>
-                getDateFromBlock(b).valueOf() - getDateFromBlock(a).valueOf()
+                (getDateFromBlock(b)?.valueOf() || 0) -
+                (getDateFromBlock(a)?.valueOf() || 0)
             : (a, b) =>
-                getDateFromBlock(a).valueOf() - getDateFromBlock(b).valueOf()
+                (getDateFromBlock(a)?.valueOf() || 0) -
+                (getDateFromBlock(b)?.valueOf() || 0)
         )
         .slice(0, limit)
         .map(getFormatter(format, createTagRegex(title)));
@@ -1283,7 +1315,7 @@ export const COMMANDS: {
     help: "Defines where cursor should be located after the workflow completes.",
     handler: () => {
       smartBlocksContext.cursorPosition = {
-        uid: smartBlocksContext.currentUid,
+        uid: smartBlocksContext.currentUid || "",
         selection: smartBlocksContext.currentContent.length,
       };
       return "";
@@ -1311,7 +1343,7 @@ export const COMMANDS: {
       const ref =
         format === "true"
           ? `((${smartBlocksContext.currentUid}))`
-          : smartBlocksContext.currentUid;
+          : smartBlocksContext.currentUid || "";
       if (name.trim()) {
         smartBlocksContext.variables[name.trim()] = ref;
         return "";
@@ -1337,7 +1369,7 @@ export const COMMANDS: {
     text: "INDENT",
     help: "Indents the current block if indentation can be done at current block. ",
     handler: () => {
-      smartBlocksContext.indent.add(smartBlocksContext.currentUid);
+      smartBlocksContext.indent.add(smartBlocksContext.currentUid || "");
       return "";
     },
   },
@@ -1345,7 +1377,7 @@ export const COMMANDS: {
     text: "UNINDENT",
     help: "Unidents at the current block if it can be done at current block. ",
     handler: () => {
-      smartBlocksContext.unindent.add(smartBlocksContext.currentUid);
+      smartBlocksContext.unindent.add(smartBlocksContext.currentUid || "");
       return "";
     },
   },
@@ -1457,14 +1489,16 @@ export const COMMANDS: {
         } else if (isADate) {
           return window.roamAlphaAPI.util.dateToPageTitle(
             addDays(
-              window.roamAlphaAPI.util.pageTitleToDate(extractTag(a)),
+              window.roamAlphaAPI.util.pageTitleToDate(extractTag(a)) ||
+                new Date(),
               Number(b) || 0
             )
           );
         } else if (isBDate) {
           return window.roamAlphaAPI.util.dateToPageTitle(
             addDays(
-              window.roamAlphaAPI.util.pageTitleToDate(extractTag(b)),
+              window.roamAlphaAPI.util.pageTitleToDate(extractTag(b)) ||
+                new Date(),
               Number(a) || 0
             )
           );
@@ -1481,20 +1515,24 @@ export const COMMANDS: {
       const isSubDate = DAILY_NOTE_PAGE_REGEX.test(extractTag(subtrahend));
       if (isMinDate && isSubDate) {
         return differenceInDays(
-          window.roamAlphaAPI.util.pageTitleToDate(extractTag(minuend)),
-          window.roamAlphaAPI.util.pageTitleToDate(extractTag(subtrahend))
+          window.roamAlphaAPI.util.pageTitleToDate(extractTag(minuend)) ||
+            new Date(),
+          window.roamAlphaAPI.util.pageTitleToDate(extractTag(subtrahend)) ||
+            new Date()
         ).toString();
       } else if (isMinDate) {
         return window.roamAlphaAPI.util.dateToPageTitle(
           subDays(
-            window.roamAlphaAPI.util.pageTitleToDate(extractTag(minuend)),
+            window.roamAlphaAPI.util.pageTitleToDate(extractTag(minuend)) ||
+              new Date(),
             Number(subtrahend) || 0
           )
         );
       } else if (isSubDate) {
         return window.roamAlphaAPI.util.dateToPageTitle(
           subDays(
-            window.roamAlphaAPI.util.pageTitleToDate(extractTag(subtrahend)),
+            window.roamAlphaAPI.util.pageTitleToDate(extractTag(subtrahend)) ||
+              new Date(),
             Number(minuend) || 0
           )
         );
@@ -1719,7 +1757,7 @@ export const COMMANDS: {
             });
         if (refsToCreate.has(navUid)) {
           smartBlocksContext.afterWorkflowMethods.push(navToPage);
-          return;
+          return "";
         } else {
           return navToPage().then(() => "");
         }
@@ -1790,11 +1828,11 @@ export const COMMANDS: {
           ).then((navUid) => {
             const openInSidebar = () =>
               window.roamAlphaAPI.ui.rightSidebar.open().then(() => {
-                if (/GRAPH/.test(afterNavArg)) {
+                if (afterNavArg && /GRAPH/.test(afterNavArg)) {
                   return window.roamAlphaAPI.ui.rightSidebar.addWindow({
                     window: { type: "graph", "block-uid": navUid },
                   });
-                } else if (/GOTOBLOCK/.test(afterNavArg)) {
+                } else if (afterNavArg && /GOTOBLOCK/.test(afterNavArg)) {
                   const blockNumber =
                     Number(afterNavArg.replace(/GOTOBLOCK/, "").trim()) || 1;
                   const blocks = Array.from(
@@ -1981,10 +2019,10 @@ export const COMMANDS: {
      ]`
         ) as [PullBlock, PullBlock][]
       ).map(([p, r]) =>
-        r[":node/title"].startsWith("Anonymous") && p
+        r[":node/title"]?.startsWith("Anonymous") && p
           ? // @ts-ignore it does exist
             (p[":user/email"] as string) || r[":node/title"]
-          : r[":node/title"]
+          : r?.[":node/title"] || ""
       );
       return users;
     },
@@ -1998,12 +2036,12 @@ export const COMMANDS: {
       if (!formConfig) return "";
       const toObject = (node: InputTextNode): Record<string, unknown> =>
         Object.fromEntries(
-          node.children.map((c) => [
+          (node.children || []).map((c) => [
             c.text,
-            c.children.length === 1 && c.children[0].children.length === 0
+            c.children?.length === 1 && c.children[0].children?.length === 0
               ? c.children[0].text
-              : c.children.every((cc) => cc.children.length === 0)
-              ? c.children.map((cc) => cc.text)
+              : (c.children || []).every((cc) => !cc.children?.length)
+              ? (c.children || []).map((cc) => cc.text)
               : toObject(c),
           ])
         );
@@ -2117,10 +2155,8 @@ const processBlockTextToPromises = (s: string) => {
                 args: s.flatMap((c) => flattenText(c)),
                 nodeProps: s.reduce((prev, cur) => {
                   const nodeProps = { ...cur[0] } || ({} as InputTextNode);
-                  delete nodeProps.children;
-                  delete nodeProps.uid;
-                  delete nodeProps.text;
-                  return { ...prev, ...nodeProps };
+                  const { text, uid, children, ...rest } = nodeProps;
+                  return { ...prev, ...rest };
                 }, {}),
               };
             })
@@ -2202,7 +2238,7 @@ export const proccessBlockWithSmartness = async (
       }
     }
     const processedChildren = await processChildren({
-      nodes: n.children,
+      nodes: n.children || [],
       nextBlocks,
     });
     const children = [...currentChildren, ...processedChildren];
@@ -2271,7 +2307,7 @@ const processChildren = ({
         (prev.every((arr) => arr.length === 0) && introUid) ||
         window.roamAlphaAPI.util.generateUID();
 
-      smartBlocksContext.refMapping[n.uid] = uid;
+      smartBlocksContext.refMapping[n.uid || ""] = uid;
       smartBlocksContext.currentUid = uid;
       smartBlocksContext.currentContent = introContent || "";
       return proccessBlockWithSmartness(n)
@@ -2289,10 +2325,7 @@ const processChildren = ({
           } else if (!prev.length || !indent || unindent) {
             prev.push(c);
           } else if (indent) {
-            prev
-              .slice(-1)[0]
-              .slice(-1)[0]
-              .children.push(...c);
+            (prev.slice(-1)[0].slice(-1)[0].children || []).push(...c);
           }
           smartBlocksContext.indent.delete(uid);
           smartBlocksContext.unindent.delete(uid);
@@ -2310,7 +2343,7 @@ const resolveRefs = (nodes: InputTextNode[]): InputTextNode[] =>
     children: resolveRefs(node.children || []),
   }));
 
-const count = (t: InputTextNode[]): number =>
+const count = (t: InputTextNode[] = []): number =>
   t.map((c) => count(c.children) + 1).reduce((p, c) => p + c, 0);
 
 export const sbBomb = async ({
@@ -2335,7 +2368,7 @@ export const sbBomb = async ({
   const finish = renderLoading(uid);
   resetContext({ targetUid: uid, variables, triggerUid });
   const childNodes = PREDEFINED_REGEX.test(srcUid)
-    ? predefinedChildrenByUid[srcUid]
+    ? predefinedChildrenByUid[srcUid] || []
     : getFullTreeByParentUid(srcUid).children;
   const props: { introUid?: string; introContent?: string; suffix?: string } =
     {};
@@ -2373,7 +2406,9 @@ export const sbBomb = async ({
               .then((textPostProcess) => {
                 const indexDiffered = textPostProcess
                   .split("")
-                  .findIndex((c, i) => c !== props.introContent.charAt(i));
+                  .findIndex(
+                    (c, i) => c !== (props.introContent || "").charAt(i)
+                  );
                 return updateBlock({
                   ...firstChild,
                   uid,
@@ -2390,7 +2425,7 @@ export const sbBomb = async ({
               })
               .then(() =>
                 Promise.all(
-                  firstChild.children.map((node, order) =>
+                  (firstChild.children || []).map((node, order) =>
                     createBlock({ order, parentUid: uid, node })
                   )
                 )
@@ -2432,7 +2467,7 @@ export const sbBomb = async ({
               selection: { start: selection },
             });
           }
-        } else if (document.activeElement.tagName === "TEXTAREA") {
+        } else if (document.activeElement?.tagName === "TEXTAREA") {
           (document.activeElement as HTMLTextAreaElement).blur();
         }
       }
