@@ -438,6 +438,13 @@ const formatTree = (
   text: getFormatter(format)({ uid, text }).text,
 });
 
+// TODO - move to roamjs-components
+const stripUid = (n: InputTextNode[] = []): InputTextNode[] =>
+  n.map(({ uid, children, ...c }) => ({
+    ...c,
+    children: stripUid(children),
+  }));
+
 export const COMMANDS: {
   text: string;
   help: string;
@@ -815,13 +822,22 @@ export const COMMANDS: {
         });
         const validFields = fieldEntries
           .map((t) => t[0])
-          .filter((t) => values[t]);
+          .filter((t) => typeof values[t] !== "undefined");
+        const get = (key: string) => {
+          const val = values[key];
+          if (typeof val === "string") {
+            return val;
+          }
+          if (typeof val === "object") {
+            return JSON.stringify(val);
+          }
+          return `${val}`;
+        };
         if (toFlexRegex("inline").test(outputMode)) {
-          return validFields.map((t) => values[t]?.toString() || "");
+          return validFields.map(get);
         } else if (toFlexRegex("variables").test(outputMode)) {
           validFields.forEach(
-            (t) =>
-              (smartBlocksContext.variables[t] = values[t]?.toString() || "")
+            (t) => (smartBlocksContext.variables[t] = get(t))
           );
           return "true";
         } else {
@@ -1277,13 +1293,17 @@ export const COMMANDS: {
   },
   {
     text: "GET",
-    help: "Returns a variable\n\n1. Variable name\n\n2. Mode: 'normal' or 'split'",
+    help: "Returns a variable\n\n1. Variable name\n\n2. Mode: 'normal', 'split', or 'json'",
     handler: (name = "", mode = "normal") => {
       if (!name) return "--> Variable name required for GET <--";
       return typeof smartBlocksContext.variables[name] === "undefined"
         ? `--> Variable ${name} not SET <--`
         : mode === "split"
         ? smartBlocksContext.variables[name].split(",")
+        : mode === "json"
+        ? stripUid(
+            JSON.parse(smartBlocksContext.variables[name]) as InputTextNode[]
+          )
         : smartBlocksContext.variables[name];
     },
   },
