@@ -16,7 +16,6 @@ import getCurrentUserUid from "roamjs-components/queries/getCurrentUserUid";
 import createBlockObserver from "roamjs-components/dom/createBlockObserver";
 import getPageTitleByPageUid from "roamjs-components/queries/getPageTitleByPageUid";
 import deleteBlock from "roamjs-components/writes/deleteBlock";
-import getSettingValueFromTree from "roamjs-components/util/getSettingValueFromTree";
 import { render as renderCursorMenu } from "roamjs-components/components/CursorMenu";
 import { render as renderToast } from "roamjs-components/components/Toast";
 import addDays from "date-fns/addDays";
@@ -62,11 +61,9 @@ const getLegacy42Setting = (name: string) => {
   return (settings[name]?.value || "").replace(/"/g, "").trim();
 };
 
-const extensionId = "smartblocks";
 const COMMAND_ENTRY_REGEX = /<%$/;
 const COLORS = ["darkblue", "darkred", "darkgreen", "darkgoldenrod"];
 export default runExtension({
-  extensionId,
   run: async ({ extensionAPI }) => {
     const timeouts = new Set<number>();
     const style = addStyle(`.roamjs-smartblocks-popover-target {
@@ -181,8 +178,9 @@ export default runExtension({
     };
 
     let isCustomOnly = extensionAPI.settings.get("custom-only") as boolean;
-    let hideButtonIcon =
-      (extensionAPI.settings.get("hide-button-icon") as boolean);
+    let hideButtonIcon = extensionAPI.settings.get(
+      "hide-button-icon"
+    ) as boolean;
     let highlighting = extensionAPI.settings.get("highlighting") as boolean;
     const defaultDisplayName = getDisplayNameByUid(getCurrentUserUid());
 
@@ -315,7 +313,7 @@ export default runExtension({
         srcName,
         srcUid = getCleanCustomWorkflows().find(({ name }) => name === srcName)
           ?.uid,
-        targetName,
+        targetName = "",
         targetUid = getPageUidByPageTitle(targetName),
         variables,
       }) => {
@@ -356,7 +354,7 @@ export default runExtension({
 
     let menuLoaded = false;
 
-    const documentInputListener = (e: InputEvent) => {
+    const documentInputListener = (e: Event) => {
       const target = e.target as HTMLElement;
       if (
         !menuLoaded &&
@@ -365,6 +363,7 @@ export default runExtension({
       ) {
         const textarea = target as HTMLTextAreaElement;
         const location = window.roamAlphaAPI.ui.getFocusedBlock();
+        if (!location) return;
         const valueToCursor = textarea.value.substring(
           0,
           textarea.selectionStart
@@ -431,13 +430,15 @@ export default runExtension({
           });
         } else {
           const [k, srcUid] =
-            Object.entries(extensionAPI.settings.get("hot-keys") || {})
+            Object.entries(
+              (extensionAPI.settings.get("hot-keys") as object) || {}
+            )
               .map(([k, uid]) => [k.split("+"), uid] as const)
               .filter(([k]) => k.every((l) => l.length === 1))
               .find(([k]) =>
                 new RegExp(`${k.join("")}$`).test(valueToCursor)
               ) || [];
-          if (srcUid) {
+          if (k && srcUid) {
             sbBomb({
               srcUid,
               target: {
@@ -453,7 +454,8 @@ export default runExtension({
     };
     document.addEventListener("input", documentInputListener);
 
-    const globalHotkeyListener = async (e: KeyboardEvent) => {
+    const globalHotkeyListener = async (_e: Event) => {
+      const e = _e as KeyboardEvent;
       const modifiers = new Set();
       if (e.altKey) modifiers.add("alt");
       if (e.shiftKey) modifiers.add("shift");
@@ -677,7 +679,7 @@ export default runExtension({
       text: string;
       el: HTMLElement;
       parentUid: string;
-      hideIcon?: false,
+      hideIcon?: false;
     }) => {
       // We include textcontent here bc there could be multiple smartblocks in a block
       const regex = new RegExp(`{{(${textContent}):(?:42)?SmartBlock:(.*?)}}`);

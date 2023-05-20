@@ -285,7 +285,7 @@ export const getCustomWorkflows = () =>
     .map((r) => {
       const [block] = r as [PullBlock];
       return {
-        uid: block?.[":block/uid"],
+        uid: block?.[":block/uid"] || "",
         name: (block?.[":block/string"] || "")
           .replace(createTagRegex("SmartBlock"), "")
           .replace(createTagRegex("42SmartBlock"), "")
@@ -786,6 +786,11 @@ export const COMMANDS: {
                 tree: f.children || [],
                 key: "options",
               }),
+              conditional:
+                getSettingValueFromTree({
+                  tree: f.children,
+                  key: "conditional",
+                }) || undefined,
               defaultValue:
                 getSettingValueFromTree({
                   tree: f.children,
