@@ -1,28 +1,21 @@
 import { APIGatewayProxyHandler } from "aws-lambda";
 import { DynamoDB } from "aws-sdk";
 import nanoid from "nanoid";
-import {
-  s3,
-  dynamo,
-  headers,
-  toStatus,
-  fromStatus,
-  isInvalid,
-} from "./common";
+import { s3, dynamo, headers, toStatus, fromStatus, isInvalid } from "./common";
 
 const getWorkflow = ({
   item,
   graph,
-  installs,
+  installs = 0,
 }: {
-  item: DynamoDB.AttributeMap;
+  item?: DynamoDB.AttributeMap;
   graph: string;
-  installs: number;
+  installs?: number;
 }) =>
   s3
     .getObject({
       Bucket: "roamjs-smartblocks",
-      Key: `${item.uuid.S}/${item.workflow.S}.json`,
+      Key: `${item?.uuid.S}/${item?.workflow.S}.json`,
     })
     .promise()
     .then((r) =>
@@ -31,10 +24,11 @@ const getWorkflow = ({
           TableName: "RoamJSSmartBlocks",
           Item: {
             uuid: { S: nanoid() },
-            name: { S: item.uuid.S },
+            name: { S: item?.uuid.S },
             author: { S: graph },
-            workflow: { S: item.workflow.S },
+            workflow: { S: item?.workflow.S },
             status: { S: toStatus("INSTALLED") },
+            installed: { S: new Date().toJSON() }, // let's see if anyone is actually using this
           },
         })
         .promise()
@@ -43,7 +37,7 @@ const getWorkflow = ({
             .updateItem({
               TableName: "RoamJSSmartBlocks",
               Key: {
-                uuid: { S: item.uuid.S },
+                uuid: { S: item?.uuid.S },
               },
               UpdateExpression: "SET #s = :s",
               ExpressionAttributeNames: {
@@ -57,7 +51,7 @@ const getWorkflow = ({
         )
         .then(() => ({
           statusCode: 200,
-          body: JSON.stringify({ workflow: r.Body.toString() }),
+          body: JSON.stringify({ workflow: r.Body?.toString() }),
           headers,
         }))
     );
@@ -110,11 +104,11 @@ export const handler: APIGatewayProxyHandler = async (event) => {
             const invalid = await s3
               .getObject({
                 Bucket: "roamjs-smartblocks",
-                Key: `${r.Item.uuid.S}/${r.Item.workflow.S}.json`,
+                Key: `${r.Item?.uuid.S}/${r.Item?.workflow.S}.json`,
               })
               .promise()
-              .then((d) => isInvalid(d.Body.toString()));
-            if (graph === r.Item.author.S) {
+              .then((d) => isInvalid(d.Body?.toString()));
+            if (graph === r.Item?.author.S) {
               return {
                 statusCode: 200,
                 body: JSON.stringify({
@@ -145,7 +139,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
               dynamo
                 .getItem({
                   TableName: "RoamJSSmartBlocks",
-                  Key: { uuid: { S: r.Item.author.S } },
+                  Key: { uuid: { S: r.Item?.author.S } },
                 })
                 .promise(),
             ]).then(async ([link, publisher]) => ({
@@ -157,13 +151,15 @@ export const handler: APIGatewayProxyHandler = async (event) => {
                 installed: !!link.Count,
                 updatable:
                   !!link.Count &&
-                  link.Items.reduce(
+                  link.Items?.reduce(
                     (prev, cur) =>
-                      cur.workflow.S.localeCompare(prev.workflow.S) > 0
+                      (cur.workflow.S || "").localeCompare(
+                        prev.workflow.S || ""
+                      ) > 0
                         ? cur
                         : prev,
                     { workflow: { S: "0000" } }
-                  ).workflow?.S !== r.Item.workflow.S,
+                  ).workflow?.S !== r.Item?.workflow.S,
               }),
               headers,
             }));
@@ -197,7 +193,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
               .promise()
               .then((is) => {
                 const uuids = Array.from(
-                  new Set(is.Items.map((u) => u.name.S))
+                  new Set((is.Items || []).map((u) => u.name.S))
                 );
                 const batches = Math.ceil(uuids.length / 100);
                 const requests = new Array(batches)
@@ -218,7 +214,9 @@ export const handler: APIGatewayProxyHandler = async (event) => {
                       .promise()
                   )
                 ).then((all) => {
-                  return all.flatMap((a) => a.Responses.RoamJSSmartBlocks);
+                  return all.flatMap(
+                    (a) => a.Responses?.RoamJSSmartBlocks || []
+                  );
                 });
               })
           : filterTab === "published"
@@ -270,7 +268,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
         .then(([items, users]) => ({
           statusCode: 200,
           body: JSON.stringify({
-            smartblocks: items
+            smartblocks: (items || [])
               .sort((a, b) => {
                 const scoreDiff =
                   Number(b.score?.N || 0) - Number(a.score?.N || 0);
@@ -286,7 +284,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
                     .map(([k, v]) => [k, v.N ? Number(v.N) : v.S || v.SS])
                 )
               ),
-            users: users.map((i) => ({
+            users: (users || []).map((i) => ({
               author: i.uuid.S,
               displayName: i.description?.S || "",
             })),

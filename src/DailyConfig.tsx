@@ -39,9 +39,9 @@ const DailyConfig = (extensionAPI: OnloadArgs["extensionAPI"]) => () => {
             extensionAPI.settings.set("daily", {
               "workflow name": workflowName || "Daily",
               time: "00:00",
-              latest: "",
               "last-run": "",
             });
+            // TODO - scheduleNextRun
             setDisabled(false);
           } else {
             extensionAPI.settings.set("daily", undefined);

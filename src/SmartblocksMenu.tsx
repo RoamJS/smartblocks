@@ -47,7 +47,11 @@ const SmartblocksMenu = ({
   extensionAPI,
 }: { onClose: () => void } & Props) => {
   const { ["block-uid"]: blockUid, ["window-id"]: windowId } = useMemo(
-    () => window.roamAlphaAPI.ui.getFocusedBlock(),
+    () =>
+      window.roamAlphaAPI.ui.getFocusedBlock() || {
+        "block-uid": "",
+        "window-id": "",
+      },
     []
   );
   const menuRef = useRef<HTMLUListElement>(null);
@@ -74,10 +78,13 @@ const SmartblocksMenu = ({
   const [activeIndex, setActiveIndex] = useState(0);
   const onSelect = useCallback(
     (index) => {
+      if (!menuRef.current) return;
       const item =
         menuRef.current.children[index].querySelector(".bp3-menu-item");
+      if (!item) return;
       const srcName = item.getAttribute("data-name");
       const srcUid = item.getAttribute("data-uid");
+      if (!srcName || !srcUid) return;
       const currentTextarea = document.getElementById(
         textarea.id
       ) as HTMLTextAreaElement;
@@ -104,20 +111,10 @@ const SmartblocksMenu = ({
                 const title = getPageTitleByBlockUid(blockUid);
                 if (DAILY_NOTE_PAGE_REGEX.test(title)) {
                   const newDate = getPageUidByPageTitle(title);
+                  // TODO - scheduleNextRun?
                   extensionAPI.settings.set("daily", {
                     ...dailyConfig,
                     "last-run": newDate,
-                  });
-
-                  // @deprecated
-                  const uuid = dailyConfig["latest"];
-                  apiPut({
-                    path: `smartblocks-daily`,
-                    data: {
-                      newDate,
-                      uuid,
-                    },
-                    anonymous: true,
                   });
                 }
               }
@@ -130,6 +127,7 @@ const SmartblocksMenu = ({
   );
   const keydownListener = useCallback(
     (e: KeyboardEvent) => {
+      if (!menuRef.current) return;
       if (e.key === "ArrowDown") {
         const index = Number(menuRef.current.getAttribute("data-active-index"));
         const count = menuRef.current.childElementCount;
@@ -171,9 +169,9 @@ const SmartblocksMenu = ({
     const listeningEl = !!textarea.closest(".rm-reference-item")
       ? textarea.parentElement // Roam rerenders a new textarea in linked references on every keypress
       : textarea;
-    listeningEl.addEventListener("keydown", keydownListener);
+    listeningEl?.addEventListener("keydown", keydownListener);
     return () => {
-      listeningEl.removeEventListener("keydown", keydownListener);
+      listeningEl?.removeEventListener("keydown", keydownListener);
     };
   }, [keydownListener]);
   return (
@@ -254,7 +252,7 @@ export const render = (props: Props & { onClose: () => void }) => {
   parent.style.position = "absolute";
   parent.style.left = `${coords.left}px`;
   parent.style.top = `${coords.top}px`;
-  props.textarea.parentElement.insertBefore(parent, props.textarea);
+  props.textarea.parentElement?.insertBefore(parent, props.textarea);
   ReactDOM.render(
     <SmartblocksMenu
       {...props}
