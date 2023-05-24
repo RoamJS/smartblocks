@@ -9,6 +9,7 @@ const zDailyConfig = z
     "next-run": z.number().optional().default(0),
     "next-run-timeout": z.number().optional().default(0),
   })
+  .or(z.null().transform(() => undefined))
   .optional()
   .default({});
 
