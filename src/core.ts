@@ -1653,6 +1653,10 @@ export const COMMANDS: {
         }).then((nodes) => {
           resetContext({
             ...parentContext,
+            refMapping: {
+              ...parentContext.refMapping,
+              ...smartBlocksContext.refMapping,
+            },
             variables: smartBlocksContext.variables,
             cursorPosition: smartBlocksContext.cursorPosition,
           });
