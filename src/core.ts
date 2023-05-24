@@ -65,6 +65,9 @@ import createOverlayRender from "roamjs-components/util/createOverlayRender";
 import getSettingValueFromTree from "roamjs-components/util/getSettingValueFromTree";
 import getSettingValuesFromTree from "roamjs-components/util/getSettingValuesFromTree";
 import toFlexRegex from "roamjs-components/util/toFlexRegex";
+import getDailyConfig from "./utils/getDailyConfig";
+import saveDailyConfig from "./utils/saveDailyConfig";
+import scheduleNextDailyRun from "./utils/scheduleNextDailyRun";
 
 type FormDialogProps = Parameters<typeof FormDialog>[0];
 const renderFormDialog = createOverlayRender<FormDialogProps>(
@@ -2381,6 +2384,7 @@ export const sbBomb = async ({
   variables = {},
   mutableCursor,
   triggerUid = uid,
+  fromDaily = false,
 }: {
   srcUid: string;
   target: {
@@ -2393,6 +2397,7 @@ export const sbBomb = async ({
   variables?: Record<string, string>;
   mutableCursor?: boolean;
   triggerUid?: string;
+  fromDaily?: boolean;
 }): Promise<0 | string> => {
   const finish = renderLoading(uid);
   resetContext({ targetUid: uid, variables, triggerUid });
@@ -2525,6 +2530,22 @@ These commands are removed in the RoamDepot version of SmartBlocks, which will b
 `,
           externalLink: true,
         });
+      }
+
+      if (!fromDaily) {
+        const dailyWorkflowName = getDailyConfig()["workflow name"];
+        const srcName = getTextByBlockUid(srcUid)
+          .replace(createTagRegex("SmartBlock"), "")
+          .replace(createTagRegex("42SmartBlock"), "")
+          .replace(/<%[A-Z]+%>/, "")
+          .trim();
+        if (dailyWorkflowName === srcName) {
+          saveDailyConfig({
+            "last-run": window.roamAlphaAPI.util.dateToPageUid(new Date()),
+          });
+          // TODO - solve circular dependency
+          scheduleNextDailyRun(true);
+        }
       }
     });
 };

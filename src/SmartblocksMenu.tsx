@@ -20,7 +20,6 @@ import {
   sbBomb,
 } from "./core";
 import fuzzy from "fuzzy";
-import apiPut from "roamjs-components/util/apiPut";
 
 type Props = {
   textarea: HTMLTextAreaElement;
@@ -100,25 +99,6 @@ const SmartblocksMenu = ({
               windowId,
             },
             mutableCursor: !srcName.includes("<%NOCURSOR%>"),
-          }).then(() => {
-            const dailyConfig = extensionAPI.settings.get("daily") as Record<
-              string,
-              string
-            >;
-            if (dailyConfig) {
-              const dailyWorkflowName = dailyConfig["workflow name"] || "";
-              if (dailyWorkflowName === srcName) {
-                const title = getPageTitleByBlockUid(blockUid);
-                if (DAILY_NOTE_PAGE_REGEX.test(title)) {
-                  const newDate = getPageUidByPageTitle(title);
-                  // TODO - scheduleNextRun?
-                  extensionAPI.settings.set("daily", {
-                    ...dailyConfig,
-                    "last-run": newDate,
-                  });
-                }
-              }
-            }
           });
         }, 10);
       });

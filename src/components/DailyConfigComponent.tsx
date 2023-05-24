@@ -1,16 +1,14 @@
-import { OnloadArgs } from "roamjs-components/types";
 import { InputGroup, Label, Switch } from "@blueprintjs/core";
 import { TimePicker } from "@blueprintjs/datetime";
 import React, { useMemo, useState } from "react";
+import getDailyConfig from "../utils/getDailyConfig";
+import saveDailyConfig from "../utils/saveDailyConfig";
+import scheduleNextDailyRun from "../utils/scheduleNextDailyRun";
 
-const DailyConfig = (extensionAPI: OnloadArgs["extensionAPI"]) => () => {
-  const config = useMemo(
-    () =>
-      extensionAPI.settings.get("daily") as Record<string, string> | undefined,
-    []
-  );
+const DailyConfig = () => {
+  const config = useMemo(getDailyConfig, []);
   const [disabled, setDisabled] = useState(!config);
-  const [workflowName, setWorkflowName] = useState(config?.["workflow name"]);
+  const [workflowName, setWorkflowName] = useState(config["workflow name"]);
   const defaultTime = useMemo(() => {
     const date = new Date();
     if (config && config["time"]) {
@@ -36,15 +34,16 @@ const DailyConfig = (extensionAPI: OnloadArgs["extensionAPI"]) => () => {
         defaultChecked={!!config}
         onChange={(e) => {
           if ((e.target as HTMLInputElement).checked) {
-            extensionAPI.settings.set("daily", {
+            saveDailyConfig({
               "workflow name": workflowName || "Daily",
               time: "00:00",
               "last-run": "",
             });
-            // TODO - scheduleNextRun
+            scheduleNextDailyRun(true);
             setDisabled(false);
           } else {
-            extensionAPI.settings.set("daily", undefined);
+            window.clearTimeout(getDailyConfig()["next-run-timeout"]);
+            saveDailyConfig({ "workflow name": "" });
             setDisabled(true);
           }
         }}
@@ -55,8 +54,7 @@ const DailyConfig = (extensionAPI: OnloadArgs["extensionAPI"]) => () => {
         <InputGroup
           value={workflowName}
           onChange={(e) => {
-            extensionAPI.settings.set("daily", {
-              ...(extensionAPI.settings.get("daily") as Record<string, string>),
+            saveDailyConfig({
               "workflow name": e.target.value,
             });
             setWorkflowName(e.target.value);
@@ -71,10 +69,7 @@ const DailyConfig = (extensionAPI: OnloadArgs["extensionAPI"]) => () => {
         <TimePicker
           defaultValue={defaultTime}
           onChange={(e) =>
-            extensionAPI.settings.set("daily", {
-              ...(extensionAPI.settings.get("daily") as Record<string, string>),
-              time: `${e.getHours()}:${e.getMinutes()}`,
-            })
+            saveDailyConfig({ time: `${e.getHours()}:${e.getMinutes()}` })
           }
           showArrowButtons
           disabled={disabled}

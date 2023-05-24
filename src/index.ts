@@ -18,14 +18,6 @@ import getPageTitleByPageUid from "roamjs-components/queries/getPageTitleByPageU
 import deleteBlock from "roamjs-components/writes/deleteBlock";
 import { render as renderCursorMenu } from "roamjs-components/components/CursorMenu";
 import { render as renderToast } from "roamjs-components/components/Toast";
-import addDays from "date-fns/addDays";
-import addHours from "date-fns/addHours";
-import addMinutes from "date-fns/addMinutes";
-import addSeconds from "date-fns/addSeconds";
-import startOfDay from "date-fns/startOfDay";
-import isBefore from "date-fns/isBefore";
-import differenceInMilliseconds from "date-fns/differenceInMilliseconds";
-import dateFnsFormat from "date-fns/format";
 import { render } from "./SmartblocksMenu";
 import { render as renderStore } from "./SmartblocksStore";
 import { render as renderPopover } from "./SmartblockPopover";
@@ -46,15 +38,15 @@ import HotKeyPanel from "./HotKeyPanel";
 import XRegExp from "xregexp";
 import isLiveBlock from "roamjs-components/queries/isLiveBlock";
 import { addTokenDialogCommand } from "roamjs-components/components/TokenDialog";
-import DailyConfig from "./DailyConfig";
+import DailyConfig from "./components/DailyConfigComponent";
 import { PullBlock } from "roamjs-components/types";
 import getParentUidByBlockUid from "roamjs-components/queries/getParentUidByBlockUid";
 import getShallowTreeByParentUid from "roamjs-components/queries/getShallowTreeByParentUid";
-<<<<<<< HEAD
 import extractRef from "roamjs-components/util/extractRef";
-=======
-import { getNodeEnv } from "roamjs-components/util/env";
->>>>>>> 5fc34b1 (Massive overhaul and cleanup of how daily smartblocks work (Closes #64))
+import getDailyConfig from "./utils/getDailyConfig";
+import saveDailyConfig from "./utils/saveDailyConfig";
+import DailyConfigComponent from "./components/DailyConfigComponent";
+import { runDaily } from "./utils/scheduleNextDailyRun";
 
 const getLegacy42Setting = (name: string) => {
   const settings = Object.fromEntries(
@@ -70,7 +62,6 @@ const COMMAND_ENTRY_REGEX = /<%$/;
 const COLORS = ["darkblue", "darkred", "darkgreen", "darkgoldenrod"];
 export default runExtension({
   run: async ({ extensionAPI }) => {
-    const timeouts = new Set<number>();
     const style = addStyle(`.roamjs-smartblocks-popover-target {
   display:inline-block;
   height:14px;
@@ -129,8 +120,7 @@ export default runExtension({
                 window.roamAlphaAPI.ui.getFocusedBlock()?.["block-uid"];
               // Because the command palette does a blur event on close,
               // we want a slight delay so that we could keep focus
-              const timeout = window.setTimeout(() => {
-                timeouts.delete(timeout);
+              window.setTimeout(() => {
                 if (targetUid) {
                   sbBomb({
                     srcUid: wf.uid,
@@ -158,7 +148,6 @@ export default runExtension({
                     );
                 }
               }, 500);
-              timeouts.add(timeout);
             },
           });
         });
@@ -271,7 +260,7 @@ export default runExtension({
             "Enable to trigger a given workflow at a certain time on each day",
           action: {
             type: "reactComponent",
-            component: DailyConfig(extensionAPI),
+            component: DailyConfigComponent,
           },
         },
       ],
@@ -501,110 +490,6 @@ export default runExtension({
       }
     };
     document.addEventListener("keydown", globalHotkeyListener);
-
-    // TODO - zod.parse();
-    const getDailyConfig = () =>
-      extensionAPI.settings.get("daily") as Record<string, string | number>;
-
-    const scheduleNextRun = (triggerDate: Date) => {
-      const dailyConfig = getDailyConfig();
-      const ms = differenceInMilliseconds(
-        addSeconds(triggerDate, 1),
-        new Date()
-      );
-      const timeout = window.setTimeout(() => {
-        timeouts.delete(timeout);
-        runDaily();
-      }, ms);
-      timeouts.add(timeout);
-      extensionAPI.settings.set("daily", {
-        ...dailyConfig,
-        "next-run": ms,
-      });
-    };
-
-    const runDaily = async () => {
-      const dailyConfig = getDailyConfig();
-      if (!dailyConfig) return;
-      const dailyWorkflowName = dailyConfig?.["workflow name"];
-      if (!dailyWorkflowName) return;
-
-      const time = (dailyConfig["time"] as string) || "00:00";
-      const lastRun = (dailyConfig["last-run"] as string) || "";
-      const debug = getNodeEnv() === "development";
-      const [hours, minutes] = time.split(":").map((s) => Number(s));
-      const today = new Date();
-      const triggerTime = addMinutes(
-        addHours(startOfDay(today), hours),
-        minutes
-      );
-      if (isBefore(today, triggerTime)) {
-        scheduleNextRun(triggerTime);
-        if (debug) {
-          renderToast({
-            id: "smartblocks-info",
-            content: `Smartblocks: Still need to run the Smartblock later today at: ${dateFnsFormat(
-              triggerTime,
-              "hh:mm:ss a"
-            )}`,
-            intent: Intent.PRIMARY,
-          });
-        }
-        return;
-      }
-      if (debug) {
-        renderToast({
-          id: "smartblocks-info",
-          content: `Smartblocks: It's after your trigger time, checking to see if we should run today...`,
-          intent: Intent.PRIMARY,
-        });
-      }
-      const todayUid = window.roamAlphaAPI.util.dateToPageUid(today);
-
-      const latestDate = lastRun
-        ? parseRoamDateUid(lastRun)
-        : new Date(1970, 0, 1);
-      if (isBefore(startOfDay(latestDate), startOfDay(today))) {
-        const srcUid = getCleanCustomWorkflows().find(
-          ({ name }) => name === dailyWorkflowName
-        )?.uid;
-        if (srcUid) {
-          if (debug)
-            renderToast({
-              id: "smartblocks-info",
-              content: `Smartblocks: About to run Daily SmartBlock: ${dailyWorkflowName}!`,
-              intent: Intent.PRIMARY,
-            });
-
-          if (!isLiveBlock(todayUid))
-            await createPage({
-              title: window.roamAlphaAPI.util.dateToPageTitle(today),
-            });
-          await sbBomb({
-            srcUid,
-            target: { uid: todayUid, isParent: true },
-          });
-          extensionAPI.settings.set("daily", {
-            ...getDailyConfig(),
-            "last-run": todayUid,
-          });
-        } else {
-          renderToast({
-            id: "smartblocks-error",
-            content: `RoamJS Error: Daily SmartBlocks enabled, but couldn't find SmartBlock Workflow named "${dailyWorkflowName}"`,
-            intent: Intent.DANGER,
-          });
-        }
-      } else if (debug) {
-        renderToast({
-          id: "smartblocks-info",
-          content: `Smartblocks: No need to run daily workflow on ${todayUid}. Last run on ${lastRun}.`,
-          intent: Intent.PRIMARY,
-        });
-      }
-      const nextRun = addDays(triggerTime, 1);
-      scheduleNextRun(nextRun);
-    };
     runDaily();
 
     const OPEN_SMARTBLOCK_STORE_COMMAND_LABEL = "Open SmartBlocks Store";
@@ -1003,8 +888,9 @@ export default runExtension({
         RUN_MULTIPLE_SMARTBLOCKS_COMMAND_LABEL,
       ],
       unload: () => {
-        timeouts.forEach((t) => window.clearTimeout(t));
         unloads.forEach((u) => u());
+        window.clearTimeout(getDailyConfig()["next-run-timeout"]);
+        saveDailyConfig({ "next-run-timeout": 0 });
       },
     };
   },
