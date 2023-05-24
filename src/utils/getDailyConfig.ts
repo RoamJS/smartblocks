@@ -9,7 +9,15 @@ const zDailyConfig = z
     "next-run": z.number().optional().default(0),
     "next-run-timeout": z.number().optional().default(0),
   })
-  .or(z.null().transform(() => undefined))
+  .or(
+    z.null().transform(() => ({
+      time: "00:00",
+      "last-run": "01-01-1970",
+      "workflow name": "",
+      "next-run": 0,
+      "next-run-timeout": 0,
+    }))
+  )
   .optional()
   .default({});
 
