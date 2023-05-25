@@ -50,6 +50,7 @@ import DailyConfig from "./DailyConfig";
 import { PullBlock } from "roamjs-components/types";
 import getParentUidByBlockUid from "roamjs-components/queries/getParentUidByBlockUid";
 import getShallowTreeByParentUid from "roamjs-components/queries/getShallowTreeByParentUid";
+import extractRef from "roamjs-components/util/extractRef";
 
 const getLegacy42Setting = (name: string) => {
   const settings = Object.fromEntries(
@@ -489,7 +490,9 @@ export default runExtension({
               end: start,
             },
             mutableCursor: true,
-          }).then((n) => n === 0 && !focusedUid && deleteBlock(target));
+          }).then((n) => {
+            if (n === 0 && !focusedUid) deleteBlock(target);
+          });
         }
       }
     };
@@ -644,7 +647,7 @@ export default runExtension({
                 .q(
                   `[:find (pull ?p [:node/title]) :where [?b :block/uid "${parentUid}"] [?c :block/parents ?b] [?c :block/refs ?p]]`
                 )
-                .map((a) => (a as [PullBlock])[0]?.[":node/title"])
+                .map((a) => (a as [PullBlock])[0]?.[":node/title"] || "")
             : [],
         });
       },
@@ -692,7 +695,7 @@ export default runExtension({
           [0]: full,
         } = match;
         const [workflowName, args = ""] = buttonText.split(":");
-        el.addEventListener("click", () => {
+        const clickListener = () => {
           const workflows = getCustomWorkflows();
           const { uid: srcUid } =
             getCleanCustomWorkflows(workflows).find(
@@ -724,7 +727,7 @@ export default runExtension({
               variables["42RemoveButton"] === "false";
             const clearBlock = variables["Clear"] === "true";
             const applyToSibling = variables["Sibling"];
-            const outputNowhere = variables["Output"] === "false";
+            const explicitTargetUid = extractRef(variables["TargetRef"]);
 
             const props = {
               srcUid,
@@ -786,13 +789,14 @@ export default runExtension({
                     })
                   );
             } else if (keepButton) {
-              outputNowhere
+              explicitTargetUid
                 ? sbBomb({
                     ...props,
                     target: {
-                      uid: parentUid,
+                      uid: explicitTargetUid,
                       start: 0,
                       end: 0,
+                      isParent: true,
                     },
                   })
                 : createBlock({
@@ -806,7 +810,9 @@ export default runExtension({
                         start: 0,
                         end: 0,
                       },
-                    }).then((n) => n === 0 && deleteBlock(targetUid))
+                    }).then((n) => {
+                      if (n === 0) deleteBlock(targetUid);
+                    })
                   ),
                 clearBlock
                   ? updateBlock({
@@ -834,7 +840,8 @@ export default runExtension({
               );
             }
           }
-        });
+        };
+        el.addEventListener("click", clickListener);
         if (!hideButtonIcon && !hideIcon) {
           const img = new Image();
           img.src =
@@ -843,25 +850,42 @@ export default runExtension({
           img.height = 14;
           img.style.marginRight = "7px";
           el.insertBefore(img, el.firstChild);
+          return () => {
+            img.remove();
+            el.removeEventListener("click", clickListener);
+          };
         }
+        return () => {
+          el.removeEventListener("click", clickListener);
+        };
       }
+      return () => {};
     };
 
+    const unloads = new Set<() => void>();
     const buttonLogoObserver = createHTMLObserver({
       className: "bp3-button",
       tag: "BUTTON",
-      callback: (b: HTMLButtonElement) => {
+      callback: (b) => {
         const parentUid = getBlockUidFromTarget(b);
-        if (parentUid && !b.hasAttribute("data-roamjs-smartblock-button")) {
+        if (
+          parentUid &&
+          !b.hasAttribute("data-roamjs-smartblock-button") &&
+          b.textContent
+        ) {
           const text = getTextByBlockUid(parentUid);
           b.setAttribute("data-roamjs-smartblock-button", "true");
 
           // We include textcontent here bc there could be multiple smartblocks in a block
-          registerElAsSmartBlockTrigger({
+          const unload = registerElAsSmartBlockTrigger({
             textContent: b.textContent,
             text,
             el: b,
             parentUid,
+          });
+          unloads.add(() => {
+            b.removeAttribute("data-roamjs-smartblock-button");
+            unload();
           });
         }
       },
@@ -870,20 +894,24 @@ export default runExtension({
     const todoObserver = createHTMLObserver({
       tag: "LABEL",
       className: "check-container",
-      callback: (l: HTMLLabelElement) => {
+      callback: (l) => {
         if (l.hasAttribute("data-roamjs-smartblock-button")) return;
         l.setAttribute("data-roamjs-smartblock-button", "true");
         const inputTarget = l.querySelector("input");
-        if (inputTarget.type !== "checkbox") return;
+        if (inputTarget?.type !== "checkbox") return;
         const blockUid = getBlockUidFromTarget(inputTarget);
         const text = getTextByBlockUid(blockUid);
         if (!/^{{\[\[TODO\]\]:[^}]+}}/.test(text)) return;
         // We include textcontent here bc there could be multiple smartblocks in a block
-        registerElAsSmartBlockTrigger({
+        const unload = registerElAsSmartBlockTrigger({
           textContent: "\\[\\[TODO\\]\\]",
           text,
           el: inputTarget,
           parentUid: blockUid,
+        });
+        unloads.add(() => {
+          l.removeAttribute("data-roamjs-smartblock-button");
+          unload();
         });
       },
     });
@@ -896,7 +924,7 @@ export default runExtension({
               ? [c]
               : Array.from(c.childNodes).flatMap(flattenTextNodes);
           const textNodes = flattenTextNodes(b).filter(
-            (t) => !t.parentElement.closest(".CodeMirror")
+            (t) => !t.parentElement?.closest(".CodeMirror")
           );
           const getMatches = (
             s: string,
@@ -931,16 +959,18 @@ export default runExtension({
           let totalCount = 0;
           if (matches.length > 1) {
             textNodes.forEach((t) => {
+              const { nodeValue, parentElement } = t;
+              if (!nodeValue || !parentElement) return;
               matches
                 .filter(
                   (m) =>
                     m.end > totalCount &&
-                    m.start < totalCount + t.nodeValue.length
+                    m.start < totalCount + nodeValue.length
                 )
                 .map((m) => {
-                  const overlap = t.nodeValue.substring(
+                  const overlap = nodeValue.substring(
                     Math.max(0, m.start - totalCount),
-                    Math.min(t.nodeValue.length, m.end - totalCount)
+                    Math.min(nodeValue.length, m.end - totalCount)
                   );
                   if (m.name === "text")
                     return document.createTextNode(overlap);
@@ -962,9 +992,9 @@ export default runExtension({
                   }
                   return null;
                 })
-                .filter((s) => !!s)
-                .forEach((s) => t.parentElement.insertBefore(s, t));
-              totalCount += t.nodeValue.length;
+                .filter((s): s is HTMLSpanElement => !!s)
+                .forEach((s) => parentElement.insertBefore(s, t));
+              totalCount += nodeValue.length;
               t.nodeValue = "";
             });
           }
@@ -990,6 +1020,7 @@ export default runExtension({
       ],
       unload: () => {
         timeouts.forEach((t) => window.clearTimeout(t));
+        unloads.forEach((u) => u());
       },
     };
   },
