@@ -1,13 +1,13 @@
 import { InputGroup, Label, Switch } from "@blueprintjs/core";
 import { TimePicker } from "@blueprintjs/datetime";
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import getDailyConfig from "../utils/getDailyConfig";
 import saveDailyConfig from "../utils/saveDailyConfig";
 import scheduleNextDailyRun from "../utils/scheduleNextDailyRun";
 
 const DailyConfig = () => {
   const config = useMemo(getDailyConfig, []);
-  const [disabled, setDisabled] = useState(!config);
+  const [disabled, setDisabled] = useState(!config.enabled);
   const [workflowName, setWorkflowName] = useState(config["workflow name"]);
   const defaultTime = useMemo(() => {
     const date = new Date();
@@ -22,6 +22,16 @@ const DailyConfig = () => {
     return date;
   }, [config]);
   const lastRun = config?.["last-run"];
+
+  // migrate old config
+  useEffect(() => {
+    if (config["workflow name"] && !config["enabled"]) {
+      saveDailyConfig({
+        enabled: true,
+      });
+      setDisabled(false);
+    }
+  }, [config]);
   return (
     <div
       className="flex items-start gap-2 flex-col"
@@ -31,20 +41,16 @@ const DailyConfig = () => {
       }}
     >
       <Switch
-        defaultChecked={!!config}
+        defaultChecked={config.enabled}
         onChange={(e) => {
           if ((e.target as HTMLInputElement).checked) {
             saveDailyConfig({
               "workflow name": workflowName || "Daily",
-              time: "00:00",
-              "last-run": "",
             });
             scheduleNextDailyRun(true);
-            setDisabled(false);
           } else {
             window.clearTimeout(getDailyConfig()["next-run-timeout"]);
             saveDailyConfig({ "workflow name": "" });
-            setDisabled(true);
           }
         }}
         label={disabled ? "Disabled" : "Enabled"}
@@ -76,7 +82,11 @@ const DailyConfig = () => {
           className={"w-full user-select-none"}
         />
       </Label>
-      <span>{lastRun && `Last ran daily workflow on page ${lastRun}.`}</span>
+      <span>
+        {lastRun &&
+          lastRun !== "01-01-1970" &&
+          `Last ran daily workflow on page ${lastRun}.`}
+      </span>
     </div>
   );
 };
