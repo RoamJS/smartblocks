@@ -22,6 +22,11 @@ const DailyConfig = () => {
     return date;
   }, [config]);
   const lastRun = config?.["last-run"];
+  const [now, setNow] = useState(new Date());
+  const nextRun = useMemo(() => {
+    if (!config.enabled) return 0;
+    return config["next-run"] - now.valueOf();
+  }, [now, config]);
 
   // migrate old config
   useEffect(() => {
@@ -32,6 +37,14 @@ const DailyConfig = () => {
       setDisabled(false);
     }
   }, [config]);
+  useEffect(() => {
+    const int = window.setInterval(() => {
+      setNow(new Date());
+    }, 500);
+    return () => {
+      window.clearInterval(int);
+    };
+  }, [setNow]);
   return (
     <div
       className="flex items-start gap-2 flex-col"
@@ -86,6 +99,14 @@ const DailyConfig = () => {
         {lastRun &&
           lastRun !== "01-01-1970" &&
           `Last ran daily workflow on page ${lastRun}.`}
+      </span>
+      <span>
+        {nextRun &&
+          `Next run is in ${Math.floor(
+            nextRun / (60 * 60 * 1000)
+          )} hours, ${Math.floor(nextRun / (60 * 1000))} minutes, ${Math.floor(
+            nextRun / 1000
+          )} secondes.`}
       </span>
     </div>
   );

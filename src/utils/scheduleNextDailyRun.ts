@@ -97,13 +97,13 @@ export const runDaily = async () => {
 
 const scheduleNextDailyRun = (tomorrow = false) => {
   const triggerDay = tomorrow ? addDays(new Date(), 1) : new Date();
-  const triggerDate = getTriggerTime(triggerDay);
-  const ms = differenceInMilliseconds(addSeconds(triggerDate, 1), new Date());
+  const triggerDate = addSeconds(getTriggerTime(triggerDay), 1);
+  const ms = differenceInMilliseconds(triggerDate, new Date());
   const timeout = window.setTimeout(() => {
     runDaily();
   }, ms);
   saveDailyConfig({
-    "next-run": ms,
+    "next-run": triggerDate.valueOf(),
     "next-run-timeout": timeout,
   });
 };
