@@ -101,12 +101,12 @@ const DailyConfig = () => {
           `Last ran daily workflow on page ${lastRun}.`}
       </span>
       <span>
-        {nextRun &&
+        {!!nextRun &&
           `Next run is in ${Math.floor(
             nextRun / (60 * 60 * 1000)
-          )} hours, ${Math.floor(nextRun / (60 * 1000))} minutes, ${Math.floor(
-            nextRun / 1000
-          )} secondes.`}
+          )} hours, ${Math.floor(
+            (nextRun % (60 * 60 * 1000)) / (60 * 1000)
+          )} minutes, ${Math.floor((nextRun % (60 * 1000)) / 1000)} seconds.`}
       </span>
     </div>
   );
