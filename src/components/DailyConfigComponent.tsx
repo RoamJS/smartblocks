@@ -56,15 +56,18 @@ const DailyConfig = () => {
       <Switch
         defaultChecked={config.enabled}
         onChange={(e) => {
-          if ((e.target as HTMLInputElement).checked) {
+          const enabled = (e.target as HTMLInputElement).checked;
+          if (enabled) {
             saveDailyConfig({
               "workflow name": workflowName || "Daily",
             });
-            scheduleNextDailyRun(true);
+            scheduleNextDailyRun({ tomorrow: true });
           } else {
             window.clearTimeout(getDailyConfig()["next-run-timeout"]);
             saveDailyConfig({ "workflow name": "" });
+            setWorkflowName("");
           }
+          setDisabled(!enabled);
         }}
         label={disabled ? "Disabled" : "Enabled"}
       />
@@ -102,6 +105,7 @@ const DailyConfig = () => {
       </span>
       <span>
         {!!nextRun &&
+          !disabled &&
           `Next run is in ${Math.floor(
             nextRun / (60 * 60 * 1000)
           )} hours, ${Math.floor(

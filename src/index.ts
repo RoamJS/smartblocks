@@ -490,7 +490,9 @@ export default runExtension({
       }
     };
     document.addEventListener("keydown", globalHotkeyListener);
-    runDaily();
+    // We want to delay this so that remote changes could be applied first from multiple devices, 
+    // namely daily config settings.
+    setTimeout(runDaily, 1000 * 10);
 
     const OPEN_SMARTBLOCK_STORE_COMMAND_LABEL = "Open SmartBlocks Store";
     window.roamAlphaAPI.ui.commandPalette.addCommand({

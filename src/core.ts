@@ -2540,11 +2540,8 @@ These commands are removed in the RoamDepot version of SmartBlocks, which will b
           .replace(/<%[A-Z]+%>/, "")
           .trim();
         if (dailyWorkflowName === srcName) {
-          saveDailyConfig({
-            "last-run": window.roamAlphaAPI.util.dateToPageUid(new Date()),
-          });
           // TODO - solve circular dependency
-          scheduleNextDailyRun(true);
+          scheduleNextDailyRun({ tomorrow: true, saveLastRun: true });
         }
       }
     });
