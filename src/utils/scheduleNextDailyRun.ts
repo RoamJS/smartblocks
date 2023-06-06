@@ -14,6 +14,7 @@ import parseRoamDateUid from "roamjs-components/date/parseRoamDateUid";
 import { getCleanCustomWorkflows, sbBomb } from "../core";
 import isLiveBlock from "roamjs-components/queries/isLiveBlock";
 import createPage from "roamjs-components/writes/createPage";
+import localStorageGet from "roamjs-components/util/localStorageGet";
 
 const getTriggerTime = (day: Date) => {
   const time = getDailyConfig().time;
@@ -25,6 +26,8 @@ export const runDaily = async () => {
   const dailyConfig = getDailyConfig();
   const dailyWorkflowName = dailyConfig["workflow name"];
   if (!dailyWorkflowName) return;
+  if (dailyConfig.device && dailyConfig.device !== localStorageGet("device"))
+    return;
 
   const { ["last-run"]: lastRun } = dailyConfig;
   const debug = getNodeEnv() === "development";

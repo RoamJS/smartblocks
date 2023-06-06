@@ -1,13 +1,19 @@
-import { InputGroup, Label, Switch } from "@blueprintjs/core";
+import { Checkbox, InputGroup, Label, Switch } from "@blueprintjs/core";
 import { TimePicker } from "@blueprintjs/datetime";
 import React, { useMemo, useState, useEffect } from "react";
 import getDailyConfig from "../utils/getDailyConfig";
 import saveDailyConfig from "../utils/saveDailyConfig";
 import scheduleNextDailyRun from "../utils/scheduleNextDailyRun";
+import localStorageGet from "roamjs-components/util/localStorageGet";
+import localStorageSet from "roamjs-components/util/localStorageSet";
+import nanoid from "nanoid";
 
 const DailyConfig = () => {
   const config = useMemo(getDailyConfig, []);
   const [disabled, setDisabled] = useState(!config.enabled);
+  const [onlyOnThisDevice, setOnlyOnThisDevice] = useState(
+    !!config.device && config.device === localStorageGet("device")
+  );
   const [workflowName, setWorkflowName] = useState(config["workflow name"]);
   const defaultTime = useMemo(() => {
     const date = new Date();
@@ -112,6 +118,24 @@ const DailyConfig = () => {
             (nextRun % (60 * 60 * 1000)) / (60 * 1000)
           )} minutes, ${Math.floor((nextRun % (60 * 1000)) / 1000)} seconds.`}
       </span>
+      <Checkbox
+        defaultChecked={onlyOnThisDevice}
+        onChange={(e) => {
+          const enabled = (e.target as HTMLInputElement).checked;
+          if (enabled) {
+            const deviceId = localStorageGet("device") && nanoid();
+            saveDailyConfig({
+              device: deviceId,
+            });
+            localStorageSet("device", deviceId);
+          } else {
+            saveDailyConfig({ device: "" });
+          }
+          setOnlyOnThisDevice(enabled);
+        }}
+        label={"Only run on this device"}
+        disabled={disabled}
+      />
     </div>
   );
 };

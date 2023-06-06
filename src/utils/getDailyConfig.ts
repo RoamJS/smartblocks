@@ -9,6 +9,7 @@ const zDailyConfig = z
     "next-run": z.number().optional().default(0),
     "next-run-timeout": z.number().optional().default(0),
     enabled: z.boolean().optional().default(false),
+    device: z.string().optional().default(""),
   })
   .or(
     z.null().transform(() => ({
@@ -18,6 +19,7 @@ const zDailyConfig = z
       "next-run": 0,
       "next-run-timeout": 0,
       enabled: false,
+      device: "",
     }))
   )
   .optional()
