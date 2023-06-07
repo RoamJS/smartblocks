@@ -59,10 +59,6 @@ module "roamjs_lambda" {
       method = "put"
     },
     { 
-      path = "smartblocks-daily", 
-      method = "put"
-    },
-    { 
       path = "smartblocks-store", 
       method = "delete"
     },

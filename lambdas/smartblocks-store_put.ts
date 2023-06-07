@@ -80,7 +80,7 @@ export const handler: APIGatewayProxyHandler = awsGetRoamJSUser(
       })
       .promise()
       .then(async (r) => {
-        const existingWorkflow = r.Items.find(
+        const existingWorkflow = (r.Items || []).find(
           (i) => fromStatus(i.status.S) !== "USER"
         );
         if (existingWorkflow && existingWorkflow?.uuid?.S !== uuid) {
@@ -100,7 +100,7 @@ export const handler: APIGatewayProxyHandler = awsGetRoamJSUser(
           .promise()
           .then((a) => a.Item);
         const limit = Number(existingAuthor?.limit?.N) || 5;
-        const putItem = (existingDisplayName: string) =>
+        const putItem = (existingDisplayName = "") =>
           dynamo
             .query({
               TableName: "RoamJSSmartBlocks",
@@ -117,7 +117,7 @@ export const handler: APIGatewayProxyHandler = awsGetRoamJSUser(
             })
             .promise()
             .then((qr) => {
-              return qr.Count >= limit
+              return (qr.Count || 0) >= limit
                 ? {
                     statusCode: 401,
                     body: `Not allowed to publish more than ${limit} workflows. Reach out to support@roamjs.com about increasing your limit.`,
