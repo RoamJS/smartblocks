@@ -811,6 +811,16 @@ export const COMMANDS: {
           key: "title",
           defaultValue: "SmartBlocks Form",
         });
+      const submitButtonText = getSettingValueFromTree({
+        tree: formConfig.children,
+        key: "submit",
+        defaultValue: "Submit",
+      });
+      const cancelButtonText = getSettingValueFromTree({
+        tree: formConfig.children,
+        key: "cancel",
+        defaultValue: "Cancel",
+      });
       return new Promise<Record<string, unknown> | false>((resolve) =>
         renderFormDialog({
           fields: Object.fromEntries(fieldEntries),
@@ -818,6 +828,8 @@ export const COMMANDS: {
           isOpen: true,
           onClose: () => resolve(false),
           title,
+          submitButtonText,
+          cancelButtonText,
         })
       ).then((values) => {
         if (!values) {
