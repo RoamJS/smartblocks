@@ -59,7 +59,8 @@ export const runDaily = async () => {
   const latestDate = parseRoamDateUid(lastRun);
   let saveLastRun = false;
   if (isBefore(startOfDay(latestDate), startOfDay(today))) {
-    const srcUid = getCleanCustomWorkflows().find(
+    const availableWorkflows = getCleanCustomWorkflows();
+    const srcUid = availableWorkflows.find(
       ({ name }) => name === dailyWorkflowName
     )?.uid;
     if (srcUid) {

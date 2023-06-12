@@ -54,7 +54,6 @@ import { ToasterPosition } from "@blueprintjs/core";
 import { renderLoading } from "roamjs-components/components/Loading";
 import lodashGet from "lodash/get";
 import getUids from "roamjs-components/dom/getUids";
-import getAttributeValueByBlockAndName from "roamjs-components/queries/getAttributeValueByBlockAndName";
 import parseNlpDate, {
   addNlpDateParser,
 } from "roamjs-components/date/parseNlpDate";
@@ -66,7 +65,6 @@ import getSettingValueFromTree from "roamjs-components/util/getSettingValueFromT
 import getSettingValuesFromTree from "roamjs-components/util/getSettingValuesFromTree";
 import toFlexRegex from "roamjs-components/util/toFlexRegex";
 import getDailyConfig from "./utils/getDailyConfig";
-import saveDailyConfig from "./utils/saveDailyConfig";
 import scheduleNextDailyRun from "./utils/scheduleNextDailyRun";
 
 type FormDialogProps = Parameters<typeof FormDialog>[0];
@@ -96,6 +94,28 @@ const getBlockUidTextAndPageReferencingTag = (title: string) =>
         title: page?.[":node/title"] || "",
       };
     });
+
+const flattenPullBlock = (blocks: PullBlock[] = []): PullBlock[] =>
+  blocks.flatMap((b) => [b, ...flattenPullBlock(b[":block/children"])]);
+
+const getAttributeValueByBlockAndName = ({
+  name,
+  uid,
+}: {
+  name: string;
+  uid: string;
+}) => {
+  const blocks = flattenPullBlock(
+    window.roamAlphaAPI.pull(
+      "[:block/string :block/uid {:block/children ...}]",
+      [":block/uid", uid]
+    )?.[":block/children"]
+  );
+  const block = blocks.find((blk) =>
+    (blk[":block/string"] || "").startsWith(name + "::")
+  );
+  return (block?.[":block/string"] || "").slice(name.length + 2).trim();
+};
 
 const getDateFromBlock = (args: { text: string; title: string }) => {
   const fromText = DAILY_REF_REGEX.exec(args.text)?.[1];
@@ -195,10 +215,6 @@ addNlpDateParser({
   },
 });
 
-const AsyncFunction: FunctionConstructor = new Function(
-  `return Object.getPrototypeOf(async function(){}).constructor`
-)();
-
 export const predefinedWorkflows = (
   [
     ...[
@@ -274,8 +290,22 @@ const predefinedChildrenByUid = Object.fromEntries(
 
 export const HIDE_REGEX = /<%HIDE%>/i;
 
-export const getCustomWorkflows = () =>
-  window.roamAlphaAPI.data.fast
+const customWorkflowsCache: {
+  current?: { uid: string; name: string }[];
+  timeout: number;
+} = {
+  current: undefined,
+  timeout: 0,
+};
+export const getCustomWorkflows = () => {
+  if (customWorkflowsCache.current) {
+    window.clearTimeout(customWorkflowsCache.timeout);
+    customWorkflowsCache.timeout = window.setTimeout(() => {
+      customWorkflowsCache.current = undefined;
+    }, 1000 * 60 * 5);
+    return customWorkflowsCache.current;
+  }
+  const result = (customWorkflowsCache.current = window.roamAlphaAPI.data.fast
     .q(
       `[:find
 (pull ?r [:block/uid :block/string])
@@ -294,7 +324,12 @@ export const getCustomWorkflows = () =>
           .replace(createTagRegex("42SmartBlock"), "")
           .trim(),
       };
-    });
+    }));
+  customWorkflowsCache.timeout = window.setTimeout(() => {
+    customWorkflowsCache.current = undefined;
+  }, 1000 * 60 * 5);
+  return result;
+};
 
 export const getVisibleCustomWorkflows = () =>
   getCustomWorkflows()

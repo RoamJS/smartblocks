@@ -490,7 +490,7 @@ export default runExtension({
       }
     };
     document.addEventListener("keydown", globalHotkeyListener);
-    // We want to delay this so that remote changes could be applied first from multiple devices, 
+    // We want to delay this so that remote changes could be applied first from multiple devices,
     // namely daily config settings.
     setTimeout(runDaily, 1000 * 10);
 
@@ -568,10 +568,9 @@ export default runExtension({
         const [workflowName, args = ""] = buttonText.split(":");
         const clickListener = () => {
           const workflows = getCustomWorkflows();
+          const availableWorkflows = getCleanCustomWorkflows(workflows);
           const { uid: srcUid } =
-            getCleanCustomWorkflows(workflows).find(
-              ({ name }) => name === workflowName
-            ) || {};
+            availableWorkflows.find(({ name }) => name === workflowName) || {};
           if (!srcUid) {
             createBlock({
               node: {
