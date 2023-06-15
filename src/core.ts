@@ -302,7 +302,7 @@ export const getCustomWorkflows = () => {
     window.clearTimeout(customWorkflowsCache.timeout);
     customWorkflowsCache.timeout = window.setTimeout(() => {
       customWorkflowsCache.current = undefined;
-    }, 1000 * 60 * 5);
+    }, 500);
     return customWorkflowsCache.current;
   }
   const result = (customWorkflowsCache.current = window.roamAlphaAPI.data.fast
@@ -327,7 +327,7 @@ export const getCustomWorkflows = () => {
     }));
   customWorkflowsCache.timeout = window.setTimeout(() => {
     customWorkflowsCache.current = undefined;
-  }, 1000 * 60 * 5);
+  }, 500);
   return result;
 };
 
