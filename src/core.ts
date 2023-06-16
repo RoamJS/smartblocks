@@ -66,6 +66,7 @@ import getSettingValuesFromTree from "roamjs-components/util/getSettingValuesFro
 import toFlexRegex from "roamjs-components/util/toFlexRegex";
 import getDailyConfig from "./utils/getDailyConfig";
 import scheduleNextDailyRun from "./utils/scheduleNextDailyRun";
+import apiPost from "roamjs-components/util/apiPost";
 
 type FormDialogProps = Parameters<typeof FormDialog>[0];
 const renderFormDialog = createOverlayRender<FormDialogProps>(
@@ -806,39 +807,40 @@ export const COMMANDS: {
         (formConfig.children || []).find((s) =>
           toFlexRegex("fields").test(s.text.trim())
         )?.children || [];
-      const fieldEntries = fieldsConfig.map(
-        (f) =>
-          [
-            f.text,
-            {
-              type: getSettingValueFromTree({
+      const fieldEntries = fieldsConfig.map((f) => {
+        const fieldType = getSettingValueFromTree({
+          tree: f.children,
+          key: "type",
+        });
+        return [
+          f.text,
+          {
+            type: fieldType,
+            label: getSettingValueFromTree({
+              tree: f.children,
+              key: "label",
+              defaultValue: f.text,
+            }),
+            options: getSettingValuesFromTree({
+              tree: f.children || [],
+              key: "options",
+            }),
+            conditional:
+              getSettingValueFromTree({
                 tree: f.children,
-                key: "type",
-              }),
-              label: getSettingValueFromTree({
+                key: "conditional",
+              }) || undefined,
+            defaultValue:
+              getSettingValueFromTree({
                 tree: f.children,
-                key: "label",
-                defaultValue: f.text,
-              }),
-              options: getSettingValuesFromTree({
-                tree: f.children || [],
-                key: "options",
-              }),
-              conditional:
-                getSettingValueFromTree({
-                  tree: f.children,
-                  key: "conditional",
-                }) || undefined,
-              defaultValue:
-                getSettingValueFromTree({
-                  tree: f.children,
-                  key: "default",
-                }) ||
-                smartBlocksContext.variables[f.text] ||
-                undefined,
-            } as Required<FormDialogProps>["fields"][string],
-          ] as const
-      );
+                key: "default",
+              }) ||
+              (fieldType === "embed" && smartBlocksContext.variables[f.text]
+                ? [{ text: smartBlocksContext.variables[f.text] }]
+                : undefined),
+          } as Required<FormDialogProps>["fields"][string],
+        ] as const;
+      });
       const title =
         getTextByBlockUid(blockUid) ||
         getSettingValueFromTree({
@@ -2152,7 +2154,21 @@ export const proccessBlockText = async (
       ...nextBlocks,
     ];
   } catch (e) {
-    console.error(e);
+    const error = e as Error;
+    apiPost({
+      domain: "https://api.smartblocks.network",
+      path: "errors",
+      data: {
+        method: "extension-error",
+        type: "Process Block Text Failed",
+        data: {
+          text: s,
+        },
+        message: error.message,
+        stack: error.stack,
+        version: process.env.VERSION,
+      },
+    }).catch(() => {});
     return [
       {
         children: [],
@@ -2337,7 +2353,21 @@ export const proccessBlockWithSmartness = async (
       ...nextBlocks,
     ];
   } catch (e) {
-    console.error(e);
+    const error = e as Error;
+    apiPost({
+      domain: "https://api.smartblocks.network",
+      path: "errors",
+      data: {
+        method: "extension-error",
+        type: "Process Block With Smartness Fail",
+        data: {
+          node: n,
+        },
+        message: error.message,
+        stack: error.stack,
+        version: process.env.VERSION,
+      },
+    }).catch(() => {});
     return [
       {
         children: [],
