@@ -593,9 +593,9 @@ export default runExtension({
             variables["ButtonContent"] = buttonContent;
 
             const keepButton =
-              variables["RemoveButton"] === "false" ||
-              variables["42RemoveButton"] === "false";
-            const clearBlock = variables["Clear"] === "true";
+              /false/i.test(variables["RemoveButton"]) ||
+              /false/i.test(variables["42RemoveButton"]);
+            const clearBlock = /true/i.test(variables["Clear"]);
             const applyToSibling = variables["Sibling"];
             const explicitTargetUid = extractRef(variables["TargetRef"]);
 
