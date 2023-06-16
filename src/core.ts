@@ -2156,7 +2156,7 @@ export const proccessBlockText = async (
   } catch (e) {
     const error = e as Error;
     apiPost({
-      domain: "https://api.smartblocks.network",
+      domain: "https://api.samepage.network",
       path: "errors",
       data: {
         method: "extension-error",
@@ -2355,7 +2355,7 @@ export const proccessBlockWithSmartness = async (
   } catch (e) {
     const error = e as Error;
     apiPost({
-      domain: "https://api.smartblocks.network",
+      domain: "https://api.samepage.network",
       path: "errors",
       data: {
         method: "extension-error",
