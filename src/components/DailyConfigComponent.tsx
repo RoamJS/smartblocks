@@ -123,7 +123,7 @@ const DailyConfig = () => {
         onChange={(e) => {
           const enabled = (e.target as HTMLInputElement).checked;
           if (enabled) {
-            const deviceId = localStorageGet("device") && nanoid();
+            const deviceId = localStorageGet("device") || nanoid();
             saveDailyConfig({
               device: deviceId,
             });
