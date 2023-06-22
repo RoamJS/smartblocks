@@ -8,7 +8,6 @@ import createHTMLObserver from "roamjs-components/dom/createHTMLObserver";
 import getBlockUidFromTarget from "roamjs-components/dom/getBlockUidFromTarget";
 import getTextByBlockUid from "roamjs-components/queries/getTextByBlockUid";
 import updateBlock from "roamjs-components/writes/updateBlock";
-import parseRoamDateUid from "roamjs-components/date/parseRoamDateUid";
 import getUids from "roamjs-components/dom/getUids";
 import getCurrentPageUid from "roamjs-components/dom/getCurrentPageUid";
 import getDisplayNameByUid from "roamjs-components/queries/getDisplayNameByUid";
@@ -279,12 +278,20 @@ export default runExtension({
       }) => {
         const command = text.toUpperCase();
         handlerByCommand[command] = {
-          handler: (...args) =>
-            handler({
-              ...smartBlocksContext,
-              proccessBlockText,
-              processBlock: proccessBlockWithSmartness,
-            })(...args),
+          handler: async (...args) => {
+            try {
+              const result = await handler({
+                ...smartBlocksContext,
+                proccessBlockText,
+                processBlock: proccessBlockWithSmartness,
+              })(...args);
+              return result;
+            } catch (e) {
+              return `Custom Command ${command} Failed: ${
+                (e as Error).message
+              }`;
+            }
+          },
           delayArgs,
         };
         customCommands.push({ text: command, help });
