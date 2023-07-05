@@ -2,7 +2,17 @@
 
 This is a directory of all of the supported commands in the SmartBlocks extension.
 
-# Date/Time Commands
+- [Date/Time Commands](#datetime-commands)
+- [Serendipity Commands](#serendipity-commands)
+- [TODO Commands](#todo-commands)
+- [Block Related Commands](#block-related-commands)
+- [Logic Control Commands](#logic-control-commands)
+- [Cursor Commands](#cursor-commands)
+- [Commands With Effects](#commands-with-effects)
+- [Workflow Modifiers](#workflow-modifiers)
+- [Common Ideas](#common-ideas)
+
+# **Date/Time Commands**
 
 Date/Time commands use relative timing to resolve to Roam dates and times
 
