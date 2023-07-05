@@ -16,21 +16,21 @@ SmartBlocks makes it easy to reuse text in a dynamic way in Roam. It can be comp
 
 The following steps dive into all the features SmartBlocks has to offer in increasing complexity; from beginners to developer.
 
-1. [Trigger Your Workflow](https://roamjs.com/extensions/smartblocks/trigger_your_workflow)
+1. [Trigger Your Workflow](https://github.com/dvargas92495/roamjs-smartblocks/blob/main/docs/010-trigger-your-workflow)
 
-1. [Understanding Commands](https://roamjs.com/extensions/smartblocks/understanding_commands)
+2. [Understanding Commands](https://github.com/dvargas92495/roamjs-smartblocks/blob/main/docs/020-understanding-commands)
 
-1. [Using Pre-Defined Workflows](https://roamjs.com/extensions/smartblocks/using_pre-defined_workflows)
+3. [Using Pre-Defined Workflows](https://github.com/dvargas92495/roamjs-smartblocks/blob/main/docs/030-using-pre-defined-workflows)
 
-1. [Make Your Own Workflows](https://roamjs.com/extensions/smartblocks/make_your_own_workflows)
+4. [Make Your Own Workflows](https://github.com/dvargas92495/roamjs-smartblocks/blob/main/docs/040-make-your-own-workflows)
 
-1. [Command Reference](https://roamjs.com/extensions/smartblocks/command_reference)
+5. [Command Reference](https://github.com/dvargas92495/roamjs-smartblocks/blob/main/docs/050-command-reference)
 
-1. [Alternative Methods](https://roamjs.com/extensions/smartblocks/alternative_methods)
+6. [Alternative Methods](https://github.com/dvargas92495/roamjs-smartblocks/blob/main/docs/060-alternative-methods)
 
-1. [SmartBlocks Store](https://roamjs.com/extensions/smartblocks/smartblocks_store)
+7. [SmartBlocks Store](https://github.com/dvargas92495/roamjs-smartblocks/blob/main/docs/070-smartblocks-store)
 
-1. [Developer Docs](https://roamjs.com/extensions/smartblocks/developer_docs)
+8. [Developer Docs](https://github.com/dvargas92495/roamjs-smartblocks/blob/main/docs/080-developer-docs)
 
 ## Demo
 
