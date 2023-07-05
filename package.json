@@ -26,8 +26,5 @@
   },
   "samepage": {
     "extends": "node_modules/roamjs-components/package.json"
-  },
-  "padawan": {
-    "webhookUrl": "https://samepage.ngrok.io/padawan"
   }
 }

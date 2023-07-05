@@ -1,7 +1,7 @@
 import { Button, InputGroup, Intent, Label } from "@blueprintjs/core";
 import React, { useMemo, useState, useRef, useEffect } from "react";
 import MenuItemSelect from "roamjs-components/components/MenuItemSelect";
-import { getCleanCustomWorkflows } from "./core";
+import { getCleanCustomWorkflows } from "./utils/core";
 import type { OnloadArgs } from "roamjs-components/types/native";
 
 const HotKeyEntry = ({
@@ -112,7 +112,8 @@ const HotKeyPanel = (extensionAPI: OnloadArgs["extensionAPI"]) => () => {
     []
   );
   const [keys, setKeys] = useState(
-    () => extensionAPI.settings.get("hot-keys") as Record<string, string> || {}
+    () =>
+      (extensionAPI.settings.get("hot-keys") as Record<string, string>) || {}
   );
   return (
     <div

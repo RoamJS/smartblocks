@@ -27,7 +27,7 @@ import createBlock from "roamjs-components/writes/createBlock";
 import deleteBlock from "roamjs-components/writes/deleteBlock";
 import getShallowTreeByParentUid from "roamjs-components/queries/getShallowTreeByParentUid";
 import { InputTextNode, OnloadArgs } from "roamjs-components/types/native";
-import { getCleanCustomWorkflows } from "./core";
+import { getCleanCustomWorkflows } from "./utils/core";
 import type Marked from "marked-react";
 import apiGet from "roamjs-components/util/apiGet";
 
@@ -106,7 +106,7 @@ const Thumbnail = ({
 
 const ROW_LENGTH = 2;
 const DRAWER_TABS = ["Marketplace", "Installed", "Published"] as const;
-type DrawerTab = typeof DRAWER_TABS[number];
+type DrawerTab = (typeof DRAWER_TABS)[number];
 
 const DrawerContent = ({
   parentUid,
@@ -203,7 +203,7 @@ const DrawerContent = ({
           setNumberOfDownloads(r.count);
           setSelectedSmartBlockAuthorDisplayName(
             selectedSmartBlock.author === window.roamAlphaAPI.graph.name
-              ? extensionAPI.settings.get("display-name") as string || ""
+              ? (extensionAPI.settings.get("display-name") as string) || ""
               : r.displayName
           );
         })

@@ -31,7 +31,7 @@ import {
   proccessBlockWithSmartness,
   sbBomb,
   smartBlocksContext,
-} from "./core";
+} from "./utils/core";
 import { Intent } from "@blueprintjs/core";
 import HotKeyPanel from "./HotKeyPanel";
 import XRegExp from "xregexp";

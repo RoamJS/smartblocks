@@ -12,13 +12,13 @@ import getPageTitleByBlockUid from "roamjs-components/queries/getPageTitleByBloc
 import getPageUidByPageTitle from "roamjs-components/queries/getPageUidByPageTitle";
 import getTextByBlockUid from "roamjs-components/queries/getTextByBlockUid";
 import type { OnloadArgs } from "roamjs-components/types/native";
-import { getCoords } from "./dom";
+import { getCoords } from "./utils/dom";
 import {
   getVisibleCustomWorkflows,
   predefinedWorkflows,
   PREDEFINED_REGEX,
   sbBomb,
-} from "./core";
+} from "./utils/core";
 import fuzzy from "fuzzy";
 
 type Props = {
