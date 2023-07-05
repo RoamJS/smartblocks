@@ -10,6 +10,5 @@ store
 store.js
 main.js
 extension.js
-*.png
 analyze.txt
 coverage

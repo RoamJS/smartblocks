@@ -38,4 +38,4 @@ When typing `<%` into a block in Roam, an autocomplete menu will appear. This is
 
 It could get very difficult reading tons of nested commands. To help with this, you could enable `Command Highlighting` from the Roam Depot Settings for Smartblocks tab. The result will give commands different nested colors to make it easier to read!
 
-![](https://firebasestorage.googleapis.com/v0/b/firescript-577a2.appspot.com/o/imgs%2Fapp%2Froamjs%2FIbHruWfV1a.png?alt=media&token=6cf19f03-663e-4c45-a1cb-dc7e31bc1c2a)
+![](media/command-highlighting.png)

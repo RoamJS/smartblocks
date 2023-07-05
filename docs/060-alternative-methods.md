@@ -12,15 +12,15 @@ Note that the Daily Note page for the current day must be empty for the workflow
 
 To turn on daily workflows, head to the Roam Depot Settings for Smartblocks and enable the `Daily` setting. Be sure that you have the `Workflow Name` setting filled and that you have a workflow in your graph defined that matches that name, which should default to use `Daily`. Now every day you load Roam, a chosen smart block workflow will trigger automatically onto your Daily Notes page!
 
-![](https://firebasestorage.googleapis.com/v0/b/firescript-577a2.appspot.com/o/imgs%2Fapp%2Froamjs%2F-ZihlJgAvO.png?alt=media&token=ec1540ad-0972-4cc3-b20b-170698559652)
+![](media/daily-workflow.png)
 
 By default, the workflow that gets triggered on your Daily Notes page is titled "Daily". You could change which workflow runs on your daily notes page by changing the `workflow name` setting in the `daily` tab:
 
-![](https://firebasestorage.googleapis.com/v0/b/firescript-577a2.appspot.com/o/imgs%2Fapp%2Froamjs%2Fej8dPAJZnj.png?alt=media&token=889d58b1-178d-46da-9b63-2a272bae6286)
+![](media/daily-workflow2.png)
 
 By default, the workflow runs any time after midnight each day. If you would like to change the time when of when the workflow fires, you could change the `time` setting in the `daily` tab:
 
-![](https://firebasestorage.googleapis.com/v0/b/firescript-577a2.appspot.com/o/imgs%2Fapp%2Froamjs%2Fu30lki1Ln1.png?alt=media&token=ef9341b5-deaf-49a3-bf57-f1222c8f267c)
+![](media/daily-workflow3.png)
 
 # SmartBlock Buttons
 
@@ -80,7 +80,7 @@ This button will not remove the Smartblock button, clear existing text on the bl
 
 You can run multiple SmartBlock workflows across multiple pages. In the Roam command palette, there will be an option called "Run Multiple SmartBlocks", which will open this dialog on click:
 
-![](https://firebasestorage.googleapis.com/v0/b/firescript-577a2.appspot.com/o/imgs%2Fapp%2Froamjs%2FFnPHTJ7Il1.png?alt=media&token=22f29986-68f0-4224-b66d-77a1dc1b9f2d)
+![](media/bulk-trigger.png)
 
 You could list any number of workflows and any number of pages. Upon clicking "Run", the workflows listed on the left column will run one page at a time on each of the pages on the right column.
 
@@ -95,7 +95,7 @@ On the Roam Depot Settings page for SmartBlocks, you could give hot keys to spec
 
 Here's an example of the second version with the hot key `smrt`.
 
-![](https://firebasestorage.googleapis.com/v0/b/firescript-577a2.appspot.com/o/imgs%2Fapp%2Froamjs%2FTuXYopi-cf.gif?alt=media&token=5ad06c37-551d-4d6b-ba06-91503ac283b9)
+![](media/hotkeys.gif)
 
 The input field in the configuration page is a special input field. It will react exactly to the key presses you enter when configuring the hot key.
 
@@ -103,6 +103,6 @@ The input field in the configuration page is a special input field. It will reac
 
 You can surface all custom SmartBlock workflows to be triggered from the Roam Command Palette. To do so, head to the SmartBlocks Settings within RoamDepot, toggle on the command palette setting.
 
-![](https://firebasestorage.googleapis.com/v0/b/firescript-577a2.appspot.com/o/imgs%2Fapp%2Froamjs%2FJmA6nl6JIE.12.56%20AM.png?alt=media&token=98e8d9ae-f842-4247-a0cc-76d6b29fe2c4)
+![](media/command-palette.png)
 
 Each workflow will start with a prefix `Trigger SmartBlock:` with the name of the workflow at the end of the command label.

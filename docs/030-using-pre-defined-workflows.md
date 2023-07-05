@@ -2,7 +2,7 @@
 
 SmartBlocks includes a number of predefined workflows out of the box. Each of them represents a quick SmartBlock template for common functionality. To use these predefined workflows, simply type the keystrokes in the trigger. Predefined workflows will be prefixed with a gear icon.
 
-![](https://firebasestorage.googleapis.com/v0/b/firescript-577a2.appspot.com/o/imgs%2Fapp%2Froamjs%2FAVb0qLG9C3.png?alt=media&token=a4fe51f5-53ee-4725-8487-6e540418a4fe)
+![](media/predefined-icon.png)
 
 ## Predefined Workflows
 
@@ -63,4 +63,4 @@ Coming Soon...
 
 By default, all pre-defined workflows are included in the smart blocks menu after opening via the trigger. If you would like to exclude the pre-defined workflows so that only the custom ones are shown, head to the Smartblocks tab in your Roam Depot Setting enable the `Custom Only` option. You will need to refresh Roam after checking this option for the setting to take effect.
 
-![](https://firebasestorage.googleapis.com/v0/b/firescript-577a2.appspot.com/o/imgs%2Fapp%2Froamjs%2FcFvQbTS_rC.png?alt=media&token=e441fdb8-c9a6-4243-bd4f-721d7e9cab95)
+![](media/predefined-customization.png)

@@ -9,7 +9,7 @@ A parent block on any page that has the tag `#SmartBlock` followed by the title 
 
 ### Example
 
-![](https://firebasestorage.googleapis.com/v0/b/firescript-577a2.appspot.com/o/imgs%2Fapp%2Froamjs%2F_K6ltqqq5_.png?alt=media&token=bfdf27a9-5b8c-4b92-aa77-ee01154870a5)
+![](media/smartblocks-structure.png)
 
 Here's what this SmartBlock is saying:
 
@@ -39,4 +39,4 @@ Description
 
 SmartBlocks includes a pre-defined workflow named **Workflow Starter**. It helps you start a new workflow quickly by inserting a template as a starting point. Visit [this section](Using-Pre-Defined-Workflows) for a list of all the other pre-defined workflows.
 
-![](https://firebasestorage.googleapis.com/v0/b/firescript-577a2.appspot.com/o/imgs%2Fapp%2Froamjs%2FKggJXdbLCH.png?alt=media&token=5fc7ca81-5fb2-44b0-8d69-d35572abcfee)
+![](media/helper-workflow.png)
