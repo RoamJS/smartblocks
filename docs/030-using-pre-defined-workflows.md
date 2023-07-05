@@ -1,3 +1,13 @@
+# Table of Contents
+
+1. [Trigger Your Workflow](010-trigger-your-workflow)
+2. [Understanding Commands](020-understanding-commands)
+3. [Using Pre-Defined Workflows](030-using-pre-defined-workflows)
+4. [Make Your Own Workflows](040-make-your-own-workflows)
+5. [Command Reference](050-command-reference)
+6. [Alternative Methods](060-alternative-methods)
+7. [Developer Docs](070-developer-docs)
+
 # Overview
 
 SmartBlocks includes a number of predefined workflows out of the box. Each of them represents a quick SmartBlock template for common functionality. To use these predefined workflows, simply type the keystrokes in the trigger. Predefined workflows will be prefixed with a gear icon.

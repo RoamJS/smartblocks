@@ -1,3 +1,13 @@
+# Table of Contents
+
+1. [Trigger Your Workflow](010-trigger-your-workflow)
+2. [Understanding Commands](020-understanding-commands)
+3. [Using Pre-Defined Workflows](030-using-pre-defined-workflows)
+4. [Make Your Own Workflows](040-make-your-own-workflows)
+5. [Command Reference](050-command-reference)
+6. [Alternative Methods](060-alternative-methods)
+7. [Developer Docs](070-developer-docs)
+
 # Overview
 
 SmartBlocks exposes a set of functions and objects for interacting with workflows. Roam developers can read from and write to these values from a `roam/js` block or as part of existing RoamJS extensions. This section includes technical notes for JavaScript developers working with SmartBlocks.
