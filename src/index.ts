@@ -1,7 +1,6 @@
 import runExtension from "roamjs-components/util/runExtension";
 import getBlockUidsAndTextsReferencingPage from "roamjs-components/queries/getBlockUidsAndTextsReferencingPage";
 import addStyle from "roamjs-components/dom/addStyle";
-import createPage from "roamjs-components/writes/createPage";
 import createBlock from "roamjs-components/writes/createBlock";
 import getPageUidByPageTitle from "roamjs-components/queries/getPageUidByPageTitle";
 import createHTMLObserver from "roamjs-components/dom/createHTMLObserver";
@@ -18,7 +17,6 @@ import deleteBlock from "roamjs-components/writes/deleteBlock";
 import { render as renderCursorMenu } from "roamjs-components/components/CursorMenu";
 import { render as renderToast } from "roamjs-components/components/Toast";
 import { render } from "./SmartblocksMenu";
-import { render as renderStore } from "./SmartblocksStore";
 import { render as renderPopover } from "./SmartblockPopover";
 import { render as renderBulk } from "./BulkTrigger";
 import {
@@ -35,9 +33,7 @@ import {
 import { Intent } from "@blueprintjs/core";
 import HotKeyPanel from "./HotKeyPanel";
 import XRegExp from "xregexp";
-import isLiveBlock from "roamjs-components/queries/isLiveBlock";
 import { addTokenDialogCommand } from "roamjs-components/components/TokenDialog";
-import DailyConfig from "./components/DailyConfigComponent";
 import { PullBlock } from "roamjs-components/types";
 import getParentUidByBlockUid from "roamjs-components/queries/getParentUidByBlockUid";
 import getShallowTreeByParentUid from "roamjs-components/queries/getShallowTreeByParentUid";
@@ -493,17 +489,6 @@ export default runExtension(async ({ extensionAPI }) => {
   // namely daily config settings.
   setTimeout(runDaily, 1000 * 10);
 
-  const OPEN_SMARTBLOCK_STORE_COMMAND_LABEL = "Open SmartBlocks Store";
-  window.roamAlphaAPI.ui.commandPalette.addCommand({
-    label: OPEN_SMARTBLOCK_STORE_COMMAND_LABEL,
-    callback: async () => {
-      const parentUid =
-        getPageUidByPageTitle(`roam/js/smartblocks/workflows`) ||
-        (await createPage({ title: `roam/js/smartblocks/workflows` }));
-      renderStore({ parentUid, extensionAPI });
-    },
-  });
-
   const RUN_MULTIPLE_SMARTBLOCKS_COMMAND_LABEL = "Run Multiple SmartBlocks";
   window.roamAlphaAPI.ui.commandPalette.addCommand({
     label: RUN_MULTIPLE_SMARTBLOCKS_COMMAND_LABEL,
@@ -535,7 +520,7 @@ export default runExtension(async ({ extensionAPI }) => {
         const span = document.createElement("span");
         s.insertBefore(span, s.firstChild);
         span.onmousedown = (e) => e.stopPropagation();
-        renderPopover(span, extensionAPI);
+        renderPopover(span);
       }
     },
   });
@@ -881,7 +866,6 @@ export default runExtension(async ({ extensionAPI }) => {
       { type: "keydown", listener: globalHotkeyListener, el: document },
     ],
     commands: [
-      OPEN_SMARTBLOCK_STORE_COMMAND_LABEL,
       RUN_MULTIPLE_SMARTBLOCKS_COMMAND_LABEL,
     ],
     unload: () => {
