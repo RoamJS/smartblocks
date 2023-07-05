@@ -11,7 +11,7 @@ import isBefore from "date-fns/isBefore";
 import dateFnsFormat from "date-fns/format";
 import renderToast from "roamjs-components/components/Toast";
 import parseRoamDateUid from "roamjs-components/date/parseRoamDateUid";
-import { getCleanCustomWorkflows, sbBomb } from "../core";
+import { getCleanCustomWorkflows, sbBomb } from "./core";
 import isLiveBlock from "roamjs-components/queries/isLiveBlock";
 import createPage from "roamjs-components/writes/createPage";
 import localStorageGet from "roamjs-components/util/localStorageGet";

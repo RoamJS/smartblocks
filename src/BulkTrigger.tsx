@@ -18,7 +18,7 @@ import getPageUidByPageTitle from "roamjs-components/queries/getPageUidByPageTit
 import createOverlayRender from "roamjs-components/util/createOverlayRender";
 import PageInput from "roamjs-components/components/PageInput";
 import useArrowKeyDown from "roamjs-components/hooks/useArrowKeyDown";
-import { getVisibleCustomWorkflows, sbBomb } from "./core";
+import { getVisibleCustomWorkflows, sbBomb } from "./utils/core";
 import fuzzy from "fuzzy";
 import AutocompleteInput from "roamjs-components/components/AutocompleteInput";
 

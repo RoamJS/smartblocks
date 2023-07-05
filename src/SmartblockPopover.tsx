@@ -28,7 +28,7 @@ import getSettingValueFromTree from "roamjs-components/util/getSettingValueFromT
 import { render as renderToast } from "roamjs-components/components/Toast";
 import toFlexRegex from "roamjs-components/util/toFlexRegex";
 import useSubTree from "roamjs-components/hooks/useSubTree";
-import { HIDE_REGEX } from "./core";
+import { HIDE_REGEX } from "./utils/core";
 import getBlockUidAndTextIncludingText from "roamjs-components/queries/getBlockUidAndTextIncludingText";
 import getPageTitleByBlockUid from "roamjs-components/queries/getPageTitleByBlockUid";
 import getOrderByBlockUid from "roamjs-components/queries/getOrderByBlockUid";
