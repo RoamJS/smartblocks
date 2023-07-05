@@ -218,7 +218,7 @@ const SmartblockPopover = (props: Props): React.ReactElement => {
         <img
           className={"roamjs-smartblocks-popover-target"}
           src={
-            "https://raw.githubusercontent.com/RoamJs/smartblocks/main/src/img/lego3blocks.png"
+            "https://raw.githubusercontent.com/dvargas92495/roamjs-smartblocks/main/src/img/lego3blocks.png"
           }
         />
       }
