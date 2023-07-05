@@ -16,13 +16,13 @@ SmartBlocks makes it easy to reuse text in a dynamic way in Roam. It can be comp
 
 The following steps dive into all the features SmartBlocks has to offer in increasing complexity; from beginners to developer.
 
-1. [Trigger Your Workflow](https://github.com/dvargas92495/roamjs-smartblocks/blob/main/docs/010-trigger-your-workflow)
-2. [Understanding Commands](https://github.com/dvargas92495/roamjs-smartblocks/blob/main/docs/020-understanding-commands)
-3. [Using Pre-Defined Workflows](https://github.com/dvargas92495/roamjs-smartblocks/blob/main/docs/030-using-pre-defined-workflows)
-4. [Make Your Own Workflows](https://github.com/dvargas92495/roamjs-smartblocks/blob/main/docs/040-make-your-own-workflows)
-5. [Command Reference](https://github.com/dvargas92495/roamjs-smartblocks/blob/main/docs/050-command-reference)
-6. [Alternative Methods](https://github.com/dvargas92495/roamjs-smartblocks/blob/main/docs/060-alternative-methods)
-7. [Developer Docs](https://github.com/dvargas92495/roamjs-smartblocks/blob/main/docs/070-developer-docs)
+1. [Trigger Your Workflow](https://github.com/RoamJs/smartblocks/blob/main/docs/010-trigger-your-workflow)
+2. [Understanding Commands](https://github.com/RoamJs/smartblocks/blob/main/docs/020-understanding-commands)
+3. [Using Pre-Defined Workflows](https://github.com/RoamJs/smartblocks/blob/main/docs/030-using-pre-defined-workflows)
+4. [Make Your Own Workflows](https://github.com/RoamJs/smartblocks/blob/main/docs/040-make-your-own-workflows)
+5. [Command Reference](https://github.com/RoamJs/smartblocks/blob/main/docs/050-command-reference)
+6. [Alternative Methods](https://github.com/RoamJs/smartblocks/blob/main/docs/060-alternative-methods)
+7. [Developer Docs](https://github.com/RoamJs/smartblocks/blob/main/docs/070-developer-docs)
 
 ## Demo
 
@@ -33,7 +33,7 @@ The following steps dive into all the features SmartBlocks has to offer in incre
 
 ## Migration
 
-This extension was inspired by and acts as version 2 of the original SmartBlocks module in the [Roam42](https://roamjs.com/extensions/roam42) extension. It will soon replace the current SmartBlocks module in Roam42. For a list of all the non-backward compatible changes from V1 to V2, check out the [Migration Guide](https://github.com/dvargas92495/roamjs-smartblocks/blob/main/docs/migration-guide).
+This extension was inspired by and acts as version 2 of the original SmartBlocks module in the [Roam42](https://roamjs.com/extensions/roam42) extension. It will soon replace the current SmartBlocks module in Roam42. For a list of all the non-backward compatible changes from V1 to V2, check out the [Migration Guide](https://github.com/RoamJs/smartblocks/blob/main/docs/migration-guide).
 
 ## Support
 

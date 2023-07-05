@@ -722,7 +722,7 @@ export default runExtension({
         if (!hideButtonIcon && !hideIcon) {
           const img = new Image();
           img.src =
-            "https://raw.githubusercontent.com/dvargas92495/roamjs-smartblocks/main/src/img/lego3blocks.png";
+            "https://raw.githubusercontent.com/RoamJs/smartblocks/main/src/img/lego3blocks.png";
           img.width = 17;
           img.height = 14;
           img.style.marginRight = "7px";

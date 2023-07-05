@@ -46,7 +46,7 @@ type Smartblocks = {
 };
 
 const Thumbnail = ({
-  src = "https://raw.githubusercontent.com/dvargas92495/roamjs-smartblocks/main/src/img/lego3blocks.png",
+  src = "https://raw.githubusercontent.com/RoamJs/smartblocks/main/src/img/lego3blocks.png",
 }: {
   src?: string;
 }): React.ReactElement => {
@@ -106,7 +106,7 @@ const Thumbnail = ({
 
 const ROW_LENGTH = 2;
 const DRAWER_TABS = ["Marketplace", "Installed", "Published"] as const;
-type DrawerTab = typeof DRAWER_TABS[number];
+type DrawerTab = (typeof DRAWER_TABS)[number];
 
 const DrawerContent = ({
   parentUid,
@@ -203,7 +203,7 @@ const DrawerContent = ({
           setNumberOfDownloads(r.count);
           setSelectedSmartBlockAuthorDisplayName(
             selectedSmartBlock.author === window.roamAlphaAPI.graph.name
-              ? extensionAPI.settings.get("display-name") as string || ""
+              ? (extensionAPI.settings.get("display-name") as string) || ""
               : r.displayName
           );
         })

@@ -43,7 +43,7 @@ The context object has the following fields:
 - `targetUid` - the target block uid the smart block workflow is outputting to.
 - `variables` - the set of variables defined by the workflow so far.
 
-To help with the race condition of which script loads first between SmartBlocks and the one housing your custom command, there is a `registerSmartBlocksCommand` available in the [roam client](https://github.com/dvargas92495/roamjs-components/blob/main/src/util/registerSmartBlocksCommand.ts) npm library for those who use node.js to develop extensions.
+To help with the race condition of which script loads first between SmartBlocks and the one housing your custom command, there is a `registerSmartBlocksCommand` available in the [roam client](https://github.com/RoamJS/roamjs-components/blob/main/src/util/registerSmartBlocksCommand.ts) npm library for those who use node.js to develop extensions.
 
 ## `triggerSmartblock`
 

@@ -2016,7 +2016,7 @@ export const COMMANDS: {
         : new RegExp(
             reg,
             // TODO - this logic got too complicated and doesn't solve the intended problem - need a better solution
-            // for whatever this was trying to solve: https://github.com/dvargas92495/roamjs-smartblocks/commit/f0519b666aab52af4b3c5fb6a7ed766052da7aca
+            // for whatever this was trying to solve: https://github.com/RoamJs/smartblocks/commit/f0519b666aab52af4b3c5fb6a7ed766052da7aca
             //
             // .replace(/([.+*?^$()[\]{}|\\])/g, (_, cap, ind) =>
             //   ind === 0 || reg[ind - 1] !== "\\" ? `\\${cap}` : cap
