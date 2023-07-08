@@ -185,8 +185,8 @@ const SmartblocksMenu = ({
                       <img
                         src={
                           PREDEFINED_REGEX.test(wf.uid)
-                            ? "https://raw.githubusercontent.com/dvargas92495/roamjs-smartblocks/main/src/img/gear.png"
-                            : "https://raw.githubusercontent.com/dvargas92495/roamjs-smartblocks/main/src/img/lego3blocks.png"
+                            ? "https://raw.githubusercontent.com/RoamJS/smartblocks/main/src/img/gear.png"
+                            : "https://raw.githubusercontent.com/RoamJS/smartblocks/main/src/img/lego3blocks.png"
                         }
                         alt={""}
                         width={15}

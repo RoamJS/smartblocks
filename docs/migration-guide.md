@@ -140,9 +140,9 @@ return uid;
 ```
 
 - `roam42.common.moveCursorToNextBlock`
-  - This method is pretty hacky and would not recommend using until Roam releases an API for doing this. In any case, if you're still interested, I would look at [the source code directly](https://github.com/dvargas92495/roam42/blob/master/common/commonFunctions.js#L317-L330).
+  - This method is pretty hacky and would not recommend using until Roam releases an API for doing this. In any case, if you're still interested, I would look at [the source code directly](https://github.com/RoamJS/workbench/blob/cd67ed575146dde8695f5eb33974ce0020abf069/legacy/common/commonFunctions.js#L317-L330).
 - `roam42.common.moveCursorToPreviousBlock`
-  - This method is pretty hacky and would not recommend using until Roam releases an API for doing this. In any case, if you're still interested, I would look at [the source code directly](https://github.com/dvargas92495/roam42/blob/master/common/commonFunctions.js#L332-L344).
+  - This method is pretty hacky and would not recommend using until Roam releases an API for doing this. In any case, if you're still interested, I would look at [the source code directly](https://github.com/RoamJS/workbench/blob/cd67ed575146dde8695f5eb33974ce0020abf069/legacy/common/commonFunctions.js#L332-L344).
 - `roam42.common.updateBlock(uid, block_string, open)`
 
 ```javascript
