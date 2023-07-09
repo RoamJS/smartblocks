@@ -698,7 +698,7 @@ export default runExtension(async ({ extensionAPI }) => {
       if (!hideButtonIcon && !hideIcon) {
         const img = new Image();
         img.src =
-          "https://raw.githubusercontent.com/dvargas92495/roamjs-smartblocks/main/src/img/lego3blocks.png";
+          "https://raw.githubusercontent.com/RoamJS/smartblocks/main/src/img/lego3blocks.png";
         img.width = 17;
         img.height = 14;
         img.style.marginRight = "7px";
@@ -865,9 +865,7 @@ export default runExtension(async ({ extensionAPI }) => {
       { type: "input", listener: documentInputListener, el: document },
       { type: "keydown", listener: globalHotkeyListener, el: document },
     ],
-    commands: [
-      RUN_MULTIPLE_SMARTBLOCKS_COMMAND_LABEL,
-    ],
+    commands: [RUN_MULTIPLE_SMARTBLOCKS_COMMAND_LABEL],
     unload: () => {
       unloads.forEach((u) => u());
       window.clearTimeout(getDailyConfig()["next-run-timeout"]);
