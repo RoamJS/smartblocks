@@ -33,7 +33,6 @@ import {
 import { Intent } from "@blueprintjs/core";
 import HotKeyPanel from "./HotKeyPanel";
 import XRegExp from "xregexp";
-import { addTokenDialogCommand } from "roamjs-components/components/TokenDialog";
 import { PullBlock } from "roamjs-components/types";
 import getParentUidByBlockUid from "roamjs-components/queries/getParentUidByBlockUid";
 import getShallowTreeByParentUid from "roamjs-components/queries/getShallowTreeByParentUid";
@@ -851,7 +850,6 @@ export default runExtension(async ({ extensionAPI }) => {
         }
       })
     : [];
-  addTokenDialogCommand();
 
   return {
     elements: [style],

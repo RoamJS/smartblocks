@@ -8,11 +8,10 @@ on:
       - ".github/workflows/main.yaml"
 
 env:
-  API_URL: https://lambda.roamjs.com
   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  AWS_REGION: us-east-1
-  ROAMJS_PROXY: dvargas92495
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  ROAMJS_PROXY: ${{ vars.ROAMJS_PROXY }}
   GITHUB_TOKEN: ${{ secrets.ROAMJS_RELEASE_TOKEN }}
 
 jobs:
