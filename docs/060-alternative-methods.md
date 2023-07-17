@@ -1,18 +1,18 @@
 # Table of Contents
 
-1. [Trigger Your Workflow](010-trigger-your-workflow)
-2. [Understanding Commands](020-understanding-commands)
-3. [Using Pre-Defined Workflows](030-using-pre-defined-workflows)
-4. [Make Your Own Workflows](040-make-your-own-workflows)
-5. [Command Reference](050-command-reference)
-6. [Alternative Methods](060-alternative-methods)
-7. [Developer Docs](070-developer-docs)
+1. [Trigger Your Workflow](010-trigger-your-workflow.md)
+2. [Understanding Commands](020-understanding-commands.md)
+3. [Using Pre-Defined Workflows](030-using-pre-defined-workflows.md)
+4. [Make Your Own Workflows](040-make-your-own-workflows.md)
+5. [Command Reference](050-command-reference.md)
+6. [Alternative Methods](060-alternative-methods.md)
+7. [Developer Docs](070-developer-docs.md)
 
 ## Table of Contents
 
 # Overview
 
-Outside of the conventional [trigger](Trigger-Your-Workflows), there are several other ways to use SmartBlocks!
+Outside of the conventional [trigger](010-trigger-your-workflow.md), there are several other ways to use SmartBlocks!
 
 # Daily Workflow
 
@@ -44,7 +44,7 @@ You can insert a button into a block so the button will run a SmartBlock workflo
   3. **Workflow Name** - the name of your workflow you want the button to run. The Workflow Name must match identically the name of the workflow in your graph
 - You could add a fourth parameter (separated by a `:`). Each variable is delimited by a comma (`,`), with an equal sign (`=`) delimiting the variable name from the value.
   - **Example**: `{{caption:SmartBlock:workflow name:name=value,secondName=otherValue}}`
-  - These variables are retrievable from the [GET command](Command-Reference#get).
+  - These variables are retrievable from the [GET command](050-command-reference.md#get).
 
 The caption of the button is also available in the SmartBlock workflow under the variable `ButtonContent`.
 

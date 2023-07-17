@@ -1,12 +1,12 @@
 # Table of Contents
 
-1. [Trigger Your Workflow](010-trigger-your-workflow)
-2. [Understanding Commands](020-understanding-commands)
-3. [Using Pre-Defined Workflows](030-using-pre-defined-workflows)
-4. [Make Your Own Workflows](040-make-your-own-workflows)
-5. [Command Reference](050-command-reference)
-6. [Alternative Methods](060-alternative-methods)
-7. [Developer Docs](070-developer-docs)
+1. [Trigger Your Workflow](010-trigger-your-workflow.md)
+2. [Understanding Commands](020-understanding-commands.md)
+3. [Using Pre-Defined Workflows](030-using-pre-defined-workflows.md)
+4. [Make Your Own Workflows](040-make-your-own-workflows.md)
+5. [Command Reference](050-command-reference.md)
+6. [Alternative Methods](060-alternative-methods.md)
+7. [Developer Docs](070-developer-docs.md)
 
 # Overview
 
@@ -73,11 +73,11 @@ The return value is either:
 
 On July 4th, 2022, all SmartBlock commands that execute arbitrary Javascript were deprecated as they could pose harm for users from attackers who are looking to circumvent Roam's extension review process.
 
-For workflows that use `IF`, `THEN`, `ELSE`, and `IFTRUE`, commands, they could in most cases could be replace with the various other [IF commands](Command-Reference#logic-control-commands) available, in particular [IFVAR](Command-Reference#ifvar). If you have a use case that cannot be covered by the current conditional command set, feel free to reach out to support@roamjs.com.
+For workflows that use `IF`, `THEN`, `ELSE`, and `IFTRUE`, commands, they could in most cases could be replace with the various other [IF commands](050-command-reference.md#logic-control-commands) available, in particular [IFVAR](050-command-reference.md##ifvar). If you have a use case that cannot be covered by the current conditional command set, feel free to reach out to support@roamjs.com.
 
 For workflows that use the various JavaScript commands (`JAVASCRIPT`, `J`, `JAVASCRIPTASYNC`, `JA`, `ONBLOCKEXIT`), there are various strategies one could turn to, depending on the workflow in question.
 
-The first step is to review [the SmartBlocks Command Reference](Command-Reference). In several cases, you may be writing code replicating features that are already available as a command. For example, this workflow:
+The first step is to review [the SmartBlocks Command Reference](050-command-reference.md). In several cases, you may be writing code replicating features that are already available as a command. For example, this workflow:
 
 ```plain text
 <%SET:pageName,Quotes%><%NOBLOCKOUTPUT%>
