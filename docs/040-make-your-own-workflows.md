@@ -1,12 +1,12 @@
 # Table of Contents
 
-1. [Trigger Your Workflow](010-trigger-your-workflow)
-2. [Understanding Commands](020-understanding-commands)
-3. [Using Pre-Defined Workflows](030-using-pre-defined-workflows)
-4. [Make Your Own Workflows](040-make-your-own-workflows)
-5. [Command Reference](050-command-reference)
-6. [Alternative Methods](060-alternative-methods)
-7. [Developer Docs](070-developer-docs)
+1. [Trigger Your Workflow](010-trigger-your-workflow.md)
+2. [Understanding Commands](020-understanding-commands.md)
+3. [Using Pre-Defined Workflows](030-using-pre-defined-workflows.md)
+4. [Make Your Own Workflows](040-make-your-own-workflows.md)
+5. [Command Reference](050-command-reference.md)
+6. [Alternative Methods](060-alternative-methods.md)
+7. [Developer Docs](070-developer-docs.md)
 
 # Overview
 
@@ -47,6 +47,6 @@ Description
 
 ## Helper Workflow
 
-SmartBlocks includes a pre-defined workflow named **Workflow Starter**. It helps you start a new workflow quickly by inserting a template as a starting point. Visit [this section](Using-Pre-Defined-Workflows) for a list of all the other pre-defined workflows.
+SmartBlocks includes a pre-defined workflow named **Workflow Starter**. It helps you start a new workflow quickly by inserting a template as a starting point. Visit [this section](030-using-pre-defined-Workflows.md) for a list of all the other pre-defined workflows.
 
 ![](media/helper-workflow.png)

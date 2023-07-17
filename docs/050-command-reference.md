@@ -1,12 +1,12 @@
 # Table of Contents
 
-1. [Trigger Your Workflow](010-trigger-your-workflow)
-2. [Understanding Commands](020-understanding-commands)
-3. [Using Pre-Defined Workflows](030-using-pre-defined-workflows)
-4. [Make Your Own Workflows](040-make-your-own-workflows)
-5. [Command Reference](050-command-reference)
-6. [Alternative Methods](060-alternative-methods)
-7. [Developer Docs](070-developer-docs)
+1. [Trigger Your Workflow](010-trigger-your-workflow.md)
+2. [Understanding Commands](020-understanding-commands.md)
+3. [Using Pre-Defined Workflows](030-using-pre-defined-workflows.md)
+4. [Make Your Own Workflows](040-make-your-own-workflows.md)
+5. [Command Reference](050-command-reference.md)
+6. [Alternative Methods](060-alternative-methods.md)
+7. [Developer Docs](070-developer-docs.md)
 
 # SmartBlocks Command Reference
 
@@ -131,7 +131,7 @@ Serendipity commands are commands that help resolve to a random block from your 
    - Option 1: **Page name **or **tag name** (brackets `[[]]` or hashtag `#` are optional)
    - Option 2: Parent block UID
 2. Levels within the page to include. Specifying 0 includes all blocks
-3. Format to output the block in. See our [Formatting](Command-Reference#formatting) section for more info.
+3. Format to output the block in. See our [Formatting](050-command-reference.md#formatting) section for more info.
 
 **Example**:
 
@@ -195,7 +195,7 @@ TODO commands are multi-block commands that query multiple TODOs from your graph
 **Parameters:**
 
 1. Maximum amount of block references to return. Default value is `20`
-2. Format to output the block in. See our [Formatting](Command-Reference#formatting) section for more info.
+2. Format to output the block in. See our [Formatting](050-command-reference.md#formatting) section for more info.
 3. optional filter parameter based on a comma separated list (case-insensitive). Can use - in front of a word to exclude it. Examples:
    - toRead,Pinnacle
      - returns blocks with toRead AND Pinnacle in the text
@@ -213,7 +213,7 @@ TODO commands are multi-block commands that query multiple TODOs from your graph
 **Parameters:**
 
 1. Maximum amount of block references to return. Default value is `20`
-2. Format to output the block in. See our [Formatting](Command-Reference#formatting) section for more info.
+2. Format to output the block in. See our [Formatting](050-command-reference.md#formatting) section for more info.
 3. optional filter parameter based on a comma separated list (case-insensitive). Can use - in front of a word to exclude it. Examples:
    - toRead,Pinnacle
      - returns blocks with toRead AND Pinnacle in the text
@@ -229,7 +229,7 @@ TODO commands are multi-block commands that query multiple TODOs from your graph
 **Parameters:**
 
 1. Maximum amount of block references to return. Default value is `20`
-2. Format to output the block in. See our [Formatting](Command-Reference#formatting) section for more info.
+2. Format to output the block in. See our [Formatting](050-command-reference.md#formatting) section for more info.
 3. optional filter parameter based on a comma separated list (case-insensitive). Can use - in front of a word to exclude it. Examples:
    - toRead,Pinnacle
      - returns blocks with toRead AND Pinnacle in the text
@@ -247,7 +247,7 @@ TODO commands are multi-block commands that query multiple TODOs from your graph
 **Parameters:**
 
 1. Maximum amount of block references to return. Default value is `20`
-2. Format to output the block in. See our [Formatting](Command-Reference#formatting) section for more info.
+2. Format to output the block in. See our [Formatting](050-command-reference.md#formatting) section for more info.
 3. optional filter parameter based on a comma separated list (case-insensitive). Can use - in front of a word to exclude it. Examples:
    - toRead,Pinnacle
      - returns blocks with toRead AND Pinnacle in the text
@@ -265,7 +265,7 @@ TODO commands are multi-block commands that query multiple TODOs from your graph
 **Parameters:**
 
 1. Maximum amount of block references to return. Default value is `20`
-2. Format to output the block in. See our [Formatting](Command-Reference#formatting) section for more info.
+2. Format to output the block in. See our [Formatting](050-command-reference.md#formatting) section for more info.
 3. optional filter parameter based on a comma separated list (case-insensitive). Can use - in front of a word to exclude it. Examples:
    - toRead,Pinnacle
      - returns blocks with toRead AND Pinnacle in the text
@@ -283,7 +283,7 @@ TODO commands are multi-block commands that query multiple TODOs from your graph
 **Parameters:**
 
 1. Maximum amount of block references to return. Default value is `20`
-2. Format to output the block in. See our [Formatting](Command-Reference#formatting) section for more info.
+2. Format to output the block in. See our [Formatting](050-command-reference.md#formatting) section for more info.
 3. optional filter parameter based on a comma separated list (case-insensitive). Can use - in front of a word to exclude it. Examples:
    - toRead,Pinnacle
      - returns blocks with toRead AND Pinnacle in the text
@@ -322,7 +322,7 @@ Block Related commands provide commands for grabbing values in blocks and other 
    if set to -1, will return only count of matches
 
 2. Page name or tag name (This parameter is case-sensitive and must match your page or tag name as used in your graph)
-3. Format to output the block in. See our [Formatting](Command-Reference#formatting) section for more info.
+3. Format to output the block in. See our [Formatting](050-command-reference.md#formatting) section for more info.
 4. Optional filtering parameters, with support for include and excluding blocks based on their text and the page their in with simple text comparison
 
 **Example**:
@@ -354,7 +354,7 @@ Block Related commands provide commands for grabbing values in blocks and other 
    - ASC - oldest dated blocks to newest
    - DESC - newest dated blocks to oldest
    - NONE - no date sort defined, just return them alphabetically
-6. Format to output the block in. See our [Formatting](Command-Reference#formatting) section for more info.
+6. Format to output the block in. See our [Formatting](050-command-reference.md#formatting) section for more info.
 7. Optional filtering parameters, with support for include and excluding blocks based on their text with simple text comparison. Filters are processed before date processing. This means if filters are designed to include or exclude text, they will be processed before the dates are processed.
 
 **Example**:
@@ -405,7 +405,7 @@ Block Related commands provide commands for grabbing values in blocks and other 
 1. Variable name or a block reference.
 2. Start index, inclusive, 1 is first
 3. End index, inclusive. If 0, it will go to the last child
-4. Format to output the block in. See our [Formatting](Command-Reference#formatting) section for more info.
+4. Format to output the block in. See our [Formatting](050-command-reference.md#formatting) section for more info.
 5. Levels of children to include. 0 will include all levels (default)
 
 **Examples:**
@@ -530,7 +530,7 @@ Special note: if you want a comma to be a part of the output, put a \ in front o
 **Parameters**:
 
 1. Maximum amount of block references to return.
-2. Format to output the block in. See our [Formatting](Command-Reference#formatting) section for more info.
+2. Format to output the block in. See our [Formatting](050-command-reference.md#formatting) section for more info.
 3. string of text to find (CASE-SENSITIVE)
 4. Parameter 3 to X: Optional filtering parameters, with support for include and excluding blocks based on their text with simple text comparison. Prefix with `-` to say that the text shouldn't include a term
 
