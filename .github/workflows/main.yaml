@@ -4,6 +4,7 @@ on:
     branches: main
     paths:
       - "src/**"
+      - "README.md"
       - "package.json"
       - ".github/workflows/main.yaml"
 
