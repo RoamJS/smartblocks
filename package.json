@@ -5,6 +5,7 @@
   "main": "./build/main.js",
   "scripts": {
     "prebuild:roam": "npm install",
+    "postinstall": "patch-package",
     "build:roam": "samepage build --dry",
     "start": "samepage dev",
     "test": "samepage test"

@@ -1,0 +1,33 @@
+diff --git a/node_modules/@samepage/scripts/build.js b/node_modules/@samepage/scripts/build.js
+index 9486658..cb85de1 100644
+--- a/node_modules/@samepage/scripts/build.js
++++ b/node_modules/@samepage/scripts/build.js
+@@ -105,12 +105,13 @@ const publish = async ({ api, root = ".", review, version, host = "samepage.netw
+     }
+     const awsToken = process.env.AWS_ACCESS_KEY_ID;
+     if (!!awsToken && host !== "none") {
++        console.log(`Preparing to publish to S3 HOST ${host}`);
+         const s3 = new client_s3_1.S3({});
+         const Bucket = host;
+         const artifacts = fs_1.default.existsSync(distDir) ? fs_1.default.readdirSync(distDir) : [];
+         const assets = fs_1.default.existsSync(assetsDir) ? fs_1.default.readdirSync(assetsDir) : [];
+         const repo = process.env.GITHUB_REPOSITORY || "samepage.network";
+-        await Promise.all(artifacts
++        const outcomes = await Promise.all(artifacts
+             .flatMap((a) => {
+             const Key = `releases/${repo}/${branch === "main" ? "" : `${branch}/`}${a}`;
+             const Path = path_1.default.join(distDir, a);
+@@ -150,7 +151,12 @@ const publish = async ({ api, root = ".", review, version, host = "samepage.netw
+             Body: fs_1.default.createReadStream(Path),
+             ContentType: mime_types_1.default.lookup(Path) || "application/octet-stream",
+         })
+-            .then(() => console.log("Uploaded", Path, "to", Key))));
++        .then(() => {console.log("Uploaded", Path, "to", Key); return true})))
++        .catch((e) => {console.error("Failed to upload", Path, "to",Key, "in S3", e); return false});
++        if (!outcomes.every((o) => o)) {
++            console.error("Failed to upload all artifacts to S3");
++            process.exit(1);
++        }
+     }
+     else {
+         console.warn("No access to AWS, skipping S3 uploads");
