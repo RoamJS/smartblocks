@@ -279,6 +279,7 @@ export default runExtension(async ({ extensionAPI }) => {
             })(...args);
             return result;
           } catch (e) {
+            console.error(e);
             return `Custom Command ${command} Failed: ${(e as Error).message}`;
           }
         },
