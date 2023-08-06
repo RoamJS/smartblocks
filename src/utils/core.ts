@@ -2268,14 +2268,14 @@ const processBlockTextToPromises = (s: string) => {
             }
       )
       .then(({ output, nodeProps }) =>
-        typeof output === "undefined"
-          ? Promise.reject(
-              "Command handler output expected a string or array, but instead got undefined"
-            )
-          : typeof output === "string"
+        typeof output === "string"
           ? [{ text: output, ...nodeProps }]
-          : output.map((o: string | InputTextNode) =>
+          : Array.isArray(output)
+          ? output.map((o: string | InputTextNode) =>
               typeof o === "string" ? { text: o, ...nodeProps } : o
+            )
+          : Promise.reject(
+              `Command handler output expected a string or array, but instead got ${typeof output}`
             )
       );
   });
