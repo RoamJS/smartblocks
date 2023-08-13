@@ -2066,12 +2066,14 @@ export const COMMANDS: {
           : typeof s === "string"
           ? s
           : JSON.stringify(s);
-      return apiGet({ href: url, path: "", anonymous: true }).then((r) => {
-        if (field) {
-          return output(lodashGet(r, field.trim()));
-        }
-        return output(r);
-      });
+      return apiGet({ href: url, path: "", anonymous: true })
+        .then((r) => {
+          if (field) {
+            return output(lodashGet(r, field.trim()));
+          }
+          return output(r);
+        })
+        .catch((e) => `Error: ${e.message}`);
     },
   },
   {
