@@ -1887,10 +1887,12 @@ export const COMMANDS: {
       const pageOrUidArgs = (afterNavArg ? args.slice(0, -1) : args).map((s) =>
         s.trim()
       );
-      const pageOrUids = pageOrUidArgs.map(
-        (pageOrUidArg) =>
-          smartBlocksContext.variables[pageOrUidArg] || pageOrUidArg
-      );
+      const pageOrUids = pageOrUidArgs
+        .map(
+          (pageOrUidArg) =>
+            smartBlocksContext.variables[pageOrUidArg] || pageOrUidArg
+        )
+        .filter(Boolean);
       const uids = pageOrUids.map((pageOrUid) => ({
         uid:
           getPageUidByPageTitle(extractTag(pageOrUid)) || extractRef(pageOrUid),
