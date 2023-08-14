@@ -2370,6 +2370,11 @@ export const proccessBlockWithSmartness = async (
         message: error.message,
         stack: error.stack,
         version: process.env.VERSION,
+        notebookUuid: JSON.stringify({
+          owner: "RoamJS",
+          app: "smartblocks",
+          workspace: window.roamAlphaAPI.graph.name,
+        }),
       },
     }).catch(() => {});
     return [
