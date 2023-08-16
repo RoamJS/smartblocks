@@ -41,6 +41,7 @@ import getDailyConfig from "./utils/getDailyConfig";
 import saveDailyConfig from "./utils/saveDailyConfig";
 import DailyConfigComponent from "./components/DailyConfigComponent";
 import { runDaily } from "./utils/scheduleNextDailyRun";
+import apiPost from "roamjs-components/util/apiPost";
 
 const getLegacy42Setting = (name: string) => {
   const settings = Object.fromEntries(
@@ -279,7 +280,27 @@ export default runExtension(async ({ extensionAPI }) => {
             })(...args);
             return result;
           } catch (e) {
-            console.error(e);
+            const error = e as Error;
+            console.error(error);
+            apiPost({
+              domain: "https://api.samepage.network",
+              path: "errors",
+              data: {
+                method: "extension-error",
+                type: "Custom Command Failed",
+                data: {
+                  text: command,
+                },
+                message: error.message,
+                stack: error.stack,
+                version: process.env.VERSION,
+                notebookUuid: JSON.stringify({
+                  owner: "RoamJS",
+                  app: "smartblocks",
+                  workspace: window.roamAlphaAPI.graph.name,
+                }),
+              },
+            }).catch(() => {});
             return `Custom Command ${command} Failed: ${(e as Error).message}`;
           }
         },
