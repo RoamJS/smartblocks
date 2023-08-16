@@ -2389,17 +2389,12 @@ export const proccessBlockWithSmartness = async (
   }
 };
 
-const processBlockUid = async (uid: string) => {
-  try {
-    proccessBlockWithSmartness({
-      text: getTextByBlockUid(uid),
-      uid,
-      children: getBasicTreeByParentUid(uid),
-    });
-  } catch (error) {
-    console.log(`processBlockUid`);
-  }
-};
+const processBlockUid = async (uid: string) =>
+  proccessBlockWithSmartness({
+    text: getTextByBlockUid(uid),
+    uid,
+    children: getBasicTreeByParentUid(uid),
+  });
 
 const processPromises = (
   nodes: ((prev: InputTextNode[][]) => Promise<void>)[] = []
