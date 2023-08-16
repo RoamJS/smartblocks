@@ -41,7 +41,6 @@ import getDailyConfig from "./utils/getDailyConfig";
 import saveDailyConfig from "./utils/saveDailyConfig";
 import DailyConfigComponent from "./components/DailyConfigComponent";
 import { runDaily } from "./utils/scheduleNextDailyRun";
-import apiPost from "roamjs-components/util/apiPost";
 
 const getLegacy42Setting = (name: string) => {
   const settings = Object.fromEntries(
@@ -280,8 +279,7 @@ export default runExtension(async ({ extensionAPI }) => {
             })(...args);
             return result;
           } catch (e) {
-            const error = e as Error;
-            console.error(error);
+            console.error(e);
             return `Custom Command ${command} Failed: ${(e as Error).message}`;
           }
         },
