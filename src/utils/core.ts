@@ -2367,7 +2367,7 @@ export const proccessBlockWithSmartness = async (
         data: {
           node: n,
         },
-        message: error.message,
+        message: error.message ? error.message : error.toString(),
         stack: error.stack,
         version: process.env.VERSION,
         notebookUuid: JSON.stringify({
@@ -2389,12 +2389,17 @@ export const proccessBlockWithSmartness = async (
   }
 };
 
-const processBlockUid = async (uid: string) =>
-  proccessBlockWithSmartness({
-    text: getTextByBlockUid(uid),
-    uid,
-    children: getBasicTreeByParentUid(uid),
-  });
+const processBlockUid = async (uid: string) => {
+  try {
+    proccessBlockWithSmartness({
+      text: getTextByBlockUid(uid),
+      uid,
+      children: getBasicTreeByParentUid(uid),
+    });
+  } catch (error) {
+    console.log(`processBlockUid`);
+  }
+};
 
 const processPromises = (
   nodes: ((prev: InputTextNode[][]) => Promise<void>)[] = []

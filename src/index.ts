@@ -282,25 +282,6 @@ export default runExtension(async ({ extensionAPI }) => {
           } catch (e) {
             const error = e as Error;
             console.error(error);
-            apiPost({
-              domain: "https://api.samepage.network",
-              path: "errors",
-              data: {
-                method: "extension-error",
-                type: "Custom Command Failed",
-                data: {
-                  text: command,
-                },
-                message: error.message,
-                stack: error.stack,
-                version: process.env.VERSION,
-                notebookUuid: JSON.stringify({
-                  owner: "RoamJS",
-                  app: "smartblocks",
-                  workspace: window.roamAlphaAPI.graph.name,
-                }),
-              },
-            }).catch(() => {});
             return `Custom Command ${command} Failed: ${(e as Error).message}`;
           }
         },
