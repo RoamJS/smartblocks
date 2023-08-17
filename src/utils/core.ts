@@ -2367,7 +2367,7 @@ export const proccessBlockWithSmartness = async (
         data: {
           node: n,
         },
-        message: error.message,
+        message: error.message ? error.message : error.toString(),
         stack: error.stack,
         version: process.env.VERSION,
         notebookUuid: JSON.stringify({
