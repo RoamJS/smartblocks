@@ -2113,6 +2113,28 @@ export const COMMANDS: {
     },
   },
   {
+    text: "AUTHOR",
+    help: "Returns the user who created the block or page \n\n1: Page name or UID.",
+    handler: (titleOrUid = "") => {
+      const uid = getUidFromText(titleOrUid);
+      const user = window.roamAlphaAPI.pull("[:create/user]", [
+        ":block/uid",
+        uid,
+      ])?.[":create/user"]?.[":db/id"];
+      if (!user) return "";
+      const displayPage = window.roamAlphaAPI.pull(
+        "[:user/display-page]",
+        user
+      )?.[":user/display-page"]?.[":db/id"];
+      if (!displayPage) return "";
+      const username =
+        window.roamAlphaAPI.pull("[:node/title :block/uid]", displayPage)?.[
+          ":node/title"
+        ] || "Anonymous";
+      return username;
+    },
+  },
+  {
     text: "SETPROPS",
     help: "Sets the current block's Roam props based on the tree of values referenced by the first argument\n\n1. Block reference",
     handler: async (uidOrVar = "") => {
