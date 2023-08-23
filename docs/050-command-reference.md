@@ -459,6 +459,18 @@ Special note: if you want a comma to be a part of the output, put a \ in front o
 
 `<%CURRENTUSER%>`
 
+## AUTHOR
+
+**Purpose:** Returns the username of the user who created the block or page.
+
+**Parameters:**
+
+1. Page name or block ref
+
+**Example:**
+
+`<%AUTHOR%>`
+
 ## CURRENTBLOCKREF
 
 **Purpose:** Gets the current block reference. Stores it in a variable if present.

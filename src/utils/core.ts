@@ -2114,7 +2114,7 @@ export const COMMANDS: {
   },
   {
     text: "AUTHOR",
-    help: "Gets the user who created the block or page \n\n1: Page name or UID.",
+    help: "Returns the user who created the block or page \n\n1: Page name or UID.",
     handler: (titleOrUid = "") => {
       const uid = getUidFromText(titleOrUid);
       const user = window.roamAlphaAPI.pull("[:create/user]", [
