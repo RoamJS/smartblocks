@@ -67,6 +67,7 @@ import toFlexRegex from "roamjs-components/util/toFlexRegex";
 import getDailyConfig from "./getDailyConfig";
 import scheduleNextDailyRun from "./scheduleNextDailyRun";
 import apiPost from "roamjs-components/util/apiPost";
+import deleteBlock from "roamjs-components/writes/deleteBlock";
 
 type FormDialogProps = Parameters<typeof FormDialog>[0];
 const renderFormDialog = createOverlayRender<FormDialogProps>(
@@ -2132,6 +2133,15 @@ export const COMMANDS: {
           ":node/title"
         ] || "Anonymous";
       return username;
+    },
+  },
+  {
+    text: "DELETEBLOCK",
+    help: "Deletes the block or page. \n\n1: Page name, UID, or variable.",
+    handler: (uidOrVar = "") => {
+      const uid = getUidFromText(uidOrVar);
+      deleteBlock(uid);
+      return "";
     },
   },
   {
