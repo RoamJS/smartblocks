@@ -469,7 +469,7 @@ Special note: if you want a comma to be a part of the output, put a \ in front o
 
 **Example:**
 
-`<%AUTHOR%>`
+`<%AUTHOR:((BVJoEW-aq))%>`
 
 ## CURRENTBLOCKREF
 
@@ -608,6 +608,20 @@ Special note: if you want a comma to be a part of the output, put a \ in front o
 **Example**:
 
 - `<%UPDATEBLOCK:ref,hello world!%>`
+
+## DELETEBLOCK
+
+**Purpose**: Deletes the block or page with the referenced UID.
+
+**Parameters**:
+
+1. Reference of block or page to delete. Can be a SmartBlock variable.
+
+**Example**:
+
+- `<%DELETEBLOCK:ref%>`
+- `<%DELETEBLOCK:((BVJoEW-aq))%>`
+- `<%DELETEBLOCK:Some Page Name%>`
 
 ## PARENT
 
