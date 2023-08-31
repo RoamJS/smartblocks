@@ -86,6 +86,10 @@ Combinations of the above predefined variables are also accepted
 
 This button will not remove the Smartblock button, clear existing text on the block, and apply the contents of the workflow to the next sibling block.
 
+**Video Demo**
+
+https://github.com/RoamJS/smartblocks/assets/3792666/eed8027b-179d-437b-a0be-c88b1d577c6a
+
 # Bulk Trigger
 
 You can run multiple SmartBlock workflows across multiple pages. In the Roam command palette, there will be an option called "Run Multiple SmartBlocks", which will open this dialog on click:
