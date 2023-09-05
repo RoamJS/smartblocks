@@ -831,6 +831,10 @@ export const COMMANDS: {
                 tree: f.children,
                 key: "conditional",
               }) || undefined,
+            conditionalValues: getSettingValuesFromTree({
+              tree: f.children || [],
+              key: "conditionalValues",
+            }),
             defaultValue:
               getSettingValueFromTree({
                 tree: f.children,
