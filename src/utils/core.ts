@@ -2425,7 +2425,7 @@ export const proccessBlockWithSmartness = async (
   }
 };
 
-const processBlockUid = async (uid: string) =>
+export const processBlockUid = async (uid: string) =>
   proccessBlockWithSmartness({
     text: getTextByBlockUid(uid),
     uid,

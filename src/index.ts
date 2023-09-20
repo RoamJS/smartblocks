@@ -29,6 +29,7 @@ import {
   proccessBlockWithSmartness,
   sbBomb,
   smartBlocksContext,
+  processBlockUid,
 } from "./utils/core";
 import { Intent } from "@blueprintjs/core";
 import HotKeyPanel from "./HotKeyPanel";
@@ -317,13 +318,7 @@ export default runExtension(async ({ extensionAPI }) => {
         }
       }
       if (!targetUid) {
-        if (targetName) {
-          throw new Error(`Could not find page with name ${targetName}`);
-        } else {
-          throw new Error(
-            "Either the `targetName` or `targetUid` input is required"
-          );
-        }
+        return processBlockUid(srcUid);
       }
       return new Promise((resolve) =>
         setTimeout(
@@ -339,6 +334,20 @@ export default runExtension(async ({ extensionAPI }) => {
           10
         )
       );
+    },
+    getSmartblockOutput: ({
+      srcName,
+      srcUid = getCleanCustomWorkflows().find(({ name }) => name === srcName)
+        ?.uid,
+    }) => {
+      if (!srcUid) {
+        if (srcName) {
+          throw new Error(`Could not find workflow with name ${srcName}`);
+        } else {
+          throw new Error("Either the `srcName` or `srcUid` input is required");
+        }
+      }
+      return new Promise((resolve) => processBlockUid(srcUid).then(resolve));
     },
   };
 
