@@ -318,7 +318,13 @@ export default runExtension(async ({ extensionAPI }) => {
         }
       }
       if (!targetUid) {
-        return processBlockUid(srcUid);
+        if (targetName) {
+          throw new Error(`Could not find page with name ${targetName}`);
+        } else {
+          throw new Error(
+            "Either the `targetName` or `targetUid` input is required"
+          );
+        }
       }
       return new Promise((resolve) =>
         setTimeout(
