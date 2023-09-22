@@ -47,6 +47,6 @@ Description
 
 ## Helper Workflow
 
-SmartBlocks includes a pre-defined workflow named **Workflow Starter**. It helps you start a new workflow quickly by inserting a template as a starting point. Visit [this section](030-using-pre-defined-Workflows.md) for a list of all the other pre-defined workflows.
+SmartBlocks includes a pre-defined workflow named **Workflow Starter**. It helps you start a new workflow quickly by inserting a template as a starting point. Visit [this section](030-using-pre-defined-workflows.md) for a list of all the other pre-defined workflows.
 
 ![](media/helper-workflow.png)
