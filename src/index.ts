@@ -29,7 +29,8 @@ import {
   proccessBlockWithSmartness,
   sbBomb,
   smartBlocksContext,
-  processBlockUid,
+  resetContext,
+  processChildren,
 } from "./utils/core";
 import { Intent } from "@blueprintjs/core";
 import HotKeyPanel from "./HotKeyPanel";
@@ -42,6 +43,7 @@ import getDailyConfig from "./utils/getDailyConfig";
 import saveDailyConfig from "./utils/saveDailyConfig";
 import DailyConfigComponent from "./components/DailyConfigComponent";
 import { runDaily } from "./utils/scheduleNextDailyRun";
+import getFullTreeByParentUid from "roamjs-components/queries/getFullTreeByParentUid";
 
 const getLegacy42Setting = (name: string) => {
   const settings = Object.fromEntries(
@@ -321,9 +323,13 @@ export default runExtension(async ({ extensionAPI }) => {
         if (targetName) {
           throw new Error(`Could not find page with name ${targetName}`);
         } else {
-          return new Promise((resolve) =>
-            processBlockUid(srcUid).then(resolve)
-          );
+          resetContext({
+            targetUid: undefined,
+            variables,
+            triggerUid: undefined,
+          });
+          const childNodes = getFullTreeByParentUid(srcUid).children;
+          return processChildren({ nodes: childNodes });
         }
       }
       return new Promise((resolve) =>
