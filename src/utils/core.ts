@@ -451,7 +451,7 @@ export const smartBlocksContext: SmartBlocksContext = {
   triggerUid: "",
   illegalCommands: new Set(),
 };
-const resetContext = (context: Partial<SmartBlocksContext> = {}) => {
+export const resetContext = (context: Partial<SmartBlocksContext> = {}) => {
   smartBlocksContext.triggerUid = context.triggerUid || context.targetUid || "";
   smartBlocksContext.targetUid = context.targetUid || "";
   smartBlocksContext.ifCommand = context.ifCommand || undefined;
@@ -2440,7 +2440,7 @@ const processPromises = (
     Promise.resolve([] as InputTextNode[][])
   );
 
-const processChildren = ({
+export const processChildren = ({
   nodes = [],
   introUid,
   introContent,
