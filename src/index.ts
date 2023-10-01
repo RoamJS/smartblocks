@@ -103,6 +103,10 @@ export default runExtension(async ({ extensionAPI }) => {
 
 .roamjs-smartblock-menu {
   width: 300px;
+}
+.rm-settings-tabs .roamjs-daily-config-tabs .bp3-tab-list {
+  padding: 2px;
+  background: none;
 }`);
 
   const toggleCommandPalette = (flag: boolean) => {
