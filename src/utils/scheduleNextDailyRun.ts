@@ -57,7 +57,6 @@ export const runDaily = async () => {
   const todayUid = window.roamAlphaAPI.util.dateToPageUid(today);
 
   const latestDate = parseRoamDateUid(lastRun);
-  let saveLastRun = false;
   if (isBefore(startOfDay(latestDate), startOfDay(today))) {
     const availableWorkflows = getCleanCustomWorkflows();
     const srcUid = availableWorkflows.find(
@@ -80,7 +79,6 @@ export const runDaily = async () => {
         target: { uid: todayUid, isParent: true },
         fromDaily: true,
       });
-      saveLastRun = true;
     } else {
       renderToast({
         id: "smartblocks-error",
@@ -98,19 +96,19 @@ export const runDaily = async () => {
   scheduleNextDailyRun({ saveLastRun: true, tomorrow: true });
 };
 
-const scheduleNextDailyRun = (
+const scheduleNextDailyRun = async (
   args: { tomorrow?: boolean; saveLastRun?: boolean } = {}
 ) => {
   const today = new Date();
   const triggerDay = args.tomorrow ? addDays(today, 1) : today;
   const triggerDate = addSeconds(getTriggerTime(triggerDay), 1);
   const ms = differenceInMilliseconds(triggerDate, today);
-  const timeout = window.setTimeout(() => {
+  const timeoutId = window.setTimeout(() => {
     runDaily();
   }, ms);
-  saveDailyConfig({
+  await saveDailyConfig({
     "next-run": triggerDate.valueOf(),
-    "next-run-timeout": timeout,
+    "next-run-timeout": timeoutId,
     ...(args.saveLastRun
       ? { "last-run": window.roamAlphaAPI.util.dateToPageUid(today) }
       : {}),

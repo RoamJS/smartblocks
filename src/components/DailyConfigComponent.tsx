@@ -1,6 +1,7 @@
 import {
   Checkbox,
   FormGroup,
+  Icon,
   InputGroup,
   Label,
   Switch,
@@ -18,17 +19,24 @@ import localStorageSet from "roamjs-components/util/localStorageSet";
 import nanoid from "nanoid";
 
 const DailyConfig = () => {
-  // TODO refresh config so debug panel shows up to date info
   const config = useMemo(getDailyConfig, []);
-  const [disabled, setDisabled] = useState(!config.enabled);
+  const [localConfig, setLocalConfig] = useState(config);
+  const {
+    enabled,
+    device,
+    time: setRunTime,
+    "workflow name": workflowName,
+    "last-run": lastRun,
+    "next-run": configNextRun,
+  } = localConfig;
   const [onlyOnThisDevice, setOnlyOnThisDevice] = useState(
-    !!config.device && config.device === localStorageGet("device")
+    !!device && device === localStorageGet("device")
   );
-  const [workflowName, setWorkflowName] = useState(config["workflow name"]);
+
   const defaultTime = useMemo(() => {
     const date = new Date();
-    if (config && config["time"]) {
-      const [h, m] = config["time"].split(":").map(Number);
+    if (localConfig && setRunTime) {
+      const [h, m] = setRunTime.split(":").map(Number);
       date.setHours(h);
       date.setMinutes(m);
     } else {
@@ -36,23 +44,26 @@ const DailyConfig = () => {
       date.setMinutes(0);
     }
     return date;
-  }, [config]);
-  const lastRun = config?.["last-run"];
+  }, [localConfig]);
+  const [localTime, setLocalTime] = useState(defaultTime);
   const [now, setNow] = useState(new Date());
+  const [isEditTime, setIsEditTime] = useState(false);
   const nextRun = useMemo(() => {
-    if (!config.enabled) return 0;
-    return config["next-run"] - now.valueOf();
-  }, [now, config]);
+    if (!localConfig.enabled) return 0;
+    return configNextRun - now.valueOf();
+  }, [now, localConfig]);
 
   // migrate old config
   useEffect(() => {
-    if (config["workflow name"] && !config["enabled"]) {
+    if (workflowName && !enabled) {
       saveDailyConfig({
         enabled: true,
       });
-      setDisabled(false);
+      setLocalConfig((prev) => ({ ...prev, enabled: true }));
     }
   }, [config]);
+
+  // Set up an interval to periodically update the current time
   useEffect(() => {
     const int = window.setInterval(() => {
       setNow(new Date());
@@ -64,8 +75,8 @@ const DailyConfig = () => {
 
   return (
     <div>
-      <Tabs className="roamjs-daily-config-tabs">
-        {!disabled && (
+      <Tabs className="roamjs-daily-config-tabs" defaultSelectedTabId="dct">
+        {enabled && (
           <Tab
             className="text-white"
             id="dct"
@@ -84,7 +95,11 @@ const DailyConfig = () => {
                       saveDailyConfig({
                         "workflow name": e.target.value,
                       });
-                      setWorkflowName(e.target.value);
+                      setLocalConfig((prev) => ({
+                        ...prev,
+                        "workflow name": e.target.value,
+                      }));
+                      console.log(e.target.value);
                     }}
                     style={{ minWidth: "initial" }}
                     placeholder={"Daily"}
@@ -98,17 +113,35 @@ const DailyConfig = () => {
                   style={{ alignItems: "center" }}
                   inline={true}
                 >
-                  <TimePicker
-                    defaultValue={defaultTime}
-                    onChange={(e) =>
-                      saveDailyConfig({
-                        time: `${e.getHours()}:${e.getMinutes()}`,
-                      })
-                    }
-                    showArrowButtons
-                    disabled={disabled}
-                    className={"w-full user-select-none flex-1 text-center"}
-                  />
+                  <div className="flex items-center">
+                    <TimePicker
+                      defaultValue={defaultTime}
+                      onChange={(e) => setLocalTime(e)}
+                      showArrowButtons
+                      disabled={!isEditTime}
+                      className={
+                        "user-select-none flex-1 text-center text-black"
+                      }
+                    />
+                    <Icon
+                      icon={isEditTime ? "tick" : "edit"}
+                      onClick={async () => {
+                        if (isEditTime) {
+                          const newTime = `${localTime.getHours()}:${localTime.getMinutes()}`;
+                          await saveDailyConfig({
+                            time: newTime,
+                          });
+                          await scheduleNextDailyRun({ tomorrow: true });
+                          setLocalConfig(getDailyConfig());
+                          setIsEditTime(false);
+                        } else {
+                          setIsEditTime(true);
+                        }
+                      }}
+                      className="cursor-pointer ml-2"
+                      intent={isEditTime ? "success" : "none"}
+                    />
+                  </div>
                 </FormGroup>
 
                 <FormGroup
@@ -132,15 +165,15 @@ const DailyConfig = () => {
                       }
                       setOnlyOnThisDevice(enabled);
                     }}
-                    disabled={disabled}
+                    disabled={!enabled}
                   />
                 </FormGroup>
               </div>
             }
-            disabled={disabled}
+            disabled={!enabled}
           />
         )}
-        {!disabled && (
+        {enabled && (
           <Tab
             className="text-white"
             id="rdt"
@@ -151,7 +184,7 @@ const DailyConfig = () => {
                   Last Run
                   <Text style={{ color: "#8A9BA8" }}>
                     {lastRun && lastRun !== "01-01-1970"
-                      ? `Last ran daily workflow on page ${lastRun}.`
+                      ? `Last ran on page ${lastRun}`
                       : "Last run data not available"}
                   </Text>
                 </Label>
@@ -159,7 +192,7 @@ const DailyConfig = () => {
                   Next Run
                   <Text style={{ color: "#8A9BA8" }}>
                     {!!nextRun
-                      ? `In ${Math.floor(
+                      ? `${Math.floor(
                           nextRun / (60 * 60 * 1000)
                         )} hours, ${Math.floor(
                           (nextRun % (60 * 60 * 1000)) / (60 * 1000)
@@ -178,20 +211,16 @@ const DailyConfig = () => {
                 <Label>
                   Next Run Scheduled At
                   <Text style={{ color: "#8A9BA8", maxWidth: "200px" }}>
-                    {/* TODO display this */}
-                    {/* {new Date(config["next-run"])} */}
-                  </Text>
-                </Label>
-                <Label>
-                  Next Run Timeout
-                  <Text style={{ color: "#8A9BA8", maxWidth: "200px" }}>
-                    {config["next-run-timeout"]}
+                    {new Date(configNextRun).toLocaleString()}
                   </Text>
                 </Label>
                 <Label>
                   Set "Time To Run"
                   <Text style={{ color: "#8A9BA8", maxWidth: "200px" }}>
-                    {config["time"]}
+                    {setRunTime
+                      .split(":")
+                      .map((val, i) => (i === 0 ? `${val} HR` : `${val} M`))
+                      .join(" ")}
                   </Text>
                 </Label>
               </div>
@@ -202,20 +231,29 @@ const DailyConfig = () => {
         <Switch
           large={true}
           className="w-full text-right"
-          defaultChecked={config.enabled}
+          checked={enabled}
           onChange={(e) => {
             const enabled = (e.target as HTMLInputElement).checked;
             if (enabled) {
               saveDailyConfig({
+                enabled: true,
                 "workflow name": workflowName || "Daily",
               });
+              setLocalConfig((prev) => ({
+                ...prev,
+                enabled: true,
+                "workflow name": workflowName || "Daily",
+              }));
               scheduleNextDailyRun({ tomorrow: true });
             } else {
               window.clearTimeout(getDailyConfig()["next-run-timeout"]);
-              saveDailyConfig({ "workflow name": "" });
-              setWorkflowName("");
+              saveDailyConfig({ "workflow name": "", enabled: false });
+              setLocalConfig((prev) => ({
+                ...prev,
+                "workflow name": "",
+                enabled: false,
+              }));
             }
-            setDisabled(!enabled);
           }}
         />
       </Tabs>
