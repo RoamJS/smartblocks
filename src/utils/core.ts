@@ -68,6 +68,8 @@ import getDailyConfig from "./getDailyConfig";
 import scheduleNextDailyRun from "./scheduleNextDailyRun";
 import apiPost from "roamjs-components/util/apiPost";
 import deleteBlock from "roamjs-components/writes/deleteBlock";
+import { zCommandOutput } from "./zodTypes";
+import { z } from "zod";
 
 type FormDialogProps = Parameters<typeof FormDialog>[0];
 const renderFormDialog = createOverlayRender<FormDialogProps>(
@@ -415,7 +417,7 @@ const outputTodoBlocks = (
     .map(getFormatter(format, createTagRegex("TODO")));
 };
 
-type CommandOutput = string | string[] | InputTextNode[];
+type CommandOutput = z.infer<typeof zCommandOutput>;
 export type CommandHandler = (
   ...args: string[]
 ) => CommandOutput | Promise<CommandOutput>;
