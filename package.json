@@ -1,6 +1,6 @@
 {
   "name": "smartblocks",
-  "version": "1.6.9",
+  "version": "1.6.10",
   "description": "Create custom and programmable templates from within Roam!",
   "main": "./build/main.js",
   "scripts": {
@@ -22,7 +22,7 @@
   },
   "dependencies": {
     "lodash": "^4.17.21",
-    "roamjs-components": "^0.82.8",
+    "roamjs-components": "^0.82.11",
     "xregexp": "^5.1.0"
   },
   "samepage": {
