@@ -1652,7 +1652,9 @@ export const COMMANDS: {
     help: "Pastes from the clipboard",
     handler: async (...args) => {
       const settings = new Set(args);
-      const raw = await navigator.clipboard.readText();
+      const raw = await navigator.clipboard
+        .readText()
+        .catch((e) => `Failed to paste text: ${e.message}`);
       const postTrim = settings.has("trim") ? raw.trim() : raw;
       const postCarriageOne = settings.has("nocarriagereturn")
         ? postTrim.replace(/\r\n/g, "")
