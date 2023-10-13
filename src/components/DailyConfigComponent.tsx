@@ -121,6 +121,7 @@ const DailyConfig = () => {
                           const newTime = `${timePicker.getHours()}:${timePicker.getMinutes()}`;
                           await setConfig({ time: newTime });
                           await scheduleNextDailyRun({ tomorrow: true });
+                          _setLocalConfig(getDailyConfig()); // force update, scheduleNextDailyRun runs saveDailyConfig
                           setIsEditTime(false);
                         } else {
                           setIsEditTime(true);
