@@ -107,6 +107,9 @@ export default runExtension(async ({ extensionAPI }) => {
 .rm-settings-tabs .roamjs-daily-config-tabs .bp3-tab-list {
   padding: 2px;
   background: none;
+}
+.rm-settings-tabs .roamjs-daily-config-tabs .bp3-timepicker.bp3-disabled .bp3-timepicker-input{
+  color: #4b5563;
 }`);
 
   const toggleCommandPalette = (flag: boolean) => {

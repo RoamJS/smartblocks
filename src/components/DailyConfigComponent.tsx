@@ -1,3 +1,4 @@
+import React, { useMemo, useState, useEffect } from "react";
 import {
   Checkbox,
   FormGroup,
@@ -10,7 +11,6 @@ import {
   Text,
 } from "@blueprintjs/core";
 import { TimePicker } from "@blueprintjs/datetime";
-import React, { useMemo, useState, useEffect } from "react";
 import getDailyConfig from "../utils/getDailyConfig";
 import saveDailyConfig from "../utils/saveDailyConfig";
 import scheduleNextDailyRun from "../utils/scheduleNextDailyRun";
@@ -19,24 +19,27 @@ import localStorageSet from "roamjs-components/util/localStorageSet";
 import nanoid from "nanoid";
 
 const DailyConfig = () => {
-  const config = useMemo(getDailyConfig, []);
-  const [localConfig, setLocalConfig] = useState(config);
+  const initialConfig = useMemo(getDailyConfig, []);
+  const [localConfig, _setLocalConfig] = useState(initialConfig);
+  const setConfig = async (newConfig: { [key: string]: any }) => {
+    _setLocalConfig((prev) => ({ ...prev, ...newConfig }));
+    await saveDailyConfig(newConfig);
+  };
   const {
     enabled,
     device,
-    time: setRunTime,
+    time: timeToRun,
     "workflow name": workflowName,
     "last-run": lastRun,
     "next-run": configNextRun,
   } = localConfig;
-  const [onlyOnThisDevice, setOnlyOnThisDevice] = useState(
-    !!device && device === localStorageGet("device")
-  );
 
-  const defaultTime = useMemo(() => {
+  const [currentDevice, setCurrentDevice] = useState(localStorageGet("device"));
+
+  const initialTimePicker = useMemo(() => {
     const date = new Date();
-    if (localConfig && setRunTime) {
-      const [h, m] = setRunTime.split(":").map(Number);
+    if (localConfig && timeToRun) {
+      const [h, m] = timeToRun.split(":").map(Number);
       date.setHours(h);
       date.setMinutes(m);
     } else {
@@ -45,7 +48,7 @@ const DailyConfig = () => {
     }
     return date;
   }, [localConfig]);
-  const [localTime, setLocalTime] = useState(defaultTime);
+  const [timePicker, setTimePicker] = useState(initialTimePicker);
   const [now, setNow] = useState(new Date());
   const [isEditTime, setIsEditTime] = useState(false);
   const nextRun = useMemo(() => {
@@ -56,12 +59,9 @@ const DailyConfig = () => {
   // migrate old config
   useEffect(() => {
     if (workflowName && !enabled) {
-      saveDailyConfig({
-        enabled: true,
-      });
-      setLocalConfig((prev) => ({ ...prev, enabled: true }));
+      setConfig({ enabled: true });
     }
-  }, [config]);
+  }, [initialConfig]);
 
   // Set up an interval to periodically update the current time
   useEffect(() => {
@@ -92,17 +92,10 @@ const DailyConfig = () => {
                     id="roamjs-workflow-name"
                     value={workflowName}
                     onChange={(e) => {
-                      saveDailyConfig({
-                        "workflow name": e.target.value,
-                      });
-                      setLocalConfig((prev) => ({
-                        ...prev,
-                        "workflow name": e.target.value,
-                      }));
-                      console.log(e.target.value);
+                      setConfig({ "workflow name": e.target.value });
                     }}
                     style={{ minWidth: "initial" }}
-                    placeholder={"Daily"}
+                    placeholder={"Enter workflow name"}
                   />
                 </FormGroup>
 
@@ -115,24 +108,19 @@ const DailyConfig = () => {
                 >
                   <div className="flex items-center">
                     <TimePicker
-                      defaultValue={defaultTime}
-                      onChange={(e) => setLocalTime(e)}
+                      value={timePicker}
+                      onChange={(date) => setTimePicker(date)}
                       showArrowButtons
                       disabled={!isEditTime}
-                      className={
-                        "user-select-none flex-1 text-center text-black"
-                      }
+                      className={"user-select-none flex-1 text-center"}
                     />
                     <Icon
                       icon={isEditTime ? "tick" : "edit"}
                       onClick={async () => {
                         if (isEditTime) {
-                          const newTime = `${localTime.getHours()}:${localTime.getMinutes()}`;
-                          await saveDailyConfig({
-                            time: newTime,
-                          });
+                          const newTime = `${timePicker.getHours()}:${timePicker.getMinutes()}`;
+                          await setConfig({ time: newTime });
                           await scheduleNextDailyRun({ tomorrow: true });
-                          setLocalConfig(getDailyConfig());
                           setIsEditTime(false);
                         } else {
                           setIsEditTime(true);
@@ -151,19 +139,17 @@ const DailyConfig = () => {
                 >
                   <Checkbox
                     id="roam-js-only-on-this-device"
-                    defaultChecked={onlyOnThisDevice}
+                    defaultChecked={device === currentDevice}
                     onChange={(e) => {
                       const enabled = (e.target as HTMLInputElement).checked;
                       if (enabled) {
-                        const deviceId = localStorageGet("device") || nanoid();
-                        saveDailyConfig({
-                          device: deviceId,
-                        });
+                        const deviceId = currentDevice || nanoid();
+                        setConfig({ device: deviceId });
                         localStorageSet("device", deviceId);
+                        setCurrentDevice(deviceId);
                       } else {
-                        saveDailyConfig({ device: "" });
+                        setConfig({ device: "" });
                       }
-                      setOnlyOnThisDevice(enabled);
                     }}
                     disabled={!enabled}
                   />
@@ -217,7 +203,7 @@ const DailyConfig = () => {
                 <Label>
                   Set "Time To Run"
                   <Text style={{ color: "#8A9BA8", maxWidth: "200px" }}>
-                    {setRunTime
+                    {timeToRun
                       .split(":")
                       .map((val, i) => (i === 0 ? `${val} HR` : `${val} M`))
                       .join(" ")}
@@ -232,27 +218,20 @@ const DailyConfig = () => {
           large={true}
           className="w-full text-right"
           checked={enabled}
-          onChange={(e) => {
+          onChange={async (e) => {
             const enabled = (e.target as HTMLInputElement).checked;
             if (enabled) {
-              saveDailyConfig({
+              await setConfig({
                 enabled: true,
                 "workflow name": workflowName || "Daily",
               });
-              setLocalConfig((prev) => ({
-                ...prev,
-                enabled: true,
-                "workflow name": workflowName || "Daily",
-              }));
               scheduleNextDailyRun({ tomorrow: true });
             } else {
               window.clearTimeout(getDailyConfig()["next-run-timeout"]);
-              saveDailyConfig({ "workflow name": "", enabled: false });
-              setLocalConfig((prev) => ({
-                ...prev,
+              setConfig({
                 "workflow name": "",
                 enabled: false,
-              }));
+              });
             }
           }}
         />

@@ -25,7 +25,7 @@ const getTriggerTime = (day: Date) => {
 export const runDaily = async () => {
   const dailyConfig = getDailyConfig();
   const dailyWorkflowName = dailyConfig["workflow name"];
-  if (!dailyWorkflowName) return;
+  if (!dailyWorkflowName) return; // useEffect in DailyConfigComponent requires this instead of if (enabled)
   if (dailyConfig.device && dailyConfig.device !== localStorageGet("device"))
     return;
 
