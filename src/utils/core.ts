@@ -1731,24 +1731,17 @@ export const COMMANDS: {
   {
     text: "REPEAT",
     delayArgs: true,
-    help: "Repeats the current block a number of specified times\n\n1. Number of times for repeat",
-    handler: (repeatArg = "1", content = "") =>
-      proccessBlockText(repeatArg)
-        .then(([{ text }]) =>
-          Array(Number(text) || 1)
-            .fill(content)
-            .map((s) => () => proccessBlockText(s))
-            .reduce(
-              (prev, cur) =>
-                prev.then((p) =>
-                  cur().then((c) => {
-                    return [...p, c];
-                  })
-                ),
-              Promise.resolve([] as InputTextNode[][])
-            )
-        )
-        .then((s) => s.flatMap((c) => c)),
+    help: "Repeats the current block a specified number of times\n\n1. Number of times for repeat",
+    handler: async (repeatArg = "1", content = "") => {
+      const [{ text: repeatArgText }] = await proccessBlockText(repeatArg);
+      const repeatCount = Number(repeatArgText) || 1;
+      const results = [];
+      for (let i = 0; i < repeatCount; i++) {
+        const result = await proccessBlockText(content);
+        results.push(result);
+      }
+      return results.flatMap((c) => c);
+    },
   },
   {
     text: "DATEBASIS",
