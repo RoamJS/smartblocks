@@ -1,5 +1,6 @@
 import { z } from "zod";
 import getExtensionApi from "roamjs-components/util/extensionApiContext";
+import localStorageGet from "roamjs-components/util/localStorageGet";
 
 const zDailyConfig = z
   .object({
@@ -9,7 +10,7 @@ const zDailyConfig = z
     "next-run": z.number().optional().default(0),
     "next-run-timeout": z.number().optional().default(0),
     enabled: z.boolean().optional().default(false),
-    device: z.string().optional().default(""),
+    device: z.string().optional().default(localStorageGet("device")),
   })
   .or(
     z.null().transform(() => ({
@@ -19,7 +20,7 @@ const zDailyConfig = z
       "next-run": 0,
       "next-run-timeout": 0,
       enabled: false,
-      device: "",
+      device: localStorageGet("device"),
     }))
   )
   .optional()

@@ -2,7 +2,6 @@ import React, { useMemo, useState, useEffect } from "react";
 import {
   Checkbox,
   FormGroup,
-  Icon,
   InputGroup,
   Label,
   Switch,
@@ -20,9 +19,9 @@ import nanoid from "nanoid";
 
 const DailyConfig = () => {
   const initialConfig = useMemo(getDailyConfig, []);
-  const [localConfig, _setLocalConfig] = useState(initialConfig);
+  const [localConfig, setLocalConfig] = useState(initialConfig);
   const setConfig = async (newConfig: { [key: string]: any }) => {
-    _setLocalConfig((prev) => ({ ...prev, ...newConfig }));
+    setLocalConfig((prev) => ({ ...prev, ...newConfig }));
     await saveDailyConfig(newConfig);
   };
   const {
@@ -34,9 +33,8 @@ const DailyConfig = () => {
     "next-run": configNextRun,
   } = localConfig;
 
-  const [currentDevice, setCurrentDevice] = useState(localStorageGet("device"));
-
-  const initialTimePicker = useMemo(() => {
+  const currentDevice = useMemo(() => localStorageGet("device"), []);
+  const timePicker = useMemo(() => {
     const date = new Date();
     if (localConfig && timeToRun) {
       const [h, m] = timeToRun.split(":").map(Number);
@@ -48,9 +46,7 @@ const DailyConfig = () => {
     }
     return date;
   }, [localConfig]);
-  const [timePicker, setTimePicker] = useState(initialTimePicker);
   const [now, setNow] = useState(new Date());
-  const [isEditTime, setIsEditTime] = useState(false);
   const nextRun = useMemo(() => {
     if (!localConfig.enabled) return 0;
     return configNextRun - now.valueOf();
@@ -109,26 +105,14 @@ const DailyConfig = () => {
                   <div className="flex items-center">
                     <TimePicker
                       value={timePicker}
-                      onChange={(date) => setTimePicker(date)}
-                      showArrowButtons
-                      disabled={!isEditTime}
-                      className={"user-select-none flex-1 text-center"}
-                    />
-                    <Icon
-                      icon={isEditTime ? "tick" : "edit"}
-                      onClick={async () => {
-                        if (isEditTime) {
-                          const newTime = `${timePicker.getHours()}:${timePicker.getMinutes()}`;
-                          await setConfig({ time: newTime });
-                          await scheduleNextDailyRun({ tomorrow: true });
-                          _setLocalConfig(getDailyConfig()); // force update, scheduleNextDailyRun runs saveDailyConfig
-                          setIsEditTime(false);
-                        } else {
-                          setIsEditTime(true);
-                        }
+                      onChange={async (e) => {
+                        const newTime = `${e.getHours()}:${e.getMinutes()}`;
+                        await setConfig({ time: newTime });
+                        await scheduleNextDailyRun({ tomorrow: true });
+                        setLocalConfig(getDailyConfig());
                       }}
-                      className="cursor-pointer ml-2"
-                      intent={isEditTime ? "success" : "none"}
+                      showArrowButtons
+                      className={"user-select-none flex-1 text-center"}
                     />
                   </div>
                 </FormGroup>
@@ -140,14 +124,13 @@ const DailyConfig = () => {
                 >
                   <Checkbox
                     id="roam-js-only-on-this-device"
-                    defaultChecked={device === currentDevice}
+                    defaultChecked={!!device && device === currentDevice}
                     onChange={(e) => {
                       const enabled = (e.target as HTMLInputElement).checked;
                       if (enabled) {
                         const deviceId = currentDevice || nanoid();
                         setConfig({ device: deviceId });
                         localStorageSet("device", deviceId);
-                        setCurrentDevice(deviceId);
                       } else {
                         setConfig({ device: "" });
                       }
