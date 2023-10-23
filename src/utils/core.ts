@@ -68,6 +68,8 @@ import getDailyConfig from "./getDailyConfig";
 import scheduleNextDailyRun from "./scheduleNextDailyRun";
 import apiPost from "roamjs-components/util/apiPost";
 import deleteBlock from "roamjs-components/writes/deleteBlock";
+import { zCommandOutput } from "./zodTypes";
+import { z } from "zod";
 
 type FormDialogProps = Parameters<typeof FormDialog>[0];
 const renderFormDialog = createOverlayRender<FormDialogProps>(
@@ -415,7 +417,7 @@ const outputTodoBlocks = (
     .map(getFormatter(format, createTagRegex("TODO")));
 };
 
-type CommandOutput = string | string[] | InputTextNode[];
+type CommandOutput = z.infer<typeof zCommandOutput>;
 export type CommandHandler = (
   ...args: string[]
 ) => CommandOutput | Promise<CommandOutput>;
@@ -1650,7 +1652,9 @@ export const COMMANDS: {
     help: "Pastes from the clipboard",
     handler: async (...args) => {
       const settings = new Set(args);
-      const raw = await navigator.clipboard.readText();
+      const raw = await navigator.clipboard
+        .readText()
+        .catch((e) => `Failed to paste text: ${e.message}`);
       const postTrim = settings.has("trim") ? raw.trim() : raw;
       const postCarriageOne = settings.has("nocarriagereturn")
         ? postTrim.replace(/\r\n/g, "")
@@ -2207,6 +2211,11 @@ export const proccessBlockText = async (
         message: error.message,
         stack: error.stack,
         version: process.env.VERSION,
+        notebookUuid: JSON.stringify({
+          owner: "RoamJS",
+          app: "smartblocks",
+          workspace: window.roamAlphaAPI.graph.name,
+        }),
       },
     }).catch(() => {});
     return [

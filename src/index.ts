@@ -44,6 +44,7 @@ import saveDailyConfig from "./utils/saveDailyConfig";
 import DailyConfigComponent from "./components/DailyConfigComponent";
 import { runDaily } from "./utils/scheduleNextDailyRun";
 import getFullTreeByParentUid from "roamjs-components/queries/getFullTreeByParentUid";
+import { zCommandOutput } from "./utils/zodTypes";
 
 const getLegacy42Setting = (name: string) => {
   const settings = Object.fromEntries(
@@ -287,7 +288,7 @@ export default runExtension(async ({ extensionAPI }) => {
               proccessBlockText,
               processBlock: proccessBlockWithSmartness,
             })(...args);
-            return result;
+            return zCommandOutput.parse(result);
           } catch (e) {
             console.error(e);
             return `Custom Command ${command} Failed: ${(e as Error).message}`;
@@ -553,7 +554,9 @@ export default runExtension(async ({ extensionAPI }) => {
     hideIcon?: false;
   }) => {
     // We include textcontent here bc there could be multiple smartblocks in a block
-    const regex = new RegExp(`{{(${textContent}):(?:42)?SmartBlock:(.*?)}}`);
+    const regex = new RegExp(
+      `{{(${textContent.replace(/\+/g, "\\+")}):(?:42)?SmartBlock:(.*?)}}`
+    );
     const match = regex.exec(text);
     if (match) {
       const {
