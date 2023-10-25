@@ -1734,7 +1734,8 @@ export const COMMANDS: {
     help: "Repeats the current block a specified number of times\n\n1. Number of times for repeat",
     handler: async (repeatArg = "1", content = "", ...values) => {
       const [{ text: repeatArgText }] = await proccessBlockText(repeatArg);
-      const repeatCount = Number(repeatArgText) || 1;
+      const repeatCount =
+        repeatArg === "-" ? values.length : Number(repeatArgText) || 1;
       const results = [];
       for (let i = 0; i < repeatCount; i++) {
         smartBlocksContext.variables["ITERATION"] = (i + 1).toString();

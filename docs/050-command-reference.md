@@ -128,7 +128,7 @@ Serendipity commands are commands that help resolve to a random block from your 
 **Parameters**:
 
 1. Page to pull a child from. Could be either:
-   - Option 1: **Page name **or **tag name** (brackets `[[]]` or hashtag `#` are optional)
+   - Option 1: **Page name** or **tag name** (brackets `[[]]` or hashtag `#` are optional)
    - Option 2: Parent block UID
 2. Levels within the page to include. Specifying 0 includes all blocks
 3. Format to output the block in. See our [Formatting](050-command-reference.md#formatting) section for more info.
@@ -154,7 +154,7 @@ Serendipity commands are commands that help resolve to a random block from your 
 
 **Parameters**: One parameter that could be either:
 
-- Option 1: **Page name **or **tag name** (brackets `[[]]` or hashtag `#` are optional)
+- Option 1: **Page name** or **tag name** (brackets `[[]]` or hashtag `#` are optional)
 - Option 2: Parent block UID
 
 **Example**:
@@ -532,8 +532,8 @@ Special note: if you want a comma to be a part of the output, put a \ in front o
 
 **Example**:
 
-- `<%RESOLVEBLOCKREF:**abcdefghi**%>`
-- `<%RESOLVEBLOCKREF:**`((abcdefghi))`**%>`
+- `<%RESOLVEBLOCKREF:abcdefghi%>`
+- `<%RESOLVEBLOCKREF:((abcdefghi))%>`
 
 ## SEARCH
 
@@ -706,7 +706,7 @@ If no value is specified, it's the same as checking if the block is empty
 
 **Example**:
 
-- ``<%IFMATCH:foo,true%>`
+- `<%IFMATCH:foo,true%>`
   - - checks if variable `foo` has value `true`. If no variable `foo` exists, it then checks to see if `foo` is equal in value to `true`, which would keep the block
 
 ## IFDATEOFYEAR
@@ -983,14 +983,26 @@ If it isn't, the block is not inserted
 
 **Purpose**: Repeats the second argument a specified amount of times.
 
+If `Count of repeats` is a dash (`-`), then `Count of repeats` will be set to the number of results from `Items to iterate over`
+
+This also passes SmartBlock variables:
+
+- `ITERATION`: returns the current loop (eg: `1`, `2`, etc).
+- `ITERATIONVALUE`: retuns the item being iterated over from `Items to iterate over`
+
 **Parameters**:
 
 1. Count of repeats
 2. Content to repeat
+3. (Optional) Items to iterate over. Accepts a SmartBlock command.
 
 **Example**:
 
 - `<%REPEAT:5,hello%>`
+- `<%REPEAT:-,<%SMARTBLOCK:runMe%>,<%CHILDREN:((someUid))%>%>`
+- runMe #SmartBlock
+  - `<%GET:ITERATION%>`
+  - `<%GET:ITERATIONVALUE%>`
 
 # **Cursor Commands**
 
