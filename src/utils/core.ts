@@ -2232,30 +2232,35 @@ const flattenUids = (blocks: RoamBasicNode[]): string[] =>
   blocks.flatMap((block) => [block.uid, ...flattenUids(block.children || [])]);
 
 const processBlockTextToPromises = (s: string) => {
-  const matches = XRegExp.matchRecursive(s, "<%", "%>", "g", {
-    valueNames: ["text", null, "command", null],
-    escapeChar: "\\",
-    unbalanced: "skip",
-  });
-  return (
-    matches.length
-      ? matches
-      : ([{ name: "text", value: s }] as XRegExp.MatchRecursiveValueNameMatch[])
-  ).map((c) => () => {
-    if (
-      smartBlocksContext.exitBlock === "yes" ||
-      smartBlocksContext.exitWorkflow
-    ) {
-      return Promise.resolve<InputTextNode[]>([{ text: "" }]);
+  const getMatches = (s: string) => {
+    const matches = XRegExp.matchRecursive(s, "<%", "%>", "g", {
+      valueNames: ["text", null, "command", null],
+      escapeChar: "\\",
+      unbalanced: "skip",
+    });
+
+    if (matches.length === 0) {
+      return [
+        { name: "text", value: s },
+      ] as XRegExp.MatchRecursiveValueNameMatch[];
     }
-    if (c.name === "text") {
-      return Promise.resolve<InputTextNode[]>([{ text: c.value }]);
-    }
-    const split = c.value.indexOf(":");
-    const cmd = split < 0 ? c.value : c.value.substring(0, split);
-    const afterColon = split < 0 ? "" : c.value.substring(split + 1);
+
+    return matches;
+  };
+  const resolvePromise = (textValue: string): Promise<InputTextNode[]> => {
+    return Promise.resolve([{ text: textValue }]);
+  };
+  const parseCommand = (input: string) => {
+    const split = input.indexOf(":");
+    const cmd = split < 0 ? input : input.substring(0, split);
+    const afterColon = split < 0 ? "" : input.substring(split + 1);
+
+    return { cmd, afterColon };
+  };
+  const getArguments = (argString: string) => {
     let commandStack = 0;
-    const args = afterColon.split("").reduce((prev, cur, i, arr) => {
+
+    return argString.split("").reduce((prev, cur, i, arr) => {
       if (cur === "," && !commandStack && arr[i - 1] !== "\\") {
         return [...prev, ""];
       } else if (cur === "\\" && arr[i + 1] === ",") {
@@ -2272,63 +2277,97 @@ const processBlockTextToPromises = (s: string) => {
         return [...prev.slice(0, -1), `${current}${cur}`];
       }
     }, [] as string[]);
+  };
+  const processArguments = (
+    args: string[],
+    delayArgs: boolean[] | boolean
+  ): Promise<InputTextNode[][]> => {
+    const delayArgsArray =
+      typeof delayArgs === "boolean"
+        ? Array(args.length).fill(delayArgs)
+        : delayArgs;
+
+    const argPromises = args.map((arg, i) => {
+      if (delayArgsArray[i]) {
+        return Promise.resolve([{ text: arg }]);
+      } else {
+        return proccessBlockText(arg);
+      }
+    });
+
+    return Promise.all(argPromises);
+  };
+  const prepareNodeProps = (s: InputTextNode[][]) => {
+    if (!s.length) return { args: [], nodeProps: {} };
+    return {
+      args: s.flatMap((c) => flattenText(c)),
+      nodeProps: s.reduce((prev, cur) => {
+        const nodeProps = { ...cur[0] } || ({} as InputTextNode);
+        const { text, uid, children, ...rest } = nodeProps;
+        return { ...prev, ...rest };
+      }, {}),
+    };
+  };
+  const handleCommandOutput = ({
+    handler,
+    args,
+    cmd,
+    nodeProps,
+  }: {
+    handler: CommandHandler;
+    args: string[];
+    cmd: String;
+    nodeProps: {};
+  }) => {
+    if (handler) {
+      return Promise.resolve(handler(...args)).then((output) => ({
+        output,
+        nodeProps,
+      }));
+    } else {
+      return Promise.resolve({
+        output: `<%${cmd}${args.length ? `:${args.join(",")}` : ""}%>`,
+        nodeProps,
+      });
+    }
+  };
+  const formatFinalOutput = ({
+    output,
+    nodeProps,
+  }: {
+    output: string | InputTextNode[] | string[];
+    nodeProps: {};
+  }) => {
+    if (typeof output === "string") {
+      return [{ text: output, ...nodeProps }];
+    } else if (Array.isArray(output)) {
+      return output.map((o: string | InputTextNode) =>
+        typeof o === "string" ? { text: o, ...nodeProps } : o
+      );
+    } else {
+      return Promise.reject(
+        `Command handler output expected a string or array, but instead got ${typeof output}`
+      );
+    }
+  };
+  const shouldExit =
+    smartBlocksContext.exitBlock === "yes" || smartBlocksContext.exitWorkflow;
+
+  return getMatches(s).map((c) => () => {
+    if (shouldExit) return resolvePromise("");
+    if (c.name === "text") return resolvePromise(c.value);
+
+    const { cmd, afterColon } = parseCommand(c.value);
+    const args = getArguments(afterColon);
     const { handler, delayArgs = false, illegal } = handlerByCommand[cmd] || {};
     if (illegal) smartBlocksContext.illegalCommands.add(cmd);
 
-    const processArgs = (
-      args: string[],
-      delayArgs: boolean[] | boolean
-    ): Promise<InputTextNode[][]> => {
-      const delayArgsArray =
-        typeof delayArgs === "boolean"
-          ? Array(args.length).fill(delayArgs)
-          : delayArgs;
-
-      const argPromises = args.map((arg, i) => {
-        if (delayArgsArray[i]) {
-          return Promise.resolve([{ text: arg }]);
-        } else {
-          return proccessBlockText(arg);
-        }
-      });
-
-      return Promise.all(argPromises);
-    };
-
-    return processArgs(args, delayArgs)
-      .then((s) => {
-        if (!s.length) return { args: [], nodeProps: {} };
-        return {
-          args: s.flatMap((c) => flattenText(c)),
-          nodeProps: s.reduce((prev, cur) => {
-            const nodeProps = { ...cur[0] } || ({} as InputTextNode);
-            const { text, uid, children, ...rest } = nodeProps;
-            return { ...prev, ...rest };
-          }, {}),
-        };
-      })
+    return processArguments(args, delayArgs)
+      .then(prepareNodeProps)
       .then(({ args, nodeProps }) =>
-        !!handler
-          ? Promise.resolve(handler(...args)).then((output) => ({
-              output,
-              nodeProps,
-            }))
-          : {
-              output: `<%${cmd}${args.length ? `:${args.join(",")}` : ""}%>`,
-              nodeProps,
-            }
+        handleCommandOutput({ handler, args, cmd, nodeProps })
       )
-      .then(({ output, nodeProps }) =>
-        typeof output === "string"
-          ? [{ text: output, ...nodeProps }]
-          : Array.isArray(output)
-          ? output.map((o: string | InputTextNode) =>
-              typeof o === "string" ? { text: o, ...nodeProps } : o
-            )
-          : Promise.reject(
-              `Command handler output expected a string or array, but instead got ${typeof output}`
-            )
-      );
+      .then(formatFinalOutput);
   });
 };
 
