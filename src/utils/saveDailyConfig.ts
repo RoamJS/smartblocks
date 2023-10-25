@@ -1,9 +1,9 @@
 import getExtensionApi from "roamjs-components/util/extensionApiContext";
 import getDailyConfig, { DailyConfig } from "./getDailyConfig";
 
-const saveDailyConfig = (config: Partial<DailyConfig>) => {
+const saveDailyConfig = async (config: Partial<DailyConfig>) => {
   const currentConfig = getDailyConfig();
-  getExtensionApi().settings.set("daily", {
+  return getExtensionApi().settings.set("daily", {
     ...currentConfig,
     ...config,
   });
