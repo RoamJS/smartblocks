@@ -2122,6 +2122,39 @@ export const COMMANDS: {
     },
   },
   {
+    text: "ACTIVEUSERS",
+    help: "Gets all users who created/edited a block.\n\nDefault is set to the last three month.\n\n1: (Optional) NLP expression for date basis\n\n2: (Optional) Format of Output",
+    handler: (nlp = "three months ago", format = `[[{text}]]`) => {
+      const timestamp =
+        parseNlpDate(nlp, getDateBasisDate()).valueOf() ||
+        // chrono fails basic parsing requiring forward date if ambiguous
+        // https://github.com/wanasit/chrono/commit/4f264a9f21fbd04eb740bf48f5616f6e6e0e78b7
+        parseNlpDate(`in ${nlp}`, getDateBasisDate()).valueOf();
+
+      // [?block :edit/time ?time] assumes newly created blocks get an edit time
+      const activeUsers = (
+        window.roamAlphaAPI.data.fast.q(`
+          [
+            :find 
+              (pull ?user-page [:node/title :block/uid])
+            :where 
+                [?user :user/display-page ?user-page]
+                [?user-page :node/title ?user-title] 
+                [?block :create/user ?user] 
+                [?block :edit/time ?time] 
+                [(< ${timestamp} ?time)]
+          ]
+        `) as [PullBlock, PullBlock][]
+      ).map(([user]) => {
+        return getFormatter(format)({
+          text: user[":node/title"],
+          uid: user[":block/uid"],
+        });
+      });
+      return activeUsers;
+    },
+  },
+  {
     text: "AUTHOR",
     help: "Returns the user who created the block or page \n\n1: Page name or UID.",
     handler: (titleOrUid = "") => {
