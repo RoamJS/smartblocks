@@ -1743,7 +1743,7 @@ export const COMMANDS: {
         const result = await proccessBlockText(content);
         results.push(result);
       }
-      return results.flatMap((c) => c);
+      return results.flat();
     },
   },
   {
@@ -2285,15 +2285,15 @@ const processBlockTextToPromises = (s: string) => {
           ? Array(args.length).fill(delayArgs)
           : delayArgs;
 
-      const argPromises = args.map((arg, i) => {
+      return args.reduce(async (prev, arg, i) => {
+        const p = await prev;
         if (delayArgsArray[i]) {
-          return Promise.resolve([{ text: arg }]);
+          return [...p, [{ text: arg }]];
         } else {
-          return proccessBlockText(arg);
+          const blockTextResult = await proccessBlockText(arg);
+          return [...p, blockTextResult];
         }
-      });
-
-      return Promise.all(argPromises);
+      }, Promise.resolve([] as InputTextNode[][]));
     };
 
     return processArgs(args, delayArgs)
