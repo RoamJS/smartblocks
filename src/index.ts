@@ -598,6 +598,14 @@ export default runExtension(async ({ extensionAPI }) => {
           const clearBlock = /true/i.test(variables["Clear"]);
           const applyToSibling = variables["Sibling"];
           const explicitTargetUid = extractRef(variables["TargetRef"]);
+          const order =
+            variables["Order"] === "last"
+              ? "last"
+              : !variables["Order"]
+              ? 0
+              : !isNaN(Number(variables["Order"]))
+              ? Number(variables["Order"])
+              : 0;
 
           const props = {
             srcUid,
@@ -672,6 +680,7 @@ export default runExtension(async ({ extensionAPI }) => {
               : createBlock({
                   node: { text: "" },
                   parentUid,
+                  order,
                 }).then((targetUid) =>
                   sbBomb({
                     ...props,
