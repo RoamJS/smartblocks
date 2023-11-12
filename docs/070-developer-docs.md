@@ -127,7 +127,10 @@ One thing to keep in mind is that there is a race condition between your extensi
 ```javascript
 const args = {
   text: "MYCOMMAND",
-  handler: (context) => () => console.log("Hello, World"),
+  handler: (context) => () => {
+    console.log("Hello, World");
+    return "";
+  },
 };
 if (window.roamjs?.extension?.smartblocks) {
   window.roamjs.extension.smartblocks.registerCommand(args);

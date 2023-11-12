@@ -16,6 +16,7 @@ This is a directory of all of the supported commands in the SmartBlocks extensio
 - [Serendipity](#serendipity-commands)
 - [TODO](#todo-commands)
 - [Block Related](#block-related-commands)
+- [User Related](#user-related-commands)
 - [Logic Control](#logic-control-commands)
 - [Cursor](#cursor-commands)
 - [Commands With Effects](#commands-with-effects)
@@ -449,28 +450,6 @@ Special note: if you want a comma to be a part of the output, put a \ in front o
 
 `<%CURRENTURL%>`
 
-## CURRENTUSER
-
-**Purpose:** Return the display name of the user.
-
-**Parameters:** None
-
-**Example:**
-
-`<%CURRENTUSER%>`
-
-## AUTHOR
-
-**Purpose:** Returns the username of the user who created the block or page.
-
-**Parameters:**
-
-1. Page name or block ref
-
-**Example:**
-
-`<%AUTHOR:((BVJoEW-aq))%>`
-
 ## CURRENTBLOCKREF
 
 **Purpose:** Gets the current block reference. Stores it in a variable if present.
@@ -636,6 +615,56 @@ Special note: if you want a comma to be a part of the output, put a \ in front o
 **Example**
 
 - `<%PARENT:ref,varName%>`
+
+# **User Related Commands**
+
+## CURRENTUSER
+
+**Purpose:** Return the display name of the user.
+
+**Parameters:** None
+
+**Example:**
+
+`<%CURRENTUSER%>`
+
+## AUTHOR
+
+**Purpose:** Returns the username of the user who created the block or page.
+
+**Parameters:**
+
+1. Page name or block ref
+
+**Example:**
+
+`<%AUTHOR:((BVJoEW-aq))%>`
+
+## ALLUSERS
+
+**Purpose:** Returns all users in the graph.
+
+**Parameters:** None
+
+**Example:**
+
+`<%ALLUSERS%>`
+
+## ACTIVEUSERS
+
+**Purpose:** Returns all users who created/edited a block.
+
+Default is set to the last three month.
+
+**Parameters:**
+
+1. (Optional) NLP expression for date basis
+2. (Optional) Format of Output
+
+**Example:**
+
+- `<%ACTIVEUSERS%>`
+- `<%ACTIVEUSERS:this year,{text}%>`
 
 # **Logic Control Commands**
 

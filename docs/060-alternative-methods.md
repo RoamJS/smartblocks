@@ -50,7 +50,7 @@ The caption of the button is also available in the SmartBlock workflow under the
 
 ## Predefined Variables
 
-There are currently 3 predefined variables: `RemoveButton`, `Clear`, and `Sibling`.
+There are currently 5 predefined variables: `RemoveButton`, `Order`, `TargetRef`, `Clear`, and `Sibling`.
 
 ### Remove Button
 
@@ -59,6 +59,26 @@ By default, SmartBlock buttons are removed and the workflow will replace it with
 **Example**
 
 - `{{caption:SmartBlock:workflow name:RemoveButton=false}}`
+
+### Order
+
+When using `RemoveButton` is set to `false`, you can set the `Order` in which to insert the SmartBlock.
+
+Default is 0. (which is first)
+Use `last` to target the last block.
+
+**Example**
+
+- `{{caption:SmartBlock:workflow name:RemoveButton=false,Order=last}}`
+-
+
+### Target Ref
+
+When using `RemoveButton` is set to `false`, you can set the UID of the block in which to run the SmartBlock on via `TargetRef`.
+
+**Example**
+
+- `{{caption:SmartBlock:workflow name:RemoveButton=false,TargetRef=((kZrX4zMQq))}}`
 
 ### Clear
 
