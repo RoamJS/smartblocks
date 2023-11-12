@@ -2273,30 +2273,22 @@ const processBlockTextToPromises = (s: string) => {
         return [...prev.slice(0, -1), `${current}${cur}`];
       }
     }, [] as string[]);
-    const { handler, delayArgs = false, illegal } = handlerByCommand[cmd] || {};
+    const { handler, delayArgs, illegal } = handlerByCommand[cmd] || {};
     if (illegal) smartBlocksContext.illegalCommands.add(cmd);
-
-    const processArgs = (
-      args: string[],
-      delayArgs: boolean[] | boolean
-    ): Promise<InputTextNode[][]> => {
-      const delayArgsArray =
-        typeof delayArgs === "boolean"
-          ? Array(args.length).fill(delayArgs)
-          : delayArgs;
-
-      return args.reduce(async (prev, arg, i) => {
-        const p = await prev;
-        if (delayArgsArray[i]) {
-          return [...p, [{ text: arg }]];
-        } else {
-          const blockTextResult = await proccessBlockText(arg);
-          return [...p, blockTextResult];
-        }
-      }, Promise.resolve([] as InputTextNode[][]));
-    };
-
-    return processArgs(args, delayArgs)
+    return (
+      delayArgs
+        ? Promise.resolve({ args, nodeProps: {} })
+        : args
+            .map((s) => () => proccessBlockText(s))
+            .reduce(
+              (prev, cur) =>
+                prev.then((p) =>
+                  cur().then((c) => {
+                    return [...p, c];
+                  })
+                ),
+              Promise.resolve([] as InputTextNode[][])
+            )
       .then((s) => {
         if (!s.length) return { args: [], nodeProps: {} };
         return {
@@ -2308,6 +2300,7 @@ const processBlockTextToPromises = (s: string) => {
           }, {}),
         };
       })
+    )
       .then(({ args, nodeProps }) =>
         !!handler
           ? Promise.resolve(handler(...args)).then((output) => ({
