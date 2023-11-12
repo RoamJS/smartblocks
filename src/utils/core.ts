@@ -490,7 +490,7 @@ const stripUid = (n: InputTextNode[] = []): InputTextNode[] =>
 export const COMMANDS: {
   text: string;
   help: string;
-  delayArgs?: boolean | boolean[];
+  delayArgs?: true;
   handler: CommandHandler;
   illegal?: true;
 }[] = [
