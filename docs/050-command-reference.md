@@ -983,23 +983,22 @@ If it isn't, the block is not inserted
 
 **Purpose**: Repeats the second argument a specified amount of times.
 
-If `Count of repeats` is a dash (`-`), then `Count of repeats` will be set to the number of results from `Items to iterate over`
+If the first argument is another command (eg `<%CHILDREN%>`), then `Count of repeats` will be set to the number of results from that command.
 
 This also passes SmartBlock variables:
 
 - `ITERATION`: returns the current loop (eg: `1`, `2`, etc).
-- `ITERATIONVALUE`: retuns the item being iterated over from `Items to iterate over`
+- `ITERATIONVALUE`: returns the item being iterated over from the first argument.
 
 **Parameters**:
 
-1. Count of repeats
+1. Count of repeats (or a SmartBlock command that returns items to iterate over)
 2. Content to repeat
-3. (Optional) Items to iterate over. Accepts a SmartBlock command.
 
 **Example**:
 
 - `<%REPEAT:5,hello%>`
-- `<%REPEAT:-,<%SMARTBLOCK:runMe%>,<%CHILDREN:((someUid))%>%>`
+- `<%REPEAT:<%CHILDREN:((someUid))%>,<%SMARTBLOCK:runMe%>%>`
 - runMe #SmartBlock
   - `<%GET:ITERATION%>`
   - `<%GET:ITERATIONVALUE%>`
