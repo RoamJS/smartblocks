@@ -1730,16 +1730,22 @@ export const COMMANDS: {
   },
   {
     text: "REPEAT",
-    delayArgs: [true, true, false],
+    delayArgs: true,
     help: "Repeats the current block a specified number of times\n\n1. Number of times for repeat",
-    handler: async (repeatArg = "1", content = "", ...values) => {
-      const [{ text: repeatArgText }] = await proccessBlockText(repeatArg);
-      const repeatCount =
-        repeatArg === "-" ? values.length : Number(repeatArgText) || 1;
+    handler: async (repeatArg = "1", content = "") => {
+      const argResult = await proccessBlockText(repeatArg);
+      const argResultNumber = Number(argResult[0].text);
+      const isNumberPassed = argResult.length === 1 && !isNaN(argResultNumber);
+      const repeatCount = isNumberPassed
+        ? argResultNumber
+        : argResult.length || 1;
+
       const results = [];
       for (let i = 0; i < repeatCount; i++) {
         smartBlocksContext.variables["ITERATION"] = (i + 1).toString();
-        smartBlocksContext.variables["ITERATIONVALUE"] = values[i] || "";
+        smartBlocksContext.variables["ITERATIONVALUE"] = isNumberPassed
+          ? ""
+          : argResult[i].text;
         const result = await proccessBlockText(content);
         results.push(result);
       }
@@ -2289,17 +2295,17 @@ const processBlockTextToPromises = (s: string) => {
                 ),
               Promise.resolve([] as InputTextNode[][])
             )
-      .then((s) => {
-        if (!s.length) return { args: [], nodeProps: {} };
-        return {
-          args: s.flatMap((c) => flattenText(c)),
-          nodeProps: s.reduce((prev, cur) => {
-            const nodeProps = { ...cur[0] } || ({} as InputTextNode);
-            const { text, uid, children, ...rest } = nodeProps;
-            return { ...prev, ...rest };
-          }, {}),
-        };
-      })
+            .then((s) => {
+              if (!s.length) return { args: [], nodeProps: {} };
+              return {
+                args: s.flatMap((c) => flattenText(c)),
+                nodeProps: s.reduce((prev, cur) => {
+                  const nodeProps = { ...cur[0] } || ({} as InputTextNode);
+                  const { text, uid, children, ...rest } = nodeProps;
+                  return { ...prev, ...rest };
+                }, {}),
+              };
+            })
     )
       .then(({ args, nodeProps }) =>
         !!handler
