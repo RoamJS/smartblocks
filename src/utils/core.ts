@@ -2434,7 +2434,14 @@ export const proccessBlockWithSmartness = async (
         ...props,
         children,
       },
-      ...nextBlocks,
+      ...nextBlocks.map((block) => ({
+        textAlign,
+        viewType,
+        heading,
+        open,
+        ...block,
+        children: block.children || [],
+      })),
     ];
   } catch (e) {
     const error = e as Error;
