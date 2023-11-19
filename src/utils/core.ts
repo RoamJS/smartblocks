@@ -2440,7 +2440,6 @@ export const proccessBlockWithSmartness = async (
         heading,
         open,
         ...block,
-        children: block.children || [],
       })),
     ];
   } catch (e) {
