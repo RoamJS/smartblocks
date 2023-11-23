@@ -1731,7 +1731,7 @@ export const COMMANDS: {
   {
     text: "REPEAT",
     delayArgs: true,
-    help: "Repeats the current block a specified number of times\n\n1. Number of times for repeat",
+    help: "Repeats the content provided a specified number of times\n\n1. Count of repeats (or a SmartBlock command that returns items to iterate over)\n\n2. Content to repeat ",
     handler: async (repeatArg = "1", content = "") => {
       const argResult = await proccessBlockText(repeatArg);
       const argResultNumber = Number(argResult[0].text);
