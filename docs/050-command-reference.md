@@ -873,6 +873,10 @@ If it isn't, the block is not inserted
       - cancel - the text assigned to the cancel button
   - The form config supports nested smartblock commands.
 
+*to set the default text of `embed`, set a variable named `embed-input`
+
+`<%SET:embed-imput:123%>`
+
 ## SET
 
 **Purpose**: Sets the value of a variable in memory. Variables are case-sensitive.
