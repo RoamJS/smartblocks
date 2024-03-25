@@ -407,7 +407,11 @@ const outputTodoBlocks = (
     .filter(({ text }) => !/{{(\[\[)?query(\]\])?/.test(text))
     .filter(({ text }) =>
       search.every((s) =>
-        /^-/.test(s) ? !text.includes(s.substring(1)) : text.includes(s)
+        s
+          .split("|")
+          .some((s) =>
+            /^-/.test(s) ? !text.includes(s.substring(1)) : text.includes(s)
+          )
       )
     );
   const limitArg = Number(limit);
