@@ -197,7 +197,7 @@ TODO commands are multi-block commands that query multiple TODOs from your graph
 
 1. Maximum amount of block references to return. Default value is `20`
 2. Format to output the block in. See our [Formatting](050-command-reference.md#formatting) section for more info.
-3. optional filter parameter based on a comma separated list (case-insensitive). Can use - in front of a word to exclude it. Examples:
+3. optional filter parameter based on a comma separated list (case-sensitive). Can use - in front of a word to exclude it. Examples:
    - toRead,Pinnacle
      - returns blocks with toRead AND Pinnacle in the text
    - toRead|Pinaccle
@@ -215,7 +215,7 @@ TODO commands are multi-block commands that query multiple TODOs from your graph
 
 1. Maximum amount of block references to return. Default value is `20`
 2. Format to output the block in. See our [Formatting](050-command-reference.md#formatting) section for more info.
-3. optional filter parameter based on a comma separated list (case-insensitive). Can use - in front of a word to exclude it. Examples:
+3. optional filter parameter based on a comma separated list (case-sensitive). Can use - in front of a word to exclude it. Examples:
    - toRead,Pinnacle
      - returns blocks with toRead AND Pinnacle in the text
    - toRead|Pinaccle
@@ -231,7 +231,7 @@ TODO commands are multi-block commands that query multiple TODOs from your graph
 
 1. Maximum amount of block references to return. Default value is `20`
 2. Format to output the block in. See our [Formatting](050-command-reference.md#formatting) section for more info.
-3. optional filter parameter based on a comma separated list (case-insensitive). Can use - in front of a word to exclude it. Examples:
+3. optional filter parameter based on a comma separated list (case-sensitive). Can use - in front of a word to exclude it. Examples:
    - toRead,Pinnacle
      - returns blocks with toRead AND Pinnacle in the text
    - toRead|Pinaccle
@@ -249,7 +249,7 @@ TODO commands are multi-block commands that query multiple TODOs from your graph
 
 1. Maximum amount of block references to return. Default value is `20`
 2. Format to output the block in. See our [Formatting](050-command-reference.md#formatting) section for more info.
-3. optional filter parameter based on a comma separated list (case-insensitive). Can use - in front of a word to exclude it. Examples:
+3. optional filter parameter based on a comma separated list (case-sensitive). Can use - in front of a word to exclude it. Examples:
    - toRead,Pinnacle
      - returns blocks with toRead AND Pinnacle in the text
    - toRead|Pinaccle
@@ -267,7 +267,7 @@ TODO commands are multi-block commands that query multiple TODOs from your graph
 
 1. Maximum amount of block references to return. Default value is `20`
 2. Format to output the block in. See our [Formatting](050-command-reference.md#formatting) section for more info.
-3. optional filter parameter based on a comma separated list (case-insensitive). Can use - in front of a word to exclude it. Examples:
+3. optional filter parameter based on a comma separated list (case-sensitive). Can use - in front of a word to exclude it. Examples:
    - toRead,Pinnacle
      - returns blocks with toRead AND Pinnacle in the text
    - toRead|Pinaccle
@@ -285,7 +285,7 @@ TODO commands are multi-block commands that query multiple TODOs from your graph
 
 1. Maximum amount of block references to return. Default value is `20`
 2. Format to output the block in. See our [Formatting](050-command-reference.md#formatting) section for more info.
-3. optional filter parameter based on a comma separated list (case-insensitive). Can use - in front of a word to exclude it. Examples:
+3. optional filter parameter based on a comma separated list (case-sensitive). Can use - in front of a word to exclude it. Examples:
    - toRead,Pinnacle
      - returns blocks with toRead AND Pinnacle in the text
    - toRead|Pinaccle
