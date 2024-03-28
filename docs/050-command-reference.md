@@ -853,25 +853,110 @@ If it isn't, the block is not inserted
 **Parameters**:
 
 - Block reference pointing to the Form Configuration. The Form Configuration should be a tree
-  - The root of the tree will be the form label
-    - fields - a tree of fields to include in the form
-      - name - the name of each field. When the form is submitted, this name is used for the output variable
-        - type - The type of field. The following values are supported
-          - text
-          - number
-          - select
-          - page
-          - block
-          - flag
-          - embed
-        - label - The label describing the field to the user
-        - default - The default value the field should have
-      - output - what to do once the form is submitted. The supported values are:
+  - fields - a tree of fields to include in the form
+    - name - the name of each field. When the form is submitted, this name is used for the output variable
+      - type - The type of field. The following values are supported
+        - text
+        - number
+        - select
+        - page
         - block
-        - variables
-      - submit - the text assigned to the submit button
-      - cancel - the text assigned to the cancel button
-  - The form config supports nested smartblock commands.
+        - flag
+        - embed
+        - autocomplete
+      - label - The label describing the field to the user
+      - default - The default value the field should have
+      - options - For `select` and `autocomplete` types, specifies the options available for selection.
+      - conditional - Specifies a field `name` that this field depends on to be displayed.
+      - conditionalValues - Specifies the values of the conditional field for which this field will be displayed.
+    - output - what to do once the form is submitted. The supported values are:
+      - block
+      - variables
+    - submit - the text assigned to the submit button
+    - cancel - the text assigned to the cancel button
+
+\*The form config supports nested SmartBlock commands.
+
+**Example Form**
+
+```
+- Example Form
+    - fields
+        - This is Some Text
+            - type
+                - text
+            - label
+                - Text Field
+        - This is a Number
+            - type
+                - number
+            - label
+                - Number Field
+        - Just a Label
+            - type
+                - label
+            - label
+                - Text Field
+        - Like a checkbox
+            - type
+                - flag
+            - label
+                - Flag Field
+        - This is text that is conditional on the checkbox
+            - type
+                - text
+            - label
+                - Conditional Text Field
+            - conditional
+                - Like a checkbox
+        - This searches all pages
+            - type
+                - page
+            - label
+                - Page Field
+        - This searches all blocks
+            - type
+                - block
+            - label
+                - Block Field
+        - This is a multiple choice
+            - type
+                - select
+            - label
+                - Select Field
+            - options
+                - apple
+                - banana
+                - orange
+                - conditional select 1
+        - This is a conditional text field based on the multiple choice
+            - type
+                - text
+            - label
+                - Conditional Text Field
+            - conditional
+                - This is a multiple choice
+            - conditionalValues
+                - conditional select 1
+                - orange
+        - This is an autocomplete field
+            - type
+                - autocomplete
+            - label
+                - Autocomplete Field
+            - options:
+                - apple
+                - banana
+                - orange
+        - This is like a roam block
+            - type
+                - embed
+            - label
+                - Embed Field
+```
+
+- Form #SmartBlock
+  - <%FORM:((S2MbRYozb))%>
 
 **Embed Default**
 
