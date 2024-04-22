@@ -919,7 +919,7 @@ If it isn't, the block is not inserted
                 - block
             - label
                 - Block Field
-        - This is a multiple choice
+        - Choose from multiple options
             - type
                 - select
             - label
@@ -929,13 +929,13 @@ If it isn't, the block is not inserted
                 - banana
                 - orange
                 - conditional select 1
-        - This is a conditional text field based on the multiple choice
+        - This is a conditional text field based on the select field above
             - type
                 - text
             - label
                 - Conditional Text Field
             - conditional
-                - This is a multiple choice
+                - Choose from multiple options
             - conditionalValues
                 - conditional select 1
                 - orange
