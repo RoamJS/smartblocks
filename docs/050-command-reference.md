@@ -574,6 +574,9 @@ Special note: if you want a comma to be a part of the output, put a \ in front o
 **Example**:
 
 - `<%REPLACE:This is a sentence,sentence,block%>`
+- Regex examples
+  - `<%REPLACE:b1ng is a search engine - bing.com,b.ng,google,g%>`
+  - `<%REPLACE:The cat in the hat sat on the mat,[b-chm]at,((PtEIfqniW)),g%>`
 
 ## UPDATEBLOCK
 
