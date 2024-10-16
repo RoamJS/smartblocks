@@ -12,7 +12,7 @@
 
 SmartBlocks exposes a set of functions and objects for interacting with workflows. Roam developers can read from and write to these values from a `roam/js` block or as part of existing RoamJS extensions. This section includes technical notes for JavaScript developers working with SmartBlocks.
 
-All methods below are attached to the `window.roamjs.extensions.smartblocks` object. Be careful before invoking any of them on load, as you will need to wait until the SmartBlocks extension is fully loaded.
+All methods below are attached to the `window.roamjs.extension.smartblocks` object. Be careful before invoking any of them on load, as you will need to wait until the SmartBlocks extension is fully loaded.
 
 ## `registerCommand`
 
