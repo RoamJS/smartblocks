@@ -178,7 +178,6 @@ export default runExtension(async ({ extensionAPI }) => {
   let isCustomOnly = extensionAPI.settings.get("custom-only") as boolean;
   let hideButtonIcon = extensionAPI.settings.get("hide-button-icon") as boolean;
   let highlighting = extensionAPI.settings.get("highlighting") as boolean;
-  const defaultDisplayName = getDisplayNameByUid(getCurrentUserUid());
 
   extensionAPI.settings.panel.create({
     tabTitle: "SmartBlocks",
