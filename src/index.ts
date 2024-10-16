@@ -246,16 +246,6 @@ export default runExtension(async ({ extensionAPI }) => {
           "Uses command highlighting to help write SmartBlock Workflows",
       },
       {
-        action: {
-          type: "input",
-          placeholder: defaultDisplayName,
-        },
-        id: "display-name",
-        name: "Display Name",
-        description:
-          "The display name that will appear in the store next to your workflow. By default, your display name in Roam will be shown. If not set, then your graph name will be shown.",
-      },
-      {
         id: "daily",
         name: "Daily",
         description:
