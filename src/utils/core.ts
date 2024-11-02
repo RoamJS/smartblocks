@@ -153,7 +153,7 @@ const getDateBasisDate = () => {
   }
 };
 
-const getTreeAtLevel = (
+const getTreeUptoLevel = (
   tree: RoamBasicNode[],
   level: number
 ): RoamBasicNode[] => {
@@ -162,7 +162,7 @@ const getTreeAtLevel = (
   }
   return tree.map((t) => ({
     ...t,
-    children: getTreeAtLevel(tree, level - 1),
+    children: getTreeUptoLevel(t.children, level - 1),
   }));
 };
 
@@ -183,7 +183,7 @@ const getLevelsBelowParentUid = (
   const parentUid = getUidFromText(titleOrUid);
   const levels = Number(levelsIncluded) || 0;
   const tree = getBasicTreeByParentUid(parentUid);
-  return levels <= 0 || !levels ? tree : getTreeAtLevel(tree, levels);
+  return levels <= 0 || !levels ? tree : getTreeUptoLevel(tree, levels);
 };
 
 addNlpDateParser({
