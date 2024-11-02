@@ -649,46 +649,75 @@ export const COMMANDS: {
     handler: (titleOrUid = "", levelsIncluded = "0", format = "(({uid}))", ...search: string[]) => {
       // console.log("RANDOMCHILDOF inputs:", titleOrUid, levelsIncluded, format, search);
       const parentUid = getUidFromText(titleOrUid);
-      try {
-        let blocks: any[];
-        if (levelsIncluded==="0") {
-          // in case we want to get all descendants, this is much faster of a query
-          blocks = window.roamAlphaAPI.data.fast
-            .q(
-              `[:find (pull ?c [:block/uid :block/string]) :where [?b :block/uid "${parentUid}"] [?r :block/refs ?b] [?c :block/parents ?r]]`
-            );
-        } else {
-          blocks = window.roamAlphaAPI.data.fast
-            .q(
-              `[:find (pull ?c [:block/uid :block/string])
-                :in $ % ?max-depth
-                :where [?b :block/uid "${parentUid}"] [?r :block/refs ?b] (child-of ?r ?c ?max-depth)]`,
-              // recursive rule with depth limit
-              `[[(child-of ?parent ?child ?n)
-                [(> ?n 0)]
-                [?parent :block/children ?child]]
-                [(child-of ?parent ?descendant ?n)
-                [(> ?n 0)]
-                [?parent :block/children ?child]
-                [(dec ?n) ?n-next]
-                (child-of ?child ?descendant ?n-next)]]`,
-              levelsIncluded
-            );
-        }
-        // console.log("blocks", blocks);
-        const uids = blocks
-                      .filter((r) => searchParamsFilterBlockFn(search, (r as [PullBlock])[0]?.[":block/string"] as string))
-                      .map((r) => (r as [PullBlock])[0]?.[":block/uid"] as string);
-        // console.log("uids", uids);
-        const uid = uids[Math.floor(Math.random() * uids.length)];
-        return uids.length
-          ? getFormatter(format)({ uid }).text
-          : "No blocks on page!";
-        } catch (e) {
-          // FIXME: remove this before merge
-          console.error('error:', e);
-          throw(e);
-        }
+      let blocks: any[];
+      if (levelsIncluded==="0") {
+        // in case we want to get all descendants, this is much faster of a query
+        blocks = window.roamAlphaAPI.data.fast
+          .q(
+            `[:find (pull ?c [:block/uid :block/string]) :where [?b :block/uid "${parentUid}"] [?r :block/refs ?b] [?c :block/parents ?r]]`
+          );
+      } else {
+        blocks = window.roamAlphaAPI.data.fast
+          .q(
+            `[:find (pull ?c [:block/uid :block/string])
+              :in $ % ?max-depth
+              :where [?b :block/uid "${parentUid}"] [?r :block/refs ?b] (child-of ?r ?c ?max-depth)]`,
+            // recursive rule with depth limit
+            `[[(child-of ?parent ?child ?n)
+              [(> ?n 0)]
+              [?parent :block/children ?child]]
+              [(child-of ?parent ?descendant ?n)
+              [(> ?n 0)]
+              [?parent :block/children ?child]
+              [(dec ?n) ?n-next]
+              (child-of ?child ?descendant ?n-next)]]`,
+            levelsIncluded
+          );
+      }
+      // console.log("blocks", blocks);
+      const uids = blocks
+                    .filter((r) => searchParamsFilterBlockFn(search, (r as [PullBlock])[0]?.[":block/string"] as string))
+                    .map((r) => (r as [PullBlock])[0]?.[":block/uid"] as string);
+      // console.log("uids", uids);
+      const uid = uids[Math.floor(Math.random() * uids.length)];
+      return uids.length
+        ? getFormatter(format)({ uid }).text
+        : "No blocks on page!";
+    },
+  },
+
+  {
+    // FIXME: add this to documentation
+    text: "FIRSTCHILDOFMENTION",
+    help: "Returns the first child block from mentions of the block or page (which fits filters if passed)\n\n1: Page name or UID.\n\n2: Format of output.\n\n3: optional filter values",
+    handler: (titleOrUid = "", format = "(({uid}))", ...search: string[]) => {
+      // console.log("FIRSTCHILDOFMENTION inputs:", titleOrUid, format, search);
+      const parentUid = getUidFromText(titleOrUid);
+      let blocks: any[];
+      blocks = window.roamAlphaAPI.data
+          .q(
+            `[:find [(pull ?r [:block/uid :block/string :block/order {:block/children 1}]) ...]
+              :where [?b :block/uid "${parentUid}"] [?r :block/refs ?b]]`
+          );
+
+      const uids = blocks
+                    .filter((block) => block["children"] && block["children"].length)
+                    .map((block) => {
+                      let filteredBlockChildren = block.children.filter((child: any) => searchParamsFilterBlockFn(search, child?.["string"] as string));
+                      if (!filteredBlockChildren || !filteredBlockChildren.length) {
+                        return null;
+                      }
+                      // the filtered child with the lowest order
+                      return filteredBlockChildren.reduce((min: any, current: any) => (current?.["order"] < min?.["order"] ? current : min))
+                    })
+                    .map((child) => child?.["uid"])
+                    .filter((v) => v);
+
+      // console.log("uids", uids);
+      const uid = uids[Math.floor(Math.random() * uids.length)];
+      return uids.length
+        ? getFormatter(format)({ uid }).text
+        : "No blocks on page!";
     },
   },
   {
