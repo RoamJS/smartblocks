@@ -501,12 +501,57 @@ const stripUid = (n: InputTextNode[] = []): InputTextNode[] =>
     children: stripUid(children),
   }));
 
+const RandomChildOfMentionHandler = (
+  titleOrUid = "",
+  levelsIncluded = "0",
+  format = "(({uid}))",
+  ...search: string[]
+) => {
+  const parentUid = getUidFromText(titleOrUid);
+  let blocks: any[];
+  if (levelsIncluded === "0") {
+    // in case we want to get all descendants, this is much faster of a query
+    blocks = window.roamAlphaAPI.data.fast.q(
+      `[:find (pull ?c [:block/uid :block/string]) :where [?b :block/uid "${parentUid}"] [?r :block/refs ?b] [?c :block/parents ?r]]`
+    );
+  } else {
+    blocks = window.roamAlphaAPI.data.fast.q(
+      `[:find (pull ?c [:block/uid :block/string])
+          :in $ % ?max-depth
+          :where [?b :block/uid "${parentUid}"] [?r :block/refs ?b] (child-of ?r ?c ?max-depth)]`,
+      // recursive rule with depth limit
+      `[[(child-of ?parent ?child ?n)
+          [(> ?n 0)]
+          [?parent :block/children ?child]]
+          [(child-of ?parent ?descendant ?n)
+          [(> ?n 0)]
+          [?parent :block/children ?child]
+          [(dec ?n) ?n-next]
+          (child-of ?child ?descendant ?n-next)]]`,
+      levelsIncluded
+    );
+  }
+  const uids = blocks
+    .filter((r) =>
+      searchParamsFilterBlockFn(
+        search,
+        (r as [PullBlock])[0]?.[":block/string"] as string
+      )
+    )
+    .map((r) => (r as [PullBlock])[0]?.[":block/uid"] as string);
+  const uid = uids[Math.floor(Math.random() * uids.length)];
+  return uids.length
+    ? getFormatter(format)({ uid }).text
+    : "No blocks on page!";
+};
+
 export const COMMANDS: {
   text: string;
   help: string;
   delayArgs?: true;
   handler: CommandHandler;
   illegal?: true;
+  hidden?: true;
 }[] = [
   {
     text: "DATE",
@@ -648,58 +693,19 @@ export const COMMANDS: {
     },
   },
   {
-    // FIXME: why is this not called something like `RANDOMCHILDOFMENTION`. Can we rename it (and still support the old name)?
     text: "RANDOMCHILDOF",
-    help: "Returns a random child block from a block references or page\n\n1: Page name or UID.\n\n2: Levels Included\n\n3: Format of output.\n\n4: optional filter values",
-    handler: (
-      titleOrUid = "",
-      levelsIncluded = "0",
-      format = "(({uid}))",
-      ...search: string[]
-    ) => {
-      const parentUid = getUidFromText(titleOrUid);
-      let blocks: any[];
-      if (levelsIncluded === "0") {
-        // in case we want to get all descendants, this is much faster of a query
-        blocks = window.roamAlphaAPI.data.fast.q(
-          `[:find (pull ?c [:block/uid :block/string]) :where [?b :block/uid "${parentUid}"] [?r :block/refs ?b] [?c :block/parents ?r]]`
-        );
-      } else {
-        blocks = window.roamAlphaAPI.data.fast.q(
-          `[:find (pull ?c [:block/uid :block/string])
-              :in $ % ?max-depth
-              :where [?b :block/uid "${parentUid}"] [?r :block/refs ?b] (child-of ?r ?c ?max-depth)]`,
-          // recursive rule with depth limit
-          `[[(child-of ?parent ?child ?n)
-              [(> ?n 0)]
-              [?parent :block/children ?child]]
-              [(child-of ?parent ?descendant ?n)
-              [(> ?n 0)]
-              [?parent :block/children ?child]
-              [(dec ?n) ?n-next]
-              (child-of ?child ?descendant ?n-next)]]`,
-          levelsIncluded
-        );
-      }
-      const uids = blocks
-        .filter((r) =>
-          searchParamsFilterBlockFn(
-            search,
-            (r as [PullBlock])[0]?.[":block/string"] as string
-          )
-        )
-        .map((r) => (r as [PullBlock])[0]?.[":block/uid"] as string);
-      const uid = uids[Math.floor(Math.random() * uids.length)];
-      return uids.length
-        ? getFormatter(format)({ uid }).text
-        : "No blocks on page!";
-    },
+    help: "DEPRECATED: use RANDOMCHILDOFMENTION instead.",
+    hidden: true,
+    handler: RandomChildOfMentionHandler,
   },
-
   {
-    // FIXME: add this to documentation
+    text: "RANDOMCHILDOFMENTION",
+    help: "Returns a random child block from mentions of the block or page\n\n1: Page name or UID.\n\n2: Levels Included\n\n3: Format of output.\n\n4: Optional filter values",
+    handler: RandomChildOfMentionHandler,
+  },
+  {
     text: "FIRSTCHILDOFMENTION",
-    help: "Returns the first child block from mentions of the block or page (which fits filters if passed)\n\n1: Page name or UID.\n\n2: Format of output.\n\n3: optional filter values",
+    help: "Returns the first child block from mentions of the block or page\n\n1: Page name or UID.\n\n2: Format of output.\n\n3: Optional filter values",
     handler: (titleOrUid = "", format = "(({uid}))", ...search: string[]) => {
       const parentUid = getUidFromText(titleOrUid);
       let blocks: any[];
@@ -733,7 +739,7 @@ export const COMMANDS: {
   },
   {
     text: "TODOTODAY",
-    help: "Returns a list of block refs of TODOs for today\n\n1. Max # blocks\n\n2. Format of output.\n\n3. optional filter values",
+    help: "Returns a list of block refs of TODOs for today\n\n1. Max # blocks\n\n2. Format of output.\n\n3. Optional filter values",
     handler: (...args) => {
       const today = window.roamAlphaAPI.util.dateToPageTitle(
         parseNlpDate("today", getDateBasisDate())
@@ -760,7 +766,7 @@ export const COMMANDS: {
   },
   {
     text: "TODOOVERDUE",
-    help: "Returns a list of block refs of TODOs that are Overdue\n\n1. Max # blocks\n\n2. Format of output.\n\n3. optional filter values",
+    help: "Returns a list of block refs of TODOs that are Overdue\n\n1. Max # blocks\n\n2. Format of output.\n\n3. Optional filter values",
     handler: (...args) => {
       const blocks = getBlockUidsAndTextsReferencingPage("TODO");
       const today = startOfDay(parseNlpDate("today", getDateBasisDate()));
@@ -783,7 +789,7 @@ export const COMMANDS: {
   },
   {
     text: "TODOOVERDUEDNP",
-    help: "Returns a list of block refs of TODOs that are Overdue including DNP TODOs\n\n1. Max # blocks\n\n2. Format of output.\n\n3. optional filter values",
+    help: "Returns a list of block refs of TODOs that are Overdue including DNP TODOs\n\n1. Max # blocks\n\n2. Format of output.\n\n3. Optional filter values",
     handler: (...args) => {
       const blocks = getBlockUidsAndTextsReferencingPage("TODO");
       const today = startOfDay(parseNlpDate("today", getDateBasisDate()));
@@ -811,7 +817,7 @@ export const COMMANDS: {
   },
   {
     text: "TODOFUTURE",
-    help: "Returns a list of block refs of TODOs that are due in the future\n\n1. Max # blocks\n\n2. Format of output.\n\n3. optional filter values",
+    help: "Returns a list of block refs of TODOs that are due in the future\n\n1. Max # blocks\n\n2. Format of output.\n\n3. Optional filter values",
     handler: (...args) => {
       const blocks = getBlockUidsAndTextsReferencingPage("TODO");
       const today = parseNlpDate("today", getDateBasisDate() || undefined);
@@ -834,7 +840,7 @@ export const COMMANDS: {
   },
   {
     text: "TODOFUTUREDNP",
-    help: "Returns a list of block refs of TODOs that are due in the future including DNP TODOs\n\n1. Max # blocks\n\n2. Format of output.\n\n3. optional filter values",
+    help: "Returns a list of block refs of TODOs that are due in the future including DNP TODOs\n\n1. Max # blocks\n\n2. Format of output.\n\n3. Optional filter values",
     handler: (...args) => {
       const blocks = getBlockUidsAndTextsReferencingPage("TODO");
       const today = parseNlpDate("today", getDateBasisDate());
@@ -862,7 +868,7 @@ export const COMMANDS: {
   },
   {
     text: "TODOUNDATED",
-    help: "Returns a list of block refs of TODOs with no date\n\n1. Max # blocks\n\n2. Format of output.\n\n3. optional filter values",
+    help: "Returns a list of block refs of TODOs with no date\n\n1. Max # blocks\n\n2. Format of output.\n\n3. Optional filter values",
     handler: (...args) => {
       const blocks = getBlockUidTextAndPageReferencingTag("TODO");
       const todos = blocks
