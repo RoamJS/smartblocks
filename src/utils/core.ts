@@ -657,7 +657,6 @@ export const COMMANDS: {
       format = "(({uid}))",
       ...search: string[]
     ) => {
-      // console.log("RANDOMCHILDOF inputs:", titleOrUid, levelsIncluded, format, search);
       const parentUid = getUidFromText(titleOrUid);
       let blocks: any[];
       if (levelsIncluded === "0") {
@@ -682,7 +681,6 @@ export const COMMANDS: {
           levelsIncluded
         );
       }
-      // console.log("blocks", blocks);
       const uids = blocks
         .filter((r) =>
           searchParamsFilterBlockFn(
@@ -691,7 +689,6 @@ export const COMMANDS: {
           )
         )
         .map((r) => (r as [PullBlock])[0]?.[":block/uid"] as string);
-      // console.log("uids", uids);
       const uid = uids[Math.floor(Math.random() * uids.length)];
       return uids.length
         ? getFormatter(format)({ uid }).text
@@ -704,7 +701,6 @@ export const COMMANDS: {
     text: "FIRSTCHILDOFMENTION",
     help: "Returns the first child block from mentions of the block or page (which fits filters if passed)\n\n1: Page name or UID.\n\n2: Format of output.\n\n3: optional filter values",
     handler: (titleOrUid = "", format = "(({uid}))", ...search: string[]) => {
-      // console.log("FIRSTCHILDOFMENTION inputs:", titleOrUid, format, search);
       const parentUid = getUidFromText(titleOrUid);
       let blocks: any[];
       blocks = window.roamAlphaAPI.data.q(
@@ -729,7 +725,6 @@ export const COMMANDS: {
         .map((child) => child?.["uid"])
         .filter((v) => v);
 
-      // console.log("uids", uids);
       const uid = uids[Math.floor(Math.random() * uids.length)];
       return uids.length
         ? getFormatter(format)({ uid }).text
