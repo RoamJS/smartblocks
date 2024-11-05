@@ -398,9 +398,14 @@ const getFormatter =
   });
 
 const searchParamsFilterBlockFn = (searchParams: string[], text: string) => {
-  // console.log("searchParamsFilterBlockFn", searchParams, text);
   if (!text) return false;
-  if (!searchParams.length || searchParams.some(item => typeof item !== 'string')) return true;
+  if (
+    !searchParams.length ||
+    searchParams.some((item) => typeof item !== "string")
+  ) {
+    return true;
+  }
+
   return searchParams.every((s) =>
     s
       .split("|")
@@ -646,24 +651,27 @@ export const COMMANDS: {
     // FIXME: why is this not called something like `RANDOMCHILDOFMENTION`. Can we rename it (and still support the old name)?
     text: "RANDOMCHILDOF",
     help: "Returns a random child block from a block references or page\n\n1: Page name or UID.\n\n2: Levels Included\n\n3: Format of output.\n\n4: optional filter values",
-    handler: (titleOrUid = "", levelsIncluded = "0", format = "(({uid}))", ...search: string[]) => {
+    handler: (
+      titleOrUid = "",
+      levelsIncluded = "0",
+      format = "(({uid}))",
+      ...search: string[]
+    ) => {
       // console.log("RANDOMCHILDOF inputs:", titleOrUid, levelsIncluded, format, search);
       const parentUid = getUidFromText(titleOrUid);
       let blocks: any[];
-      if (levelsIncluded==="0") {
+      if (levelsIncluded === "0") {
         // in case we want to get all descendants, this is much faster of a query
-        blocks = window.roamAlphaAPI.data.fast
-          .q(
-            `[:find (pull ?c [:block/uid :block/string]) :where [?b :block/uid "${parentUid}"] [?r :block/refs ?b] [?c :block/parents ?r]]`
-          );
+        blocks = window.roamAlphaAPI.data.fast.q(
+          `[:find (pull ?c [:block/uid :block/string]) :where [?b :block/uid "${parentUid}"] [?r :block/refs ?b] [?c :block/parents ?r]]`
+        );
       } else {
-        blocks = window.roamAlphaAPI.data.fast
-          .q(
-            `[:find (pull ?c [:block/uid :block/string])
+        blocks = window.roamAlphaAPI.data.fast.q(
+          `[:find (pull ?c [:block/uid :block/string])
               :in $ % ?max-depth
               :where [?b :block/uid "${parentUid}"] [?r :block/refs ?b] (child-of ?r ?c ?max-depth)]`,
-            // recursive rule with depth limit
-            `[[(child-of ?parent ?child ?n)
+          // recursive rule with depth limit
+          `[[(child-of ?parent ?child ?n)
               [(> ?n 0)]
               [?parent :block/children ?child]]
               [(child-of ?parent ?descendant ?n)
@@ -671,13 +679,18 @@ export const COMMANDS: {
               [?parent :block/children ?child]
               [(dec ?n) ?n-next]
               (child-of ?child ?descendant ?n-next)]]`,
-            levelsIncluded
-          );
+          levelsIncluded
+        );
       }
       // console.log("blocks", blocks);
       const uids = blocks
-                    .filter((r) => searchParamsFilterBlockFn(search, (r as [PullBlock])[0]?.[":block/string"] as string))
-                    .map((r) => (r as [PullBlock])[0]?.[":block/uid"] as string);
+        .filter((r) =>
+          searchParamsFilterBlockFn(
+            search,
+            (r as [PullBlock])[0]?.[":block/string"] as string
+          )
+        )
+        .map((r) => (r as [PullBlock])[0]?.[":block/uid"] as string);
       // console.log("uids", uids);
       const uid = uids[Math.floor(Math.random() * uids.length)];
       return uids.length
@@ -694,24 +707,27 @@ export const COMMANDS: {
       // console.log("FIRSTCHILDOFMENTION inputs:", titleOrUid, format, search);
       const parentUid = getUidFromText(titleOrUid);
       let blocks: any[];
-      blocks = window.roamAlphaAPI.data
-          .q(
-            `[:find [(pull ?r [:block/uid :block/string :block/order {:block/children 1}]) ...]
+      blocks = window.roamAlphaAPI.data.q(
+        `[:find [(pull ?r [:block/uid :block/string :block/order {:block/children 1}]) ...]
               :where [?b :block/uid "${parentUid}"] [?r :block/refs ?b]]`
-          );
+      );
 
       const uids = blocks
-                    .filter((block) => block["children"] && block["children"].length)
-                    .map((block) => {
-                      let filteredBlockChildren = block.children.filter((child: any) => searchParamsFilterBlockFn(search, child?.["string"] as string));
-                      if (!filteredBlockChildren || !filteredBlockChildren.length) {
-                        return null;
-                      }
-                      // the filtered child with the lowest order
-                      return filteredBlockChildren.reduce((min: any, current: any) => (current?.["order"] < min?.["order"] ? current : min))
-                    })
-                    .map((child) => child?.["uid"])
-                    .filter((v) => v);
+        .filter((block) => block["children"] && block["children"].length)
+        .map((block) => {
+          let filteredBlockChildren = block.children.filter((child: any) =>
+            searchParamsFilterBlockFn(search, child?.["string"] as string)
+          );
+          if (!filteredBlockChildren || !filteredBlockChildren.length) {
+            return null;
+          }
+          // the filtered child with the lowest order
+          return filteredBlockChildren.reduce((min: any, current: any) =>
+            current?.["order"] < min?.["order"] ? current : min
+          );
+        })
+        .map((child) => child?.["uid"])
+        .filter((v) => v);
 
       // console.log("uids", uids);
       const uid = uids[Math.floor(Math.random() * uids.length)];
