@@ -151,6 +151,8 @@ Serendipity commands are commands that help resolve to a random block from your 
 
 ## RANDOMCHILDOFMENTION
 
+_Previously called `RANDOMCHILDOF`_
+
 **Purpose**: Returns a random child block of a block that's referencing the input page
 
 **Parameters**:
