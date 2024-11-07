@@ -149,18 +149,42 @@ Serendipity commands are commands that help resolve to a random block from your 
 
 - `<%RANDOMBLOCKMENTION:Evergreen Notes%>`
 
-## RANDOMCHILDOF
+## RANDOMCHILDOFMENTION
+
+_Previously called `RANDOMCHILDOF`_
 
 **Purpose**: Returns a random child block of a block that's referencing the input page
 
-**Parameters**: One parameter that could be either:
+**Parameters**:
 
-- Option 1: **Page name** or **tag name** (brackets `[[]]` or hashtag `#` are optional)
-- Option 2: Parent block UID
+1. One parameter that could be either:
+   - Option 1: **Page name** or **tag name** (brackets `[[]]` or hashtag `#` are optional)
+   - Option 2: Parent block UID
+2. Levels within the page to include. Specifying 0 includes all blocks
+3. Format to output the block in. See our [Formatting](050-command-reference.md#formatting) section for more info.
+4. Optional filter parameter. See our [Filtering](050-command-reference.md#filtering) section for more info.
 
-**Example**:
+**Examples**:
 
-- `<%RANDOMCHILDOF:Evergreen Notes%>`
+- `<%RANDOMCHILDOFMENTION:Evergreen Notes%>`
+- `<%RANDOMCHILDOFMENTION:[[ONE BLOG POST A DAY/Candidates]],1,{{embed-path:(({uid}))}},-[[DONE]]%>`
+
+## FIRSTCHILDOFMENTION
+
+**Purpose**: Returns the first child block of a block that's referencing the input page
+
+**Parameters**:
+
+1. One parameter that could be either:
+   - Option 1: **Page name** or **tag name** (brackets `[[]]` or hashtag `#` are optional)
+   - Option 2: Parent block UID
+2. Format to output the block in. See our [Formatting](050-command-reference.md#formatting) section for more info.
+3. Optional filter parameter. See our [Filtering](050-command-reference.md#filtering) section for more info.
+
+**Examples**:
+
+- `<%FIRSTCHILDOFMENTION:Evergreen Notes%>`
+- `<%FIRSTCHILDOFMENTION:[[ONE BLOG POST A DAY/Candidates]],{{embed-path:(({uid}))}},-[[DONE]]%>`
 
 ## RANDOMNUMBER
 
@@ -197,13 +221,7 @@ TODO commands are multi-block commands that query multiple TODOs from your graph
 
 1. Maximum amount of block references to return. Default value is `20`
 2. Format to output the block in. See our [Formatting](050-command-reference.md#formatting) section for more info.
-3. optional filter parameter based on a comma separated list (case-sensitive). Can use - in front of a word to exclude it. Examples:
-   - toRead,Pinnacle
-     - returns blocks with toRead AND Pinnacle in the text
-   - toRead|Pinaccle
-     - returns blocks with toRead OR Pinnacle in the text
-   - toRead,-Pinnacle
-     - returns blocks with toRead but not if they have pinnacle
+3. Optional filter parameter. See our [Filtering](050-command-reference.md#filtering) section for more info.
 
 **Example**: `<%TODOTODAY:20,(({uid}))%>`
 
@@ -215,13 +233,9 @@ TODO commands are multi-block commands that query multiple TODOs from your graph
 
 1. Maximum amount of block references to return. Default value is `20`
 2. Format to output the block in. See our [Formatting](050-command-reference.md#formatting) section for more info.
-3. optional filter parameter based on a comma separated list (case-sensitive). Can use - in front of a word to exclude it. Examples:
-   - toRead,Pinnacle
-     - returns blocks with toRead AND Pinnacle in the text
-   - toRead|Pinaccle
-     - returns blocks with toRead OR Pinnacle in the text
-   - toRead,-Pinnacle - returns blocks with toRead but not if they have pinnacle
-     **Examples**: `<%TODOOVERDUE:20,(({uid}))%>`
+3. Optional filter parameter. See our [Filtering](050-command-reference.md#filtering) section for more info.
+
+**Examples**: `<%TODOOVERDUE:20,(({uid}))%>`
 
 ## TODOOVERDUEDNP
 
@@ -231,13 +245,7 @@ TODO commands are multi-block commands that query multiple TODOs from your graph
 
 1. Maximum amount of block references to return. Default value is `20`
 2. Format to output the block in. See our [Formatting](050-command-reference.md#formatting) section for more info.
-3. optional filter parameter based on a comma separated list (case-sensitive). Can use - in front of a word to exclude it. Examples:
-   - toRead,Pinnacle
-     - returns blocks with toRead AND Pinnacle in the text
-   - toRead|Pinaccle
-     - returns blocks with toRead OR Pinnacle in the text
-   - toRead,-Pinnacle
-     - returns blocks with toRead but not if they have pinnacle
+3. Optional filter parameter. See our [Filtering](050-command-reference.md#filtering) section for more info.
 
 **Examples**: `<%TODOOVERDUEDNP:20,(({uid}))%>`
 
@@ -249,13 +257,7 @@ TODO commands are multi-block commands that query multiple TODOs from your graph
 
 1. Maximum amount of block references to return. Default value is `20`
 2. Format to output the block in. See our [Formatting](050-command-reference.md#formatting) section for more info.
-3. optional filter parameter based on a comma separated list (case-sensitive). Can use - in front of a word to exclude it. Examples:
-   - toRead,Pinnacle
-     - returns blocks with toRead AND Pinnacle in the text
-   - toRead|Pinaccle
-     - returns blocks with toRead OR Pinnacle in the text
-   - toRead,-Pinnacle
-     - returns blocks with toRead but not if they have pinnacle
+3. Optional filter parameter. See our [Filtering](050-command-reference.md#filtering) section for more info.
 
 **Examples**:`<%TODOFUTURE:20,(({uid}))%>`
 
@@ -267,13 +269,7 @@ TODO commands are multi-block commands that query multiple TODOs from your graph
 
 1. Maximum amount of block references to return. Default value is `20`
 2. Format to output the block in. See our [Formatting](050-command-reference.md#formatting) section for more info.
-3. optional filter parameter based on a comma separated list (case-sensitive). Can use - in front of a word to exclude it. Examples:
-   - toRead,Pinnacle
-     - returns blocks with toRead AND Pinnacle in the text
-   - toRead|Pinaccle
-     - returns blocks with toRead OR Pinnacle in the text
-   - toRead,-Pinnacle
-     - returns blocks with toRead but not if they have pinnacle
+3. Optional filter parameter. See our [Filtering](050-command-reference.md#filtering) section for more info.
 
 **Examples**: `<%TODOFUTUREDNP:20,(({uid}))%>`
 
@@ -285,13 +281,7 @@ TODO commands are multi-block commands that query multiple TODOs from your graph
 
 1. Maximum amount of block references to return. Default value is `20`
 2. Format to output the block in. See our [Formatting](050-command-reference.md#formatting) section for more info.
-3. optional filter parameter based on a comma separated list (case-sensitive). Can use - in front of a word to exclude it. Examples:
-   - toRead,Pinnacle
-     - returns blocks with toRead AND Pinnacle in the text
-   - toRead|Pinaccle
-     - returns blocks with toRead OR Pinnacle in the text
-   - toRead,-Pinnacle
-     - returns blocks with toRead but not if they have pinnacle
+3. Optional filter parameter. See our [Filtering](050-command-reference.md#filtering) section for more info.
 
 **Examples**: `<%TODOUNDATED:20,(({uid}))%>`
 
@@ -1383,3 +1373,14 @@ Several commands support a "Format" argument that allow you to specify exactly h
 - `{path}` - resolves to the uids of blocks that are parents of the current block, delimited by `>`
 - `{attr:name:format}` - resolves the attribute value of the attribute found on the page with the block. Replace `name` with the name of the attribute. The `format` is optional and could be used to specify additional text that only appears if the attribute is on the page.
 - `{text}` - resolves to the raw text of the block
+
+## Filtering
+
+Several commands support an optional filter parameter based on a comma separated list (case-sensitive). Can use `-` in front of a word to exclude it. Examples:
+
+- toRead,Pinnacle
+  - returns blocks with toRead AND Pinnacle in the text
+- toRead|Pinaccle
+  - returns blocks with toRead OR Pinnacle in the text
+- toRead,-Pinnacle
+  - returns blocks with toRead but not if they have pinnacle

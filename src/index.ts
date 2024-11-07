@@ -389,6 +389,7 @@ export default runExtension(async ({ extensionAPI }) => {
       } else if (COMMAND_ENTRY_REGEX.test(valueToCursor)) {
         renderCursorMenu({
           initialItems: COMMANDS.filter((c) => !c.illegal)
+            .filter((c) => !c.hidden)
             .map(({ text, help }) => ({
               text,
               id: text,
