@@ -178,7 +178,6 @@ export default runExtension(async ({ extensionAPI }) => {
   let isCustomOnly = extensionAPI.settings.get("custom-only") as boolean;
   let hideButtonIcon = extensionAPI.settings.get("hide-button-icon") as boolean;
   let highlighting = extensionAPI.settings.get("highlighting") as boolean;
-  const defaultDisplayName = getDisplayNameByUid(getCurrentUserUid());
 
   extensionAPI.settings.panel.create({
     tabTitle: "SmartBlocks",
@@ -244,16 +243,6 @@ export default runExtension(async ({ extensionAPI }) => {
         },
         description:
           "Uses command highlighting to help write SmartBlock Workflows",
-      },
-      {
-        action: {
-          type: "input",
-          placeholder: defaultDisplayName,
-        },
-        id: "display-name",
-        name: "Display Name",
-        description:
-          "The display name that will appear in the store next to your workflow. By default, your display name in Roam will be shown. If not set, then your graph name will be shown.",
       },
       {
         id: "daily",
