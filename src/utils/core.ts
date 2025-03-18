@@ -2200,16 +2200,15 @@ export const COMMANDS: {
     handler: () => {
       const users = (
         window.roamAlphaAPI.data.fast.q(
-          `[:find (pull ?p [:user/email]) (pull ?r [:node/title]) :where 
+          `[:find (pull ?p [:user/uid]) (pull ?r [:node/title]) :where 
         [?p :user/display-page ?r]
      ]`
         ) as [PullBlock, PullBlock][]
-      ).map(([p, r]) =>
-        r[":node/title"]?.startsWith("Anonymous") && p
-          ? // @ts-ignore it does exist
-            (p[":user/email"] as string) || r[":node/title"]
-          : r?.[":node/title"] || ""
-      );
+      ).map(([p, r]) => {
+        const userUid = p[":user/uid"] as string;
+        const title = r?.[":node/title"] || userUid;
+        return title.startsWith("Anonymous") ? userUid : title;
+      });
       return users;
     },
   },
