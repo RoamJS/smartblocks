@@ -1766,14 +1766,24 @@ export const COMMANDS: {
   },
   {
     text: "SMARTBLOCK",
-    help: "Runs another SmartBlock\n\n1. SmartBlock name\n\n2. Optional page name or ref to execute the workflow remotely",
-    handler: (inputName = "", ...pageNameOrUid) => {
+    help: "Runs another SmartBlock\n\n1. SmartBlock name\n\n2. Optional page name or ref to execute the workflow remotely\n\n3. Optional order for the new block when running remotely",
+    handler: (
+      inputName = "",
+      pageNameOrUid = "",
+      orderArg = ""
+    ) => {
       const srcUid = getCleanCustomWorkflows().find(
         ({ name }) => name === inputName.trim()
       )?.uid;
       if (srcUid) {
         if (pageNameOrUid.length) {
-          const title = extractTag(pageNameOrUid.join(","));
+          const maybeOrder = Number(orderArg);
+          const hasOrder = orderArg.length > 0 && !isNaN(maybeOrder);
+          const title = extractTag(
+            hasOrder
+              ? pageNameOrUid
+              : [pageNameOrUid, orderArg].filter((s) => s.length).join(",")
+          );
           const targetUid = getUidFromText(title);
           return (
             targetUid ? Promise.resolve(targetUid) : createPage({ title })
@@ -1781,7 +1791,11 @@ export const COMMANDS: {
             const parentContext = { ...smartBlocksContext };
             return sbBomb({
               srcUid,
-              target: { uid: targetUid, isParent: true },
+              target: {
+                uid: targetUid,
+                isParent: true,
+                ...(hasOrder ? { order: maybeOrder } : {}),
+              },
               variables: smartBlocksContext.variables,
             }).then((uid) => {
               resetContext(parentContext);
@@ -2641,7 +2655,7 @@ const count = (t: InputTextNode[] = []): number =>
 
 export const sbBomb = async ({
   srcUid,
-  target: { uid, start = 0, end = start, isParent = false, windowId },
+  target: { uid, start = 0, end = start, isParent = false, order, windowId },
   variables = {},
   mutableCursor,
   triggerUid = uid,
@@ -2653,6 +2667,7 @@ export const sbBomb = async ({
     start?: number;
     end?: number;
     isParent?: boolean;
+    order?: number;
     windowId?: string;
   };
   variables?: Record<string, string>;
@@ -2688,7 +2703,9 @@ export const sbBomb = async ({
       const [firstChild, ...next] = tree;
       if (firstChild) {
         const startingOrder = isParent
-          ? getChildrenLengthByPageUid(uid)
+          ? typeof order === "number"
+            ? order
+            : getChildrenLengthByPageUid(uid)
           : getOrderByBlockUid(uid);
         const parentUid = isParent ? uid : getParentUidByBlockUid(uid);
         const outputUid = await (isParent

@@ -1098,11 +1098,13 @@ To set the default text of `embed`, set a variable named the same as the name of
 
 1. The workflow name
 2. An optional page name to execute the workflow on another page. The command will return a block reference to the other page if this parameter is set.
+3. When the second parameter is set, you may optionally pass a number to specify the order of the new block on that page.
 
 **Example:**
 
 - `<%SMARTBLOCK:Daily%>`
 - `<%SMARTBLOCK:Daily,<%DATE:Tomorrow%>%>`
+- `<%SMARTBLOCK:Daily,Some Page,2%>`
 
 ## REPEAT
 
