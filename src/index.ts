@@ -45,6 +45,7 @@ import DailyConfigComponent from "./components/DailyConfigComponent";
 import { runDaily } from "./utils/scheduleNextDailyRun";
 import getFullTreeByParentUid from "roamjs-components/queries/getFullTreeByParentUid";
 import { zCommandOutput } from "./utils/zodTypes";
+import { registerEnhancedSmartBlockTrigger } from "./SmartBlockButtonEnhanced";
 
 const getLegacy42Setting = (name: string) => {
   const settings = Object.fromEntries(
@@ -745,16 +746,26 @@ export default runExtension(async ({ extensionAPI }) => {
         const text = getTextByBlockUid(parentUid);
         b.setAttribute("data-roamjs-smartblock-button", "true");
 
-        // We include textcontent here bc there could be multiple smartblocks in a block
-        const unload = registerElAsSmartBlockTrigger({
+        // Register traditional SmartBlock triggers
+        const unloadTraditional = registerElAsSmartBlockTrigger({
           textContent: b.textContent,
           text,
           el: b,
           parentUid,
         });
+        
+        // Register enhanced SmartBlock triggers
+        const unloadEnhanced = registerEnhancedSmartBlockTrigger({
+          textContent: b.textContent,
+          text,
+          el: b,
+          parentUid,
+        });
+        
         unloads.add(() => {
           b.removeAttribute("data-roamjs-smartblock-button");
-          unload();
+          unloadTraditional();
+          unloadEnhanced();
         });
       }
     },
