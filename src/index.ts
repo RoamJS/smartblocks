@@ -44,6 +44,7 @@ import saveDailyConfig from "./utils/saveDailyConfig";
 import DailyConfigComponent from "./components/DailyConfigComponent";
 import { runDaily } from "./utils/scheduleNextDailyRun";
 import getFullTreeByParentUid from "roamjs-components/queries/getFullTreeByParentUid";
+import createTagRegex from "roamjs-components/util/createTagRegex";
 import { zCommandOutput } from "./utils/zodTypes";
 
 const getLegacy42Setting = (name: string) => {
@@ -549,13 +550,39 @@ export default runExtension(async ({ extensionAPI }) => {
     );
     const match = regex.exec(text);
     if (match) {
-      const {
+      let {
         [1]: buttonContent = "",
         [2]: buttonText = "",
         index,
         [0]: full,
       } = match;
-      const [workflowName, args = ""] = buttonText.split(":");
+      let [workflowName, args = ""] = buttonText.split(":");
+
+      const tree = getFullTreeByParentUid(parentUid);
+      const labelNode = tree.children.find((c) => /label/i.test(c.text));
+      if (labelNode && labelNode.children.length) {
+        buttonContent = labelNode.children.map((n) => n.text).join("\n");
+      }
+      const sbNode = tree.children.find((c) => /smartblock/i.test(c.text));
+      if (sbNode && sbNode.children.length) {
+        const ref = sbNode.children[0].text.match(/\(\(([^)]+)\)\)/);
+        if (ref) {
+          workflowName = getTextByBlockUid(ref[1])
+            .replace(createTagRegex("SmartBlock"), "")
+            .replace(createTagRegex("42SmartBlock"), "")
+            .trim();
+          args = "";
+        }
+      }
+      const optionsNode = tree.children.find((c) => /options/i.test(c.text));
+      const childVariables: Record<string, string> = {};
+      if (optionsNode) {
+        optionsNode.children.forEach((opt) => {
+          const key = opt.text.trim();
+          const value = opt.children.map((c) => c.text).join("\n");
+          childVariables[key] = value;
+        });
+      }
       const clickListener = () => {
         const workflows = getCustomWorkflows();
         const availableWorkflows = getCleanCustomWorkflows(workflows);
@@ -580,6 +607,7 @@ export default runExtension(async ({ extensionAPI }) => {
               .map((v) => v.replace(/ESCAPE_COMMA/g, ",").split("="))
               .map(([k, v = ""]) => [k, v])
           );
+          Object.assign(variables, childVariables);
           variables["ButtonContent"] = buttonContent;
 
           const keepButton =
@@ -711,22 +739,41 @@ export default runExtension(async ({ extensionAPI }) => {
         }
       };
       el.addEventListener("click", clickListener);
-      if (!hideButtonIcon && !hideIcon) {
-        const img = new Image();
-        img.src =
-          "https://raw.githubusercontent.com/RoamJS/smartblocks/main/src/img/lego3blocks.png";
-        img.width = 17;
-        img.height = 14;
-        img.style.marginRight = "7px";
-        el.insertBefore(img, el.firstChild);
-        return () => {
-          img.remove();
-          el.removeEventListener("click", clickListener);
-        };
-      }
-      return () => {
+      let cleanup = () => {
         el.removeEventListener("click", clickListener);
       };
+      if (!hideButtonIcon && !hideIcon) {
+        const icon = childVariables["Icon"];
+        if (icon) {
+          el.classList.add(`bp3-icon-${icon}`);
+        } else {
+          const img = new Image();
+          img.src =
+            "https://raw.githubusercontent.com/RoamJS/smartblocks/main/src/img/lego3blocks.png";
+          img.width = 17;
+          img.height = 14;
+          img.style.marginRight = "7px";
+          el.insertBefore(img, el.firstChild);
+          const prev = cleanup;
+          cleanup = () => {
+            img.remove();
+            prev();
+          };
+        }
+      }
+      if (childVariables["Intent"]) {
+        el.classList.add(`bp3-intent-${childVariables["Intent"].toLowerCase()}`);
+      }
+      if (/true/i.test(childVariables["Minimal"])) {
+        el.classList.add("bp3-minimal");
+      }
+      if (/true/i.test(childVariables["Outlined"])) {
+        el.classList.add("bp3-outlined");
+      }
+      if (childVariables["styling"]) {
+        el.style.cssText += childVariables["styling"];
+      }
+      return cleanup;
     }
     return () => {};
   };
