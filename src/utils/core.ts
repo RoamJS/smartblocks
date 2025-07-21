@@ -1784,14 +1784,25 @@ export const COMMANDS: {
           } else {
             // Multiple arguments - last one might be order=value
             const lastArg = pageNameOrUid[pageNameOrUid.length - 1];
-            if (lastArg.includes("=")) {
-              // Last argument is order=value, rest is page name
-              const orderValue = lastArg.split("=")[1];
-              title = extractTag(pageNameOrUid.slice(0, -1).join(" "));
-              order =
-                orderValue.toLowerCase() === "last"
-                  ? "last"
-                  : Number(orderValue);
+            const orderMatch = /^order=(.+)$/i.exec(lastArg);
+            if (orderMatch) {
+              const orderValue = orderMatch[1];
+              title = extractTag(pageNameOrUid.slice(0, -1).join(","));
+              if (orderValue.toLowerCase() === "last") {
+                order = "last";
+              } else {
+                const numOrder = Number(orderValue);
+                if (
+                  !isNaN(numOrder) &&
+                  Number.isInteger(numOrder) &&
+                  numOrder >= 0
+                ) {
+                  order = numOrder;
+                } else {
+                  // Invalid order value, treat as part of page name
+                  title = extractTag(pageNameOrUid.join(","));
+                }
+              }
             } else {
               // All arguments are page name
               title = extractTag(pageNameOrUid.join(" "));
