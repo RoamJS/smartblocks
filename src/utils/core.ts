@@ -1766,28 +1766,70 @@ export const COMMANDS: {
   },
   {
     text: "SMARTBLOCK",
-    help: "Runs another SmartBlock\n\n1. SmartBlock name\n\n2. Optional page name or ref to execute the workflow remotely",
+    help: "Runs another SmartBlock\n\n1. SmartBlock name\n\n2. Optional page name or ref to execute the workflow remotely\n\n3. Optional order for the new block when running remotely in the format order=value (use a number or 'last' to append to the end)",
     handler: (inputName = "", ...pageNameOrUid) => {
       const srcUid = getCleanCustomWorkflows().find(
         ({ name }) => name === inputName.trim()
       )?.uid;
       if (srcUid) {
         if (pageNameOrUid.length) {
-          const title = extractTag(pageNameOrUid.join(","));
-          const targetUid = getUidFromText(title);
-          return (
-            targetUid ? Promise.resolve(targetUid) : createPage({ title })
-          ).then((targetUid) => {
-            const parentContext = { ...smartBlocksContext };
-            return sbBomb({
-              srcUid,
-              target: { uid: targetUid, isParent: true },
-              variables: smartBlocksContext.variables,
-            }).then((uid) => {
-              resetContext(parentContext);
-              return uid ? `((${uid}))` : "";
+          // Parse arguments to handle page name with potential order parameter
+          let title: string;
+          let order: number | "last" | undefined;
+
+          if (pageNameOrUid.length === 1) {
+            // Single argument - assume it is a page name
+            const arg = pageNameOrUid[0];
+            title = extractTag(arg);
+          } else {
+            // Multiple arguments - last one might be order=value
+            const lastArg = pageNameOrUid[pageNameOrUid.length - 1];
+            const orderMatch = /^order=(.+)$/i.exec(lastArg);
+            if (orderMatch) {
+              const orderValue = orderMatch[1];
+              title = extractTag(pageNameOrUid.slice(0, -1).join(","));
+              if (orderValue.toLowerCase() === "last") {
+                order = "last";
+              } else {
+                const numOrder = Number(orderValue);
+                if (
+                  !isNaN(numOrder) &&
+                  Number.isInteger(numOrder) &&
+                  numOrder >= 0
+                ) {
+                  order = numOrder;
+                } else {
+                  // Invalid order value, treat as part of page name
+                  title = extractTag(pageNameOrUid.join(","));
+                }
+              }
+            } else {
+              // All arguments are page name
+              title = extractTag(pageNameOrUid.join(" "));
+            }
+          }
+
+          if (title.trim() !== "") {
+            const targetUid = getUidFromText(title);
+
+            return (
+              targetUid ? Promise.resolve(targetUid) : createPage({ title })
+            ).then((targetUid) => {
+              const parentContext = { ...smartBlocksContext };
+              return sbBomb({
+                srcUid,
+                target: {
+                  uid: targetUid,
+                  isParent: true,
+                  ...(order !== undefined ? { order } : {}),
+                },
+                variables: smartBlocksContext.variables,
+              }).then((uid) => {
+                resetContext(parentContext);
+                return uid ? `((${uid}))` : "";
+              });
             });
-          });
+          }
         }
         const nodes = getFullTreeByParentUid(srcUid).children;
         const parentContext = { ...smartBlocksContext };
@@ -2641,7 +2683,7 @@ const count = (t: InputTextNode[] = []): number =>
 
 export const sbBomb = async ({
   srcUid,
-  target: { uid, start = 0, end = start, isParent = false, windowId },
+  target: { uid, start = 0, end = start, isParent = false, order, windowId },
   variables = {},
   mutableCursor,
   triggerUid = uid,
@@ -2653,6 +2695,7 @@ export const sbBomb = async ({
     start?: number;
     end?: number;
     isParent?: boolean;
+    order?: number | "last";
     windowId?: string;
   };
   variables?: Record<string, string>;
@@ -2688,7 +2731,9 @@ export const sbBomb = async ({
       const [firstChild, ...next] = tree;
       if (firstChild) {
         const startingOrder = isParent
-          ? getChildrenLengthByPageUid(uid)
+          ? typeof order === "number" || order === "last"
+            ? order
+            : getChildrenLengthByPageUid(uid)
           : getOrderByBlockUid(uid);
         const parentUid = isParent ? uid : getParentUidByBlockUid(uid);
         const outputUid = await (isParent
@@ -2730,7 +2775,10 @@ export const sbBomb = async ({
           next.map((node, i) =>
             createBlock({
               parentUid,
-              order: startingOrder + 1 + i,
+              order:
+                startingOrder === "last"
+                  ? startingOrder
+                  : startingOrder + 1 + i,
               node,
             })
           )
