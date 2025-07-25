@@ -596,6 +596,7 @@ export default runExtension(async ({ extensionAPI }) => {
               : !isNaN(Number(variables["Order"]))
               ? Number(variables["Order"])
               : 0;
+          const iconSetting = variables["icon"] || variables["Icon"];
 
           const props = {
             srcUid,
@@ -710,20 +711,44 @@ export default runExtension(async ({ extensionAPI }) => {
           }
         }
       };
+      
       el.addEventListener("click", clickListener);
-      if (!hideButtonIcon && !hideIcon) {
-        const img = new Image();
-        img.src =
-          "https://raw.githubusercontent.com/RoamJS/smartblocks/main/src/img/lego3blocks.png";
-        img.width = 17;
-        img.height = 14;
-        img.style.marginRight = "7px";
-        el.insertBefore(img, el.firstChild);
+      
+      // Handle icon display logic
+      const shouldHideIcon = hideButtonIcon || hideIcon || 
+                           iconSetting === "false" || 
+                           iconSetting === "none" || 
+                           iconSetting === "False" || 
+                           iconSetting === "None";
+      
+      if (!shouldHideIcon) {
+        let iconElement: HTMLElement | null = null;
+        
+        // Check if it's a Blueprint icon name
+        if (iconSetting && iconSetting !== "true" && iconSetting !== "True") {
+          // Create Blueprint icon
+          iconElement = document.createElement("span");
+          iconElement.className = `bp3-icon bp3-icon-${iconSetting}`;
+          iconElement.style.marginRight = "7px";
+          iconElement.style.fontSize = "14px";
+        } else {
+          // Default lego icon
+          const img = new Image();
+          img.src =
+            "https://raw.githubusercontent.com/RoamJS/smartblocks/main/src/img/lego3blocks.png";
+          img.width = 17;
+          img.height = 14;
+          img.style.marginRight = "7px";
+          iconElement = img;
+        }
+        
+        el.insertBefore(iconElement, el.firstChild);
         return () => {
-          img.remove();
+          iconElement?.remove();
           el.removeEventListener("click", clickListener);
         };
       }
+      
       return () => {
         el.removeEventListener("click", clickListener);
       };
