@@ -50,7 +50,7 @@ The caption of the button is also available in the SmartBlock workflow under the
 
 ## Predefined Variables
 
-There are currently 6 predefined variables: `RemoveButton`, `Order`, `TargetRef`, `Clear`, `Sibling`, and `icon`.
+There are currently 6 predefined variables: `RemoveButton`, `Order`, `TargetRef`, `Clear`, `Sibling`, and `Icon`.
 
 ### Remove Button
 
@@ -112,21 +112,22 @@ https://github.com/RoamJS/smartblocks/assets/3792666/eed8027b-179d-437b-a0be-c88
 
 ### Icon
 
-By default, SmartBlock buttons display a lego icon. You can customize or disable this icon using the `icon` parameter:
+By default, SmartBlock buttons display a lego icon. You can customize or disable this icon using the `Icon` parameter:
 
 **Examples**
 
-- `{{Today:SmartBlock:myWorkflow:icon=false}}` - No icon will be displayed
-- `{{Today:SmartBlock:myWorkflow:icon=none}}` - No icon will be displayed  
-- `{{Today:SmartBlock:myWorkflow:icon=user}}` - Display a Blueprint.js user icon
-- `{{Today:SmartBlock:myWorkflow:icon=settings}}` - Display a Blueprint.js settings icon
+- `{{Today:SmartBlock:myWorkflow:Icon=false}}` - No icon will be displayed
+- `{{Today:SmartBlock:myWorkflow:Icon=none}}` - No icon will be displayed
+- `{{Today:SmartBlock:myWorkflow:Icon=user}}` - Display a Blueprint.js user icon
+- `{{Today:SmartBlock:myWorkflow:Icon=settings}}` - Display a Blueprint.js settings icon
 
-The icon parameter accepts:
+The Icon parameter accepts:
+
 - `false` or `none` - Hides the icon completely
-- Any valid [Blueprint.js icon name](https://blueprintjs.com/docs/#icons) - Displays that Blueprint icon instead of the default lego icon
-- When omitted or set to `true` - Shows the default lego icon
+- Any valid [Blueprint.js icon name](https://blueprintjs.com/docs/versions/3/#icons) - Displays that Blueprint icon instead of the default lego icon
+- When omitted - Shows the default lego icon
 
-Note: This parameter overrides the global "Hide Button Icon" setting in SmartBlocks configuration for individual buttons.
+Note: The global "Hide Button Icon" setting overrides the `Icon` parameter.
 
 # Bulk Trigger
 

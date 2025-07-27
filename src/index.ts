@@ -45,6 +45,7 @@ import DailyConfigComponent from "./components/DailyConfigComponent";
 import { runDaily } from "./utils/scheduleNextDailyRun";
 import getFullTreeByParentUid from "roamjs-components/queries/getFullTreeByParentUid";
 import { zCommandOutput } from "./utils/zodTypes";
+import { IconNames } from "@blueprintjs/icons";
 
 const getLegacy42Setting = (name: string) => {
   const settings = Object.fromEntries(
@@ -556,11 +557,21 @@ export default runExtension(async ({ extensionAPI }) => {
         [0]: full,
       } = match;
       const [workflowName, args = ""] = buttonText.split(":");
+      const variables = Object.fromEntries(
+        args
+          .replace(/\[\[[^\]]+\]\]/g, (m) => m.replace(/,/g, "ESCAPE_COMMA"))
+          .split(",")
+          .filter((s) => !!s)
+          .map((v) => v.replace(/ESCAPE_COMMA/g, ",").split("="))
+          .map(([k, v = ""]) => [k, v])
+      );
+      variables["ButtonContent"] = buttonContent;
       const clickListener = () => {
         const workflows = getCustomWorkflows();
         const availableWorkflows = getCleanCustomWorkflows(workflows);
         const { uid: srcUid } =
           availableWorkflows.find(({ name }) => name === workflowName) || {};
+
         if (!srcUid) {
           createBlock({
             node: {
@@ -570,18 +581,6 @@ export default runExtension(async ({ extensionAPI }) => {
             parentUid,
           });
         } else {
-          const variables = Object.fromEntries(
-            args
-              .replace(/\[\[[^\]]+\]\]/g, (m) =>
-                m.replace(/,/g, "ESCAPE_COMMA")
-              )
-              .split(",")
-              .filter((s) => !!s)
-              .map((v) => v.replace(/ESCAPE_COMMA/g, ",").split("="))
-              .map(([k, v = ""]) => [k, v])
-          );
-          variables["ButtonContent"] = buttonContent;
-
           const keepButton =
             /false/i.test(variables["RemoveButton"]) ||
             /false/i.test(variables["42RemoveButton"]);
@@ -596,7 +595,6 @@ export default runExtension(async ({ extensionAPI }) => {
               : !isNaN(Number(variables["Order"]))
               ? Number(variables["Order"])
               : 0;
-          const iconSetting = variables["icon"] || variables["Icon"];
 
           const props = {
             srcUid,
@@ -711,44 +709,48 @@ export default runExtension(async ({ extensionAPI }) => {
           }
         }
       };
-      
+
       el.addEventListener("click", clickListener);
-      
-      // Handle icon display logic
-      const shouldHideIcon = hideButtonIcon || hideIcon || 
-                           iconSetting === "false" || 
-                           iconSetting === "none" || 
-                           iconSetting === "False" || 
-                           iconSetting === "None";
-      
+
+      const iconSetting = variables["Icon"]?.toLowerCase();
+
+      const shouldHideIcon =
+        hideButtonIcon ||
+        hideIcon ||
+        iconSetting === "false" ||
+        iconSetting === "none";
+
+      const isValidBlueprintIcon = (
+        name: string
+      ): name is (typeof IconNames)[keyof typeof IconNames] =>
+        Object.values(IconNames).includes(name as any);
+
       if (!shouldHideIcon) {
         let iconElement: HTMLElement | null = null;
-        
-        // Check if it's a Blueprint icon name
-        if (iconSetting && iconSetting !== "true" && iconSetting !== "True") {
-          // Create Blueprint icon
+
+        if (iconSetting && isValidBlueprintIcon(iconSetting)) {
           iconElement = document.createElement("span");
           iconElement.className = `bp3-icon bp3-icon-${iconSetting}`;
           iconElement.style.marginRight = "7px";
-          iconElement.style.fontSize = "14px";
+          iconElement.style.marginLeft = "0px";
         } else {
           // Default lego icon
           const img = new Image();
           img.src =
             "https://raw.githubusercontent.com/RoamJS/smartblocks/main/src/img/lego3blocks.png";
+          img.style.marginRight = "7px";
           img.width = 17;
           img.height = 14;
-          img.style.marginRight = "7px";
           iconElement = img;
         }
-        
+
         el.insertBefore(iconElement, el.firstChild);
         return () => {
           iconElement?.remove();
           el.removeEventListener("click", clickListener);
         };
       }
-      
+
       return () => {
         el.removeEventListener("click", clickListener);
       };
