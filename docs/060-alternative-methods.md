@@ -118,8 +118,8 @@ By default, SmartBlock buttons display a lego icon. You can customize or disable
 
 - `{{Today:SmartBlock:myWorkflow:Icon=false}}` - No icon will be displayed
 - `{{Today:SmartBlock:myWorkflow:Icon=none}}` - No icon will be displayed
-- `{{Today:SmartBlock:myWorkflow:Icon=user}}` - Display a Blueprint.js user icon
-- `{{Today:SmartBlock:myWorkflow:Icon=settings}}` - Display a Blueprint.js settings icon
+- `{{Today:SmartBlock:myWorkflow:Icon=clipboard}}` - Display a Blueprint.js user icon
+- `{{Today:SmartBlock:myWorkflow:Icon=refresh}}` - Display a Blueprint.js settings icon
 
 The Icon parameter accepts:
 
