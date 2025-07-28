@@ -50,7 +50,7 @@ The caption of the button is also available in the SmartBlock workflow under the
 
 ## Predefined Variables
 
-There are currently 5 predefined variables: `RemoveButton`, `Order`, `TargetRef`, `Clear`, and `Sibling`.
+There are currently 6 predefined variables: `RemoveButton`, `Order`, `TargetRef`, `Clear`, `Sibling`, and `Icon`.
 
 ### Remove Button
 
@@ -109,6 +109,25 @@ This button will not remove the Smartblock button, clear existing text on the bl
 **Video Demo**
 
 https://github.com/RoamJS/smartblocks/assets/3792666/eed8027b-179d-437b-a0be-c88b1d577c6a
+
+### Icon
+
+By default, SmartBlock buttons display a lego icon. You can customize or disable this icon using the `Icon` parameter:
+
+**Examples**
+
+- `{{Today:SmartBlock:myWorkflow:Icon=false}}` - No icon will be displayed
+- `{{Today:SmartBlock:myWorkflow:Icon=none}}` - No icon will be displayed
+- `{{Today:SmartBlock:myWorkflow:Icon=clipboard}}` - Display a Blueprint.js clipboard icon
+- `{{Today:SmartBlock:myWorkflow:Icon=refresh}}` - Display a Blueprint.js refresh icon
+
+The Icon parameter accepts:
+
+- `false` or `none` - Hides the icon completely
+- Any valid [Blueprint.js icon name](https://blueprintjs.com/docs/versions/3/#icons) - Displays that Blueprint icon instead of the default lego icon
+- When omitted - Shows the default lego icon
+
+Note: The global "Hide Button Icon" setting overrides the `Icon` parameter.
 
 # Bulk Trigger
 
