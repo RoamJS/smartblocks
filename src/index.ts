@@ -543,7 +543,7 @@ export default runExtension(async ({ extensionAPI }) => {
     text: string;
     el: HTMLElement;
     parentUid: string;
-  hideIcon?: boolean;
+    hideIcon?: boolean;
   }) => {
     // We include textcontent here bc there could be multiple smartblocks in a block
     const label = textContent.trim();
@@ -712,17 +712,23 @@ export default runExtension(async ({ extensionAPI }) => {
       if (!shouldHideIcon) {
         let iconElement: HTMLElement | null = null;
 
+        const hasTextContent = el.textContent && el.textContent.trim() !== "";
+
         if (iconSetting && isValidBlueprintIcon(iconSetting)) {
           iconElement = document.createElement("span");
           iconElement.className = `bp3-icon bp3-icon-${iconSetting}`;
-          iconElement.style.marginRight = "7px";
+          if (hasTextContent) {
+            iconElement.style.marginRight = "7px";
+          }
           iconElement.style.marginLeft = "0px";
         } else {
           // Default lego icon
           const img = new Image();
           img.src =
             "https://raw.githubusercontent.com/RoamJS/smartblocks/main/src/img/lego3blocks.png";
-          img.style.marginRight = "7px";
+          if (hasTextContent) {
+            img.style.marginRight = "7px";
+          }
           img.width = 17;
           img.height = 14;
           iconElement = img;
@@ -748,10 +754,7 @@ export default runExtension(async ({ extensionAPI }) => {
     tag: "BUTTON",
     callback: (b) => {
       const parentUid = getBlockUidFromTarget(b);
-      if (
-        parentUid &&
-        !b.hasAttribute("data-roamjs-smartblock-button")
-      ) {
+      if (parentUid && !b.hasAttribute("data-roamjs-smartblock-button")) {
         const text = getTextByBlockUid(parentUid);
         b.setAttribute("data-roamjs-smartblock-button", "true");
 
