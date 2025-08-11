@@ -10,5 +10,6 @@ store
 store.js
 main.js
 extension.js
+extension.js.map
 analyze.txt
 coverage

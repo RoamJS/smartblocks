@@ -37,6 +37,8 @@ By default, the workflow runs any time after midnight each day. If you would lik
 You can insert a button into a block so the button will run a SmartBlock workflow when the user clicks on it. To do this, insert a button using the following syntax:
 
 - `{{caption:SmartBlock:workflow name}}`
+- If you would like the button to display no caption, simply omit the first parameter:
+  - `{{:SmartBlock:workflow name}}`
 - First, you notice the syntax starts with `{{` and also ends with `}}`
 - Three parameters separated by a `:`
   1. **Caption** - the name that will appear on the button. (Do not use caption names that conflict with other Roam features, like: table, kanban, test)
