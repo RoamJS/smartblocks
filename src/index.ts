@@ -543,7 +543,7 @@ export default runExtension(async ({ extensionAPI }) => {
     text: string;
     el: HTMLElement;
     parentUid: string;
-  hideIcon?: false;
+  hideIcon?: boolean;
   }) => {
     // We include textcontent here bc there could be multiple smartblocks in a block
     const label = textContent.trim();
