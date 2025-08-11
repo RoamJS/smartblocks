@@ -759,8 +759,9 @@ export default runExtension(async ({ extensionAPI }) => {
         b.setAttribute("data-roamjs-smartblock-button", "true");
 
         // We include textcontent here bc there could be multiple smartblocks in a block
+        // TODO: if multiple smartblocks have the same textContent, we need to distinguish them
         const unload = registerElAsSmartBlockTrigger({
-          textContent: b.textContent,
+          textContent: b.textContent || "",
           text,
           el: b,
           parentUid,

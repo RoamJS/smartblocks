@@ -57,8 +57,7 @@ test("parses SmartBlock button with sibling directive", () => {
 });
 
 test("parses SmartBlock button for today's entry", () => {
-  const text =
-    `{{Create Today's Entry:SmartBlock:UserDNPToday:RemoveButton=false}}`;
+  const text = `{{Create Today's Entry:SmartBlock:UserDNPToday:RemoveButton=false}}`;
   const result = parseSmartBlockButton("Create Today's Entry", text);
   expect(result?.workflowName).toBe("UserDNPToday");
   expect(result?.variables).toMatchObject({
