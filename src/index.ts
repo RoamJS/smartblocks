@@ -46,6 +46,7 @@ import { runDaily } from "./utils/scheduleNextDailyRun";
 import getFullTreeByParentUid from "roamjs-components/queries/getFullTreeByParentUid";
 import { zCommandOutput } from "./utils/zodTypes";
 import { IconNames } from "@blueprintjs/icons";
+import parseSmartBlockButton from "./utils/parseSmartBlockButton";
 
 const getLegacy42Setting = (name: string) => {
   const settings = Object.fromEntries(
@@ -542,30 +543,13 @@ export default runExtension(async ({ extensionAPI }) => {
     text: string;
     el: HTMLElement;
     parentUid: string;
-    hideIcon?: false;
+  hideIcon?: false;
   }) => {
     // We include textcontent here bc there could be multiple smartblocks in a block
-    const regex = new RegExp(
-      `{{(${textContent.replace(/\+/g, "\\+")}):(?:42)?SmartBlock:(.*?)}}`
-    );
-    const match = regex.exec(text);
-    if (match) {
-      const {
-        [1]: buttonContent = "",
-        [2]: buttonText = "",
-        index,
-        [0]: full,
-      } = match;
-      const [workflowName, args = ""] = buttonText.split(":");
-      const variables = Object.fromEntries(
-        args
-          .replace(/\[\[[^\]]+\]\]/g, (m) => m.replace(/,/g, "ESCAPE_COMMA"))
-          .split(",")
-          .filter((s) => !!s)
-          .map((v) => v.replace(/ESCAPE_COMMA/g, ",").split("="))
-          .map(([k, v = ""]) => [k, v])
-      );
-      variables["ButtonContent"] = buttonContent;
+    const label = textContent.trim();
+    const parsed = parseSmartBlockButton(label, text);
+    if (parsed) {
+      const { index, full, buttonContent, workflowName, variables } = parsed;
       const clickListener = () => {
         const workflows = getCustomWorkflows();
         const availableWorkflows = getCleanCustomWorkflows(workflows);
@@ -766,8 +750,7 @@ export default runExtension(async ({ extensionAPI }) => {
       const parentUid = getBlockUidFromTarget(b);
       if (
         parentUid &&
-        !b.hasAttribute("data-roamjs-smartblock-button") &&
-        b.textContent
+        !b.hasAttribute("data-roamjs-smartblock-button")
       ) {
         const text = getTextByBlockUid(parentUid);
         b.setAttribute("data-roamjs-smartblock-button", "true");
