@@ -717,18 +717,15 @@ export default runExtension(async ({ extensionAPI }) => {
         if (iconSetting && isValidBlueprintIcon(iconSetting)) {
           iconElement = document.createElement("span");
           iconElement.className = `bp3-icon bp3-icon-${iconSetting}`;
-          if (hasTextContent) {
-            iconElement.style.marginRight = "7px";
-          }
-          iconElement.style.marginLeft = "0px";
+          if (hasTextContent) iconElement.style.margin = "0 7px 0 0";
+          else iconElement.style.margin = "0";
         } else {
           // Default lego icon
           const img = new Image();
           img.src =
             "https://raw.githubusercontent.com/RoamJS/smartblocks/main/src/img/lego3blocks.png";
-          if (hasTextContent) {
-            img.style.marginRight = "7px";
-          }
+          if (hasTextContent) img.style.margin = "0 7px 0 0";
+          else img.style.margin = "0";
           img.width = 17;
           img.height = 14;
           iconElement = img;
