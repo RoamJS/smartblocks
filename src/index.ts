@@ -747,7 +747,7 @@ export default runExtension(async ({ extensionAPI }) => {
 
   const unloads = new Set<() => void>();
   const buttonLogoObserver = createHTMLObserver({
-    className: "bp3-button",
+    className: "bp3-button bp3-small dont-focus-block",
     tag: "BUTTON",
     callback: (b) => {
       const parentUid = getBlockUidFromTarget(b);
