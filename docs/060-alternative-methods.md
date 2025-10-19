@@ -156,8 +156,12 @@ The input field in the configuration page is a special input field. It will reac
 
 # Command Palette
 
-You can surface all custom SmartBlock workflows to be triggered from the Roam Command Palette. To do so, head to the SmartBlocks Settings within RoamDepot, toggle on the command palette setting.
+You can surface all custom SmartBlock workflows to be triggered from the Roam Command Palette. To do so, head to the SmartBlocks Settings within RoamDepot and toggle on the command palette setting. If you only want specific workflows to show up, enable the "Command Palette Opt-In" setting and add `<%CMD%>` to the workflow title you wish to expose.
 
 ![](media/command-palette.png)
 
 Each workflow will start with a prefix `Trigger SmartBlock:` with the name of the workflow at the end of the command label.
+
+## Refreshing Command Palette Workflows
+
+After adding or removing the `<%CMD%>` tag from workflow titles (when Command Palette Opt-In is enabled), you may need to refresh the list of available workflows in the command palette. To do this, open the Roam Command Palette and search for "Refresh SmartBlocks Command Palette". Running this command will update the command palette with your current workflows and display a confirmation message.

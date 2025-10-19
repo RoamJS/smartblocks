@@ -1357,6 +1357,14 @@ Add any of these commands to the workflow name to modify the workflow's entire b
 
 - `#SmartBlock NameOfSmartBlock <%HIDE%>`
 
+## CMD
+
+**Purpose:** Opt the workflow into appearing in Roam's command palette when the Command Palette setting requires it
+
+**Usage**
+
+- `#SmartBlock NameOfSmartBlock <%CMD%>`
+
 ## NOCURSOR
 
 **Purpose:** After a SmartBlock has finished running, Roam should be left in a non-edit state, meaning no block currently has editing focus
