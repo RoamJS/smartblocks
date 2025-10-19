@@ -293,6 +293,9 @@ const predefinedChildrenByUid = Object.fromEntries(
 );
 
 export const HIDE_REGEX = /<%HIDE%>/i;
+export const COMMAND_PALETTE_REGEX = /<%CMD%>/i;
+const HIDE_REGEX_GLOBAL = /<%HIDE%>/gi;
+const COMMAND_PALETTE_REGEX_GLOBAL = /<%CMD%>/gi;
 
 const customWorkflowsCache: {
   current?: { uid: string; name: string }[];
@@ -338,15 +341,22 @@ export const getCustomWorkflows = () => {
 export const getVisibleCustomWorkflows = () =>
   getCustomWorkflows()
     .filter(({ name }) => !HIDE_REGEX.test(name))
-    .map(({ name, uid }) => ({
-      uid,
-      name: name.replace(HIDE_REGEX, ""),
-    }));
+    .map(({ name, uid }) => {
+      const commandPaletteEligible = COMMAND_PALETTE_REGEX.test(name);
+      return {
+        uid,
+        name: name
+          .replace(HIDE_REGEX_GLOBAL, "")
+          .replace(COMMAND_PALETTE_REGEX_GLOBAL, "")
+          .trim(),
+        commandPaletteEligible,
+      };
+    });
 
 export const getCleanCustomWorkflows = (workflows = getCustomWorkflows()) =>
   workflows.map(({ name, uid }) => ({
     uid,
-    name: name.replace(/<%[A-Z]+%>/, "").trim(),
+    name: name.replace(/<%[A-Z]+%>/g, "").trim(),
   }));
 
 const getFormatter =

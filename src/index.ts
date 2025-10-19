@@ -115,55 +115,74 @@ export default runExtension(async ({ extensionAPI }) => {
   color: #4b5563;
 }`);
 
-  const toggleCommandPalette = (flag: boolean) => {
-    const workflows = getCleanCustomWorkflows(getVisibleCustomWorkflows());
-    if (flag) {
-      workflows.forEach((wf) => {
-        window.roamAlphaAPI.ui.commandPalette.addCommand({
-          label: `Trigger SmartBlock: ${wf.name}`,
-          callback: () => {
-            const targetUid =
-              window.roamAlphaAPI.ui.getFocusedBlock()?.["block-uid"];
-            // Because the command palette does a blur event on close,
-            // we want a slight delay so that we could keep focus
-            window.setTimeout(() => {
-              if (targetUid) {
-                sbBomb({
-                  srcUid: wf.uid,
-                  target: {
-                    uid: targetUid,
-                    isParent: false,
-                    start: getTextByBlockUid(targetUid).length,
-                  },
-                  mutableCursor: true,
-                });
-              } else {
-                window.roamAlphaAPI.ui.mainWindow
-                  .getOpenPageOrBlockUid()
-                  .then((uid) =>
-                    sbBomb({
-                      srcUid: wf.uid,
-                      target: {
-                        uid:
-                          uid ||
-                          window.roamAlphaAPI.util.dateToPageUid(new Date()),
-                        isParent: true,
-                      },
-                      mutableCursor: true,
-                    })
-                  );
-              }
-            }, 500);
-          },
-        });
+  let commandPaletteEnabled = false;
+  let commandPaletteOptIn = !!extensionAPI.settings.get(
+    "command-palette-opt-in"
+  );
+
+  const removeCommandPaletteCommands = () => {
+    getCleanCustomWorkflows(getVisibleCustomWorkflows()).forEach((wf) => {
+      window.roamAlphaAPI.ui.commandPalette.removeCommand({
+        label: `Trigger SmartBlock: ${wf.name}`,
       });
-    } else {
-      workflows.forEach((wf) => {
-        window.roamAlphaAPI.ui.commandPalette.removeCommand({
-          label: `Trigger SmartBlock: ${wf.name}`,
-        });
+    });
+  };
+
+  const addCommandPaletteCommands = () => {
+    const eligibleWorkflows = getVisibleCustomWorkflows().filter((wf) =>
+      commandPaletteOptIn ? wf.commandPaletteEligible : true
+    );
+    getCleanCustomWorkflows(eligibleWorkflows).forEach((wf) => {
+      window.roamAlphaAPI.ui.commandPalette.addCommand({
+        label: `Trigger SmartBlock: ${wf.name}`,
+        callback: () => {
+          const targetUid =
+            window.roamAlphaAPI.ui.getFocusedBlock()?.["block-uid"];
+          // Because the command palette does a blur event on close,
+          // we want a slight delay so that we could keep focus
+          window.setTimeout(() => {
+            if (targetUid) {
+              sbBomb({
+                srcUid: wf.uid,
+                target: {
+                  uid: targetUid,
+                  isParent: false,
+                  start: getTextByBlockUid(targetUid).length,
+                },
+                mutableCursor: true,
+              });
+            } else {
+              window.roamAlphaAPI.ui.mainWindow
+                .getOpenPageOrBlockUid()
+                .then((uid) =>
+                  sbBomb({
+                    srcUid: wf.uid,
+                    target: {
+                      uid:
+                        uid ||
+                        window.roamAlphaAPI.util.dateToPageUid(new Date()),
+                      isParent: true,
+                    },
+                    mutableCursor: true,
+                  })
+                );
+            }
+          }, 500);
+        },
       });
+    });
+  };
+
+  const syncCommandPaletteCommands = () => {
+    removeCommandPaletteCommands();
+    if (commandPaletteEnabled) {
+      addCommandPaletteCommands();
     }
+  };
+
+  const toggleCommandPalette = (flag: boolean) => {
+    commandPaletteEnabled = flag;
+    syncCommandPaletteCommands();
   };
 
   let trigger = "jj";
@@ -193,6 +212,19 @@ export default runExtension(async ({ extensionAPI }) => {
           type: "switch",
           onChange: (e) =>
             toggleCommandPalette((e.target as HTMLInputElement).checked),
+        },
+      },
+      {
+        id: "command-palette-opt-in",
+        name: "Command Palette Opt-In",
+        description:
+          "If enabled, workflows must include <%CMD%> in their title to appear in the command palette",
+        action: {
+          type: "switch",
+          onChange: (e) => {
+            commandPaletteOptIn = (e.target as HTMLInputElement).checked;
+            syncCommandPaletteCommands();
+          },
         },
       },
       {
@@ -258,7 +290,8 @@ export default runExtension(async ({ extensionAPI }) => {
       },
     ],
   });
-  toggleCommandPalette(!!extensionAPI.settings.get("command-palette"));
+  commandPaletteEnabled = !!extensionAPI.settings.get("command-palette");
+  syncCommandPaletteCommands();
   refreshTrigger(extensionAPI.settings.get("trigger") as string);
 
   const customCommands: { text: string; help: string }[] = [];
@@ -510,6 +543,21 @@ export default runExtension(async ({ extensionAPI }) => {
               .map((a) => (a as [PullBlock])[0]?.[":node/title"])
               .filter((a): a is string => !!a)
           : [],
+      });
+    },
+  });
+
+  const REFRESH_SMARTBLOCKS_COMMAND_LABEL =
+    "Refresh SmartBlocks Command Palette";
+  window.roamAlphaAPI.ui.commandPalette.addCommand({
+    label: REFRESH_SMARTBLOCKS_COMMAND_LABEL,
+    callback: () => {
+      syncCommandPaletteCommands();
+      renderToast({
+        id: "smartblocks-command-palette-refresh",
+        intent: Intent.SUCCESS,
+        content: "Command palette workflows refreshed",
+        timeout: 2000,
       });
     },
   });
@@ -891,7 +939,10 @@ export default runExtension(async ({ extensionAPI }) => {
       { type: "input", listener: documentInputListener, el: document },
       { type: "keydown", listener: globalHotkeyListener, el: document },
     ],
-    commands: [RUN_MULTIPLE_SMARTBLOCKS_COMMAND_LABEL],
+    commands: [
+      RUN_MULTIPLE_SMARTBLOCKS_COMMAND_LABEL,
+      REFRESH_SMARTBLOCKS_COMMAND_LABEL,
+    ],
     unload: () => {
       unloads.forEach((u) => u());
       window.clearTimeout(getDailyConfig()["next-run-timeout"]);
