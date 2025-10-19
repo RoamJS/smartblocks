@@ -430,6 +430,11 @@ export default runExtension(async ({ extensionAPI }) => {
                 id: "HIDE",
                 help: "Workflow modifier that hides this workflow from the standard SmartBlock menu execution",
               },
+              {
+                text: "CMD",
+                id: "CMD",
+                help: "Workflow modifier that opts this workflow into appearing in the command palette when Command Palette Opt-In is enabled",
+              },
               ...customCommands.map(({ text, help }) => ({
                 text,
                 id: text,
