@@ -1777,8 +1777,8 @@ export const COMMANDS: {
         if (textArea?.parentNode) {
           textArea.parentNode.removeChild(textArea);
         }
-        return "";
       }
+      return "";
     },
   },
   {
