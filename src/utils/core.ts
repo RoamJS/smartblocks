@@ -2508,7 +2508,9 @@ const processBlockTextToPromises = (s: string) => {
               return {
                 args: s.flatMap((c) => flattenText(c)),
                 nodeProps: s.reduce((prev, cur) => {
-                  const nodeProps = { ...cur[0] } || ({} as InputTextNode);
+                  const nodeProps = cur[0]
+                    ? { ...cur[0] }
+                    : ({} as InputTextNode);
                   const { text, uid, children, ...rest } = nodeProps;
                   return { ...prev, ...rest };
                 }, {}),
