@@ -1742,9 +1742,43 @@ export const COMMANDS: {
   {
     text: "CLIPBOARDCOPY",
     help: "Writes text to the clipboard\n\n1: text",
-    handler: (text = "") => {
-      navigator.clipboard.writeText(text);
-      return "";
+    handler: async (text = "") => {
+      try {
+        // Try modern clipboard API first
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(text);
+          return "";
+        }
+      } catch (error) {
+        console.warn("Clipboard API failed, trying fallback:", error);
+      }
+
+      // Fallback for Safari and other browsers
+      let textArea: HTMLTextAreaElement | null = null;
+      try {
+        textArea = document.createElement("textarea");
+        textArea.value = text;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-999999px";
+        textArea.style.top = "-999999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+
+        const successful = document.execCommand("copy");
+
+        if (!successful) {
+          throw new Error("execCommand('copy') failed");
+        }
+      } catch (e) {
+        const error = e as Error;
+        console.error("Failed to copy to clipboard:", error);
+      } finally {
+        if (textArea?.parentNode) {
+          textArea.parentNode.removeChild(textArea);
+        }
+        return "";
+      }
     },
   },
   {
