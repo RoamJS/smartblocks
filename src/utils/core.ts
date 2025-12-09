@@ -2300,8 +2300,12 @@ export const COMMANDS: {
   },
   {
     text: "ACTIVEUSERS",
-    help: "Gets all users who created/edited a block.\n\nDefault is set to the last three month.\n\n1: (Optional) NLP expression for date basis\n\n2: (Optional) Format of Output",
-    handler: (nlp = "three months ago", format = `[[{text}]]`) => {
+    help: "Gets all users who created/edited a block.\n\nDefault is set to the last three month.\n\n1: (Optional) NLP expression for date basis\n\n2: (Optional) Format of Output\n\n3: (Optional) Sort (ASC,DESC,NONE)",
+    handler: (
+      nlp = "three months ago",
+      format = `[[{text}]]`,
+      sort = "NONE"
+    ) => {
       const timestamp =
         parseNlpDate(nlp, getDateBasisDate()).valueOf() ||
         // chrono fails basic parsing requiring forward date if ambiguous
@@ -2322,13 +2326,19 @@ export const COMMANDS: {
                 [(< ${timestamp} ?time)]
           ]
         `) as [PullBlock, PullBlock][]
-      ).map(([user]) => {
-        return getFormatter(format)({
-          text: user[":node/title"],
-          uid: user[":block/uid"],
-        });
-      });
-      return activeUsers;
+      ).map(([user]) => ({
+        text: user[":node/title"] || user[":block/uid"] || "",
+        uid: user[":block/uid"],
+      }));
+      const sortedUsers =
+        sort === "NONE"
+          ? activeUsers
+          : activeUsers.sort(
+              sort === "DESC"
+                ? (a, b) => b.text.localeCompare(a.text)
+                : (a, b) => a.text.localeCompare(b.text)
+            );
+      return sortedUsers.map((user) => getFormatter(format)(user));
     },
   },
   {
