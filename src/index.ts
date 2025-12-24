@@ -598,16 +598,18 @@ export default runExtension(async ({ extensionAPI }) => {
     el,
     parentUid,
     hideIcon,
+    occurrenceIndex = 0,
   }: {
     textContent: string;
     text: string;
     el: HTMLElement;
     parentUid: string;
     hideIcon?: boolean;
+    occurrenceIndex?: number;
   }) => {
     // We include textcontent here bc there could be multiple smartblocks in a block
     const label = textContent.trim();
-    const parsed = parseSmartBlockButton(label, text);
+    const parsed = parseSmartBlockButton(label, text, occurrenceIndex);
     if (parsed) {
       const { index, full, buttonContent, workflowName, variables } = parsed;
       const clickListener = () => {
@@ -806,6 +808,9 @@ export default runExtension(async ({ extensionAPI }) => {
   };
 
   const unloads = new Set<() => void>();
+  // Track button occurrences per block: blockUid -> label -> count
+  const buttonOccurrences = new Map<string, Map<string, number>>();
+
   const buttonLogoObserver = createHTMLObserver({
     className: "bp3-button bp3-small dont-focus-block",
     tag: "BUTTON",
@@ -815,17 +820,38 @@ export default runExtension(async ({ extensionAPI }) => {
         const text = getTextByBlockUid(parentUid);
         b.setAttribute("data-roamjs-smartblock-button", "true");
 
-        // We include textcontent here bc there could be multiple smartblocks in a block
-        // TODO: if multiple smartblocks have the same textContent, we need to distinguish them
+        // Track occurrence index for buttons with the same label in the same block
+        const label = (b.textContent || "").trim();
+        if (!buttonOccurrences.has(parentUid)) {
+          buttonOccurrences.set(parentUid, new Map());
+        }
+        const blockOccurrences = buttonOccurrences.get(parentUid)!;
+        const occurrenceIndex = blockOccurrences.get(label) || 0;
+        blockOccurrences.set(label, occurrenceIndex + 1);
+
         const unload = registerElAsSmartBlockTrigger({
           textContent: b.textContent || "",
           text,
           el: b,
           parentUid,
+          occurrenceIndex,
         });
         unloads.add(() => {
           b.removeAttribute("data-roamjs-smartblock-button");
           unload();
+          // Clean up occurrence tracking when button is removed
+          const blockOccurrences = buttonOccurrences.get(parentUid);
+          if (blockOccurrences) {
+            const currentCount = blockOccurrences.get(label) || 0;
+            if (currentCount <= 1) {
+              blockOccurrences.delete(label);
+              if (blockOccurrences.size === 0) {
+                buttonOccurrences.delete(parentUid);
+              }
+            } else {
+              blockOccurrences.set(label, currentCount - 1);
+            }
+          }
         });
       }
     },
