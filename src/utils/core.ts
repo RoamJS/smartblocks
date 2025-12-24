@@ -2854,17 +2854,28 @@ export const sbBomb = async ({
             const { uid: blockUid, selection } =
               smartBlocksContext.cursorPosition;
             // There's a bug with this setter below where the promise doesn't resolve
-            window.roamAlphaAPI.ui.setBlockFocusAndSelection({
-              location: {
-                "block-uid": blockUid,
-                "window-id":
-                  windowId ||
-                  `${getCurrentUserUid()}-body-outline-${getPageUidByBlockUid(
-                    blockUid
-                  )}`,
-              },
-              selection: { start: selection },
-            });
+            let resolvedWindowId = windowId;
+            if (!resolvedWindowId) {
+              // Try to get windowId from focused block as fallback
+              const focusedBlock = window.roamAlphaAPI.ui.getFocusedBlock();
+              resolvedWindowId = focusedBlock?.["window-id"];
+            }
+            if (!resolvedWindowId) {
+              // Fallback: construct windowId from page UID
+              const pageUid = getPageUidByBlockUid(blockUid);
+              if (pageUid) {
+                resolvedWindowId = `${getCurrentUserUid()}-body-outline-${pageUid}`;
+              }
+            }
+            if (resolvedWindowId) {
+              window.roamAlphaAPI.ui.setBlockFocusAndSelection({
+                location: {
+                  "block-uid": blockUid,
+                  "window-id": resolvedWindowId,
+                },
+                selection: { start: selection },
+              });
+            }
           }
         } else if (document.activeElement?.tagName === "TEXTAREA") {
           (document.activeElement as HTMLTextAreaElement).blur();
