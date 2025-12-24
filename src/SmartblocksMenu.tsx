@@ -108,13 +108,19 @@ const SmartblocksMenu = ({
   const keydownListener = useCallback(
     (e: KeyboardEvent) => {
       if (!menuRef.current) return;
-      if (e.key === "ArrowDown") {
+      const isDown =
+        e.key === "ArrowDown" ||
+        (e.ctrlKey && (e.key === "n" || e.key === "j"));
+      const isUp =
+        e.key === "ArrowUp" ||
+        (e.ctrlKey && (e.key === "p" || e.key === "k"));
+      if (isDown) {
         const index = Number(menuRef.current.getAttribute("data-active-index"));
         const count = menuRef.current.childElementCount;
         setActiveIndex((index + 1) % count);
         e.stopPropagation();
         e.preventDefault();
-      } else if (e.key === "ArrowUp") {
+      } else if (isUp) {
         const index = Number(menuRef.current.getAttribute("data-active-index"));
         const count = menuRef.current.childElementCount;
         setActiveIndex((index - 1 + count) % count);
