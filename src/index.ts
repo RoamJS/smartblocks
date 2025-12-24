@@ -107,6 +107,11 @@ export default runExtension(async ({ extensionAPI }) => {
 .roamjs-smartblock-menu {
   width: 300px;
 }
+
+.roamjs-hotkey-dropdown .bp3-menu {
+  max-height: 300px;
+  overflow-y: auto;
+}
 .rm-settings-tabs .roamjs-daily-config-tabs .bp3-tab-list {
   padding: 2px;
   background: none;
