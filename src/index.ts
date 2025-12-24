@@ -136,8 +136,9 @@ export default runExtension(async ({ extensionAPI }) => {
       window.roamAlphaAPI.ui.commandPalette.addCommand({
         label: `Trigger SmartBlock: ${wf.name}`,
         callback: () => {
-          const targetUid =
-            window.roamAlphaAPI.ui.getFocusedBlock()?.["block-uid"];
+          const focusedBlock = window.roamAlphaAPI.ui.getFocusedBlock();
+          const targetUid = focusedBlock?.["block-uid"];
+          const windowId = focusedBlock?.["window-id"];
           // Because the command palette does a blur event on close,
           // we want a slight delay so that we could keep focus
           window.setTimeout(() => {
@@ -148,6 +149,7 @@ export default runExtension(async ({ extensionAPI }) => {
                   uid: targetUid,
                   isParent: false,
                   start: getTextByBlockUid(targetUid).length,
+                  windowId,
                 },
                 mutableCursor: true,
               });
@@ -162,6 +164,7 @@ export default runExtension(async ({ extensionAPI }) => {
                         uid ||
                         window.roamAlphaAPI.util.dateToPageUid(new Date()),
                       isParent: true,
+                      windowId,
                     },
                     mutableCursor: true,
                   })
@@ -473,12 +476,14 @@ export default runExtension(async ({ extensionAPI }) => {
             .find(([k]) => new RegExp(`${k.join("")}$`).test(valueToCursor)) ||
           [];
         if (k && srcUid) {
+          const { blockUid, windowId } = getUids(textarea);
           sbBomb({
             srcUid,
             target: {
-              uid: getUids(textarea).blockUid,
+              uid: blockUid,
               start: textarea.selectionStart - k.length,
               end: textarea.selectionStart,
+              windowId,
             },
             mutableCursor: true,
           });
@@ -506,8 +511,9 @@ export default runExtension(async ({ extensionAPI }) => {
       if (srcUid) {
         e.preventDefault();
         e.stopPropagation();
-        const focusedUid =
-          window.roamAlphaAPI.ui.getFocusedBlock()?.["block-uid"];
+        const focusedBlock = window.roamAlphaAPI.ui.getFocusedBlock();
+        const focusedUid = focusedBlock?.["block-uid"];
+        const windowId = focusedBlock?.["window-id"];
         const target =
           focusedUid ||
           (await createBlock({
@@ -521,6 +527,7 @@ export default runExtension(async ({ extensionAPI }) => {
             uid: target,
             start,
             end: start,
+            windowId,
           },
           mutableCursor: true,
         }).then((n) => {
