@@ -1,6 +1,7 @@
 export const parseSmartBlockButton = (
   label: string,
-  text: string
+  text: string,
+  occurrenceIndex: number = 0
 ):
   | {
       index: number;
@@ -14,10 +15,16 @@ export const parseSmartBlockButton = (
   const trimmedLabel = label.trim();
   const buttonRegex = trimmedLabel
     ? new RegExp(
-        `{{(${trimmedLabel.replace(/\\+/g, "\\+")}):(?:42)?SmartBlock:(.*?)}}`
+        `{{(${trimmedLabel.replace(/\\+/g, "\\+")}):(?:42)?SmartBlock:(.*?)}}`,
+        "g"
       )
-    : /{{\s*:(?:42)?SmartBlock:(.*?)}}/;
-  const match = buttonRegex.exec(text);
+    : /{{\s*:(?:42)?SmartBlock:(.*?)}/g;
+
+  // Find all matches
+  const matches = Array.from(text.matchAll(buttonRegex));
+  if (matches.length === 0 || occurrenceIndex >= matches.length) return null;
+
+  const match = matches[occurrenceIndex];
   if (!match) return null;
   const index = match.index;
   const full = match[0];
