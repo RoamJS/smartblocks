@@ -81,6 +81,7 @@ const HotKeyEntry = ({
           }}
           transformItem={(e) => workflowNamesByUid[e]}
           className={"w-full"}
+          popoverProps={{ portalClassName: "roamjs-hotkey-dropdown" }}
         />
       </Label>
       <Button
