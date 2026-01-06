@@ -15,10 +15,10 @@ export const parseSmartBlockButton = (
   const trimmedLabel = label.trim();
   const buttonRegex = trimmedLabel
     ? new RegExp(
-        `{{(${trimmedLabel.replace(/\\+/g, "\\+")}):(?:42)?SmartBlock:(.*?)}}`,
+        `{{(${trimmedLabel.replace(/\+/g, "\\+")}):(?:42)?SmartBlock:(.*?)}}`,
         "g"
       )
-    : /{{\s*:(?:42)?SmartBlock:(.*?)}/g;
+    : /{{\s*:(?:42)?SmartBlock:(.*?)}}/g;
 
   // Find all matches
   const matches = Array.from(text.matchAll(buttonRegex));
