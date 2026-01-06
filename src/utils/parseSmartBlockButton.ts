@@ -12,10 +12,12 @@ export const parseSmartBlockButton = (
       variables: Record<string, string>;
     }
   | null => {
+  const escapeRegex = (value: string) =>
+    value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const trimmedLabel = label.trim();
   const buttonRegex = trimmedLabel
     ? new RegExp(
-        `{{(${trimmedLabel.replace(/\+/g, "\\+")}):(?:42)?SmartBlock:(.*?)}}`,
+        `{{(${escapeRegex(trimmedLabel)}):(?:42)?SmartBlock:(.*?)}}`,
         "g"
       )
     : /{{\s*:(?:42)?SmartBlock:(.*?)}}/g;

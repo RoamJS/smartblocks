@@ -115,3 +115,12 @@ test("parses SmartBlock button label containing plus signs", () => {
     ButtonContent: "Add+More",
   });
 });
+
+test("parses SmartBlock button label with regex special characters", () => {
+  const text = "{{Add+(Test)[One]?:SmartBlock:WeirdWorkflow}}";
+  const result = parseSmartBlockButton("Add+(Test)[One]?", text);
+  expect(result?.workflowName).toBe("WeirdWorkflow");
+  expect(result?.variables).toMatchObject({
+    ButtonContent: "Add+(Test)[One]?",
+  });
+});
