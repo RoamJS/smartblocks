@@ -1655,6 +1655,9 @@ export const COMMANDS: {
           ? getBasicTreeByParentUid(targetParentUid).length
           : Math.max(0, Number(orderArg) || 0);
 
+      if (typeof (window.roamAlphaAPI as any).moveBlock !== "function") {
+        return "--> MOVEBLOCK failed: moveBlock API not available <--";
+      }
       try {
         await (window.roamAlphaAPI as any).moveBlock({
           location: { "parent-uid": targetParentUid, order },
@@ -1662,7 +1665,7 @@ export const COMMANDS: {
         });
         return `((${sourceUid}))`;
       } catch (e) {
-        const message = (e as Error)?.message || e;
+        const message = e instanceof Error ? e.message : String(e);
         return `--> MOVEBLOCK failed: ${message} <--`;
       }
     },
