@@ -813,6 +813,7 @@ export default runExtension(async ({ extensionAPI }) => {
   const buttonTextByBlockUid = new Map<string, string>();
   const buttonGenerationByBlockUid = new Map<string, number>();
   const buttonCleanupByElement = new Map<HTMLElement, () => void>();
+  const buttonElementsByBlockUid = new Map<string, Set<HTMLElement>>();
 
   const buttonLogoObserver = createHTMLObserver({
     className: "bp3-button bp3-small dont-focus-block",
@@ -820,6 +821,17 @@ export default runExtension(async ({ extensionAPI }) => {
     callback: (b) => {
       const parentUid = getBlockUidFromTarget(b);
       if (parentUid && !b.hasAttribute("data-roamjs-smartblock-button")) {
+        // Clean up disconnected elements first so stale counts don't break
+        // occurrence tracking during re-renders.
+        const trackedButtons = buttonElementsByBlockUid.get(parentUid);
+        if (trackedButtons) {
+          Array.from(trackedButtons).forEach((el) => {
+            if (!el.isConnected) {
+              buttonCleanupByElement.get(el)?.();
+            }
+          });
+        }
+
         const text = getTextByBlockUid(parentUid);
         b.setAttribute("data-roamjs-smartblock-button", "true");
 
@@ -855,6 +867,16 @@ export default runExtension(async ({ extensionAPI }) => {
           unloads.delete(cleanup);
           b.removeAttribute("data-roamjs-smartblock-button");
           unload();
+          const blockButtons = buttonElementsByBlockUid.get(parentUid);
+          if (blockButtons) {
+            blockButtons.delete(b);
+            if (blockButtons.size === 0) {
+              buttonElementsByBlockUid.delete(parentUid);
+              buttonOccurrences.delete(parentUid);
+              buttonTextByBlockUid.delete(parentUid);
+              buttonGenerationByBlockUid.delete(parentUid);
+            }
+          }
           if ((buttonGenerationByBlockUid.get(parentUid) || 0) !== generation) {
             return;
           }
@@ -866,12 +888,20 @@ export default runExtension(async ({ extensionAPI }) => {
               blockOccurrences.delete(label);
               if (blockOccurrences.size === 0) {
                 buttonOccurrences.delete(parentUid);
+                if (!buttonElementsByBlockUid.get(parentUid)?.size) {
+                  buttonTextByBlockUid.delete(parentUid);
+                  buttonGenerationByBlockUid.delete(parentUid);
+                }
               }
             } else {
               blockOccurrences.set(label, currentCount - 1);
             }
           }
         };
+        const blockButtons =
+          buttonElementsByBlockUid.get(parentUid) || new Set<HTMLElement>();
+        blockButtons.add(b);
+        buttonElementsByBlockUid.set(parentUid, blockButtons);
         buttonCleanupByElement.set(b, cleanup);
         unloads.add(cleanup);
       }

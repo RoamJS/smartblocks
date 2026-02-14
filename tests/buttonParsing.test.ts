@@ -107,6 +107,12 @@ test("returns null when occurrence index is out of bounds", () => {
   expect(result).toBeNull();
 });
 
+test("returns null when occurrence index is negative", () => {
+  const text = "{{Only One:SmartBlock:Workflow}}";
+  const result = parseSmartBlockButton("Only One", text, -1);
+  expect(result).toBeNull();
+});
+
 test("parses SmartBlock button label containing plus signs", () => {
   const text = "{{Add+More:SmartBlock:PlusWorkflow}}";
   const result = parseSmartBlockButton("Add+More", text);
