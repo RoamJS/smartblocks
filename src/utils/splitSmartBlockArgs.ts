@@ -2,6 +2,14 @@ const MONTH_DAY_REGEX =
   /^(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d{1,2}(?:st|nd|rd|th)?$/i;
 const YEAR_REGEX = /^\d{4}$/;
 
+/**
+ * Re-joins "Month Day, Year" date tokens that were split on commas.
+ *
+ * BLOCKMENTIONSDATED signature: (limit, title, startDate, endDate, sort, format, ...search)
+ * Positions 0-1 (limit, title) are passed through unchanged.
+ * Starting at position 2, up to 2 date tokens are coalesced (startDate + endDate).
+ * The `mergedDates < 2` guard stops coalescing after both date slots are filled.
+ */
 const coalesceBlockMentionsDatedDates = (args: string[]) => {
   const merged = args.slice(0, 2);
   let i = 2;
