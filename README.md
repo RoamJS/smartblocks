@@ -1,6 +1,12 @@
+<a href="https://roamjs.com/">
+    <img src="https://avatars.githubusercontent.com/u/138642184" alt="RoamJS Logo" title="RoamJS" align="right" height="60" />
+</a>
+
 # SmartBlocks
 
-Create custom and programmable templates from within Roam!
+**Build powerful, dynamic workflows in Roam—like programmable templates that can write, transform, and fetch data from your graph. Automate daily notes, meeting prep, task flows, and repeatable processes with a rich command system.**
+
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/RoamJS/smartblocks)
 
 ## Overview
 
@@ -29,10 +35,6 @@ The following steps dive into all the features SmartBlocks has to offer in incre
 [![](https://raw.githubusercontent.com/RoamJs/smartblocks/main/docs/media/vargas-smartblocks-demo-thumbnail.gif)](https://www.loom.com/share/954d916643754027a3889fd5bf7f24dd)
 
 <!-- <div style="position: relative; padding-bottom: 66.66666666666666%; height: 0;"><iframe src="https://www.loom.com/embed/954d916643754027a3889fd5bf7f24dd" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></iframe></div> -->
-
-## Migration
-
-This extension was inspired by and acts as version 2 of the original SmartBlocks module in the Roam42 extension. It will soon replace the current SmartBlocks module in Roam42. For a list of all the non-backward compatible changes from V1 to V2, check out the [Migration Guide](https://github.com/RoamJS/smartblocks/blob/main/docs/migration-guide.md).
 
 ## Support
 
