@@ -148,7 +148,7 @@ export default runExtension(async ({ extensionAPI }) => {
           // we want a slight delay so that we could keep focus
           window.setTimeout(() => {
             if (targetUid) {
-              runSbBomb({
+              sbBomb({
                 srcUid: wf.uid,
                 target: {
                   uid: targetUid,
@@ -162,7 +162,7 @@ export default runExtension(async ({ extensionAPI }) => {
               window.roamAlphaAPI.ui.mainWindow
                 .getOpenPageOrBlockUid()
                 .then((uid) =>
-                  runSbBomb({
+                  sbBomb({
                     srcUid: wf.uid,
                     target: {
                       uid:
@@ -203,19 +203,9 @@ export default runExtension(async ({ extensionAPI }) => {
       .trim();
     triggerRegex = new RegExp(`${trigger}(.*)$`);
   };
-  const parseStreamOutputDelay = (value: unknown, fallback = 10) => {
-    const parsed = Math.floor(Number(value));
-    return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
-  };
-
   let isCustomOnly = extensionAPI.settings.get("custom-only") as boolean;
   let hideButtonIcon = extensionAPI.settings.get("hide-button-icon") as boolean;
   let highlighting = extensionAPI.settings.get("highlighting") as boolean;
-  let streamOutput = !!extensionAPI.settings.get("stream-output");
-  let streamOutputDelay = parseStreamOutputDelay(
-    extensionAPI.settings.get("stream-output-delay"),
-    10
-  );
 
   extensionAPI.settings.panel.create({
     tabTitle: "SmartBlocks",
@@ -254,31 +244,6 @@ export default runExtension(async ({ extensionAPI }) => {
         name: "Trigger",
         description:
           "The key combination to used to pull up the smart blocks menu",
-      },
-      {
-        id: "stream-output",
-        name: "Stream Output",
-        action: {
-          type: "switch",
-          onChange: (e) => {
-            streamOutput = e.target.checked;
-          },
-        },
-        description:
-          "If checked, SmartBlock output is inserted progressively instead of all at once",
-      },
-      {
-        id: "stream-output-delay",
-        name: "Stream Delay",
-        action: {
-          type: "input",
-          onChange: (e) => {
-            streamOutputDelay = parseStreamOutputDelay(e.target.value, 0);
-          },
-          placeholder: "10",
-        },
-        description:
-          "Delay in milliseconds between streamed characters when Stream Output is enabled",
       },
       {
         id: "custom-only",
@@ -335,13 +300,6 @@ export default runExtension(async ({ extensionAPI }) => {
   commandPaletteEnabled = !!extensionAPI.settings.get("command-palette");
   syncCommandPaletteCommands();
   refreshTrigger(extensionAPI.settings.get("trigger") as string);
-  const runSbBomb = (props: Parameters<typeof sbBomb>[0]) =>
-    sbBomb({
-      ...props,
-      streamOutput,
-      streamOutputDelay,
-    });
-
   const customCommands: { text: string; help: string }[] = [];
 
   window.roamjs.extension.smartblocks = {
@@ -415,7 +373,7 @@ export default runExtension(async ({ extensionAPI }) => {
       return new Promise((resolve) =>
         setTimeout(
           () =>
-            runSbBomb({
+            sbBomb({
               srcUid,
               target: {
                 uid: targetUid,
@@ -522,7 +480,7 @@ export default runExtension(async ({ extensionAPI }) => {
           [];
         if (k && srcUid) {
           const { blockUid, windowId } = getUids(textarea);
-          runSbBomb({
+          sbBomb({
             srcUid,
             target: {
               uid: blockUid,
@@ -566,7 +524,7 @@ export default runExtension(async ({ extensionAPI }) => {
             parentUid: getCurrentPageUid(),
           }));
         const start = getTextByBlockUid(target).length;
-        runSbBomb({
+        sbBomb({
           srcUid,
           target: {
             uid: target,
@@ -721,7 +679,7 @@ export default runExtension(async ({ extensionAPI }) => {
               ? updateBlock({
                   uid: siblingUid,
                 }).then(() =>
-                  runSbBomb({
+                  sbBomb({
                     ...props,
                     target: {
                       uid: siblingUid,
@@ -735,7 +693,7 @@ export default runExtension(async ({ extensionAPI }) => {
                   parentUid: getParentUidByBlockUid(parentUid),
                   order: siblingIndex === -1 ? 0 : siblingIndex,
                 }).then((targetUid) =>
-                  runSbBomb({
+                  sbBomb({
                     ...props,
                     target: {
                       uid: targetUid,
@@ -746,7 +704,7 @@ export default runExtension(async ({ extensionAPI }) => {
                 );
           } else if (keepButton) {
             explicitTargetUid
-              ? runSbBomb({
+              ? sbBomb({
                   ...props,
                   target: {
                     uid: explicitTargetUid,
@@ -760,7 +718,7 @@ export default runExtension(async ({ extensionAPI }) => {
                   parentUid,
                   order,
                 }).then((targetUid) =>
-                  runSbBomb({
+                  sbBomb({
                     ...props,
                     target: {
                       uid: targetUid,
@@ -786,7 +744,7 @@ export default runExtension(async ({ extensionAPI }) => {
                     index + full.length
                   )}`,
             }).then(() =>
-              runSbBomb({
+              sbBomb({
                 ...props,
                 target: {
                   uid: parentUid,
