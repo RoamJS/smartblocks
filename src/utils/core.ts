@@ -986,6 +986,7 @@ export const COMMANDS: {
           title,
           submitButtonText,
           cancelButtonText,
+          // Prevent keyboard input leaking to Roam while form is open (#128, #130)
           enforceFocus: true,
         })
       ).then((values) => {
@@ -2733,33 +2734,6 @@ const resolveRefs = (nodes: InputTextNode[]): InputTextNode[] =>
 const count = (t: InputTextNode[] = []): number =>
   t.map((c) => count(c.children) + 1).reduce((p, c) => p + c, 0);
 
-const sleep = (ms: number) =>
-  new Promise<void>((resolve) => setTimeout(resolve, ms));
-
-const updateBlockStream = async ({
-  uid,
-  text,
-  delayMs,
-  ...rest
-}: {
-  uid: string;
-  text: string;
-  delayMs: number;
-} & Omit<Partial<InputTextNode>, "uid" | "children">) => {
-  const normalizedDelay = Number.isFinite(delayMs)
-    ? Math.max(0, Math.floor(delayMs))
-    : 0;
-  if (!text || !normalizedDelay) {
-    return updateBlock({ ...rest, uid, text });
-  }
-  for (let i = 1; i <= text.length; i += 1) {
-    await updateBlock({ ...rest, uid, text: text.slice(0, i) });
-    if (i < text.length) {
-      await sleep(normalizedDelay);
-    }
-  }
-};
-
 export const sbBomb = async ({
   srcUid,
   target: { uid, start = 0, end = start, isParent = false, order, windowId },
@@ -2767,8 +2741,6 @@ export const sbBomb = async ({
   mutableCursor,
   triggerUid = uid,
   fromDaily = false,
-  streamOutput = false,
-  streamOutputDelay = 0,
 }: {
   srcUid: string;
   target: {
@@ -2783,8 +2755,6 @@ export const sbBomb = async ({
   mutableCursor?: boolean;
   triggerUid?: string;
   fromDaily?: boolean;
-  streamOutput?: boolean;
-  streamOutputDelay?: number;
 }): Promise<0 | string> => {
   const finish = renderLoading(uid);
   resetContext({ targetUid: uid, variables, triggerUid });
@@ -2841,14 +2811,7 @@ export const sbBomb = async ({
                     ? ""
                     : textPostProcess.substring(indexDiffered)
                 }`;
-                return streamOutput
-                  ? updateBlockStream({
-                      ...firstChild,
-                      uid,
-                      text: finalText,
-                      delayMs: streamOutputDelay,
-                    })
-                  : updateBlock({
+                return updateBlock({
                       ...firstChild,
                       uid,
                       text: finalText,
