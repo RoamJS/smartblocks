@@ -130,3 +130,28 @@ test("parses SmartBlock button label with regex special characters", () => {
     ButtonContent: "Add+(Test)[One]?",
   });
 });
+
+test("returns null for empty text", () => {
+  const result = parseSmartBlockButton("Run", "");
+  expect(result).toBeNull();
+});
+
+test("returns null for empty label with no SmartBlock buttons in text", () => {
+  const result = parseSmartBlockButton("", "just some regular text");
+  expect(result).toBeNull();
+});
+
+test("parses 42SmartBlock variant", () => {
+  const text = "{{Run:42SmartBlock:LegacyWorkflow}}";
+  const result = parseSmartBlockButton("Run", text);
+  expect(result?.workflowName).toBe("LegacyWorkflow");
+});
+
+test("handles label with leading/trailing whitespace", () => {
+  // The function trims the label, but the regex requires an exact match
+  // against the text content after `{{`. Since the text has spaces around
+  // "Run" that don't appear in the trimmed regex pattern, there is no match.
+  const text = "{{  Run  :SmartBlock:TrimWorkflow}}";
+  const result = parseSmartBlockButton("  Run  ", text);
+  expect(result).toBeNull();
+});
