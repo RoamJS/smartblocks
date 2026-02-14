@@ -70,6 +70,7 @@ import apiPost from "roamjs-components/util/apiPost";
 import deleteBlock from "roamjs-components/writes/deleteBlock";
 import { zCommandOutput } from "./zodTypes";
 import { z } from "zod";
+import splitSmartBlockArgs from "./splitSmartBlockArgs";
 
 type FormDialogProps = Parameters<typeof FormDialog>[0];
 const renderFormDialog = createOverlayRender<FormDialogProps>(
@@ -127,6 +128,17 @@ const getDateFromBlock = (args: { text: string; title: string }) => {
   const fromTitle = DAILY_NOTE_PAGE_TITLE_REGEX.exec(args.title)?.[0];
   if (fromTitle) return window.roamAlphaAPI.util.pageTitleToDate(fromTitle);
   return new Date("");
+};
+
+const parseBlockMentionsDatedArg = (dateArg: string, referenceDate: Date) => {
+  const normalizedArg = dateArg.trim().replace(/^first of\b/i, "start of");
+  const title =
+    DAILY_REF_REGEX.exec(normalizedArg)?.[1] ||
+    DAILY_NOTE_PAGE_TITLE_REGEX.exec(extractTag(normalizedArg))?.[0];
+  return title
+    ? window.roamAlphaAPI.util.pageTitleToDate(title) ||
+        parseNlpDate(normalizedArg, referenceDate)
+    : parseNlpDate(normalizedArg, referenceDate);
 };
 const getPageUidByBlockUid = (blockUid: string): string =>
   (
@@ -974,6 +986,7 @@ export const COMMANDS: {
           title,
           submitButtonText,
           cancelButtonText,
+          enforceFocus: true,
         })
       ).then((values) => {
         if (!values) {
@@ -1052,7 +1065,7 @@ export const COMMANDS: {
   },
   {
     text: "BREADCRUMBS",
-    help: "Returns a list of parent block refs to a given block ref\n\n1: Block reference\n\n2: Separator used between block references",
+    help: "Returns page title and parent block refs to a given block ref\n\n1: Block reference\nPrefix with + to return page title only\nPrefix with - to return parent chain only\n\n2: Separator used between block references",
     handler: (uidArg = "", ...delim) => {
       const separator = delim.join(",") || " > ";
       const uid = uidArg.replace(/^(\+|-)?\(\(/, "").replace(/\)\)$/, "");
@@ -1218,11 +1231,11 @@ export const COMMANDS: {
       const undated = startArg === "-1" && endArg === "-1";
       const start =
         !undated && startArg && startArg !== "0"
-          ? startOfDay(parseNlpDate(startArg, referenceDate))
+          ? startOfDay(parseBlockMentionsDatedArg(startArg, referenceDate))
           : new Date(0);
       const end =
         !undated && endArg && endArg !== "0"
-          ? endOfDay(parseNlpDate(endArg, referenceDate))
+          ? endOfDay(parseBlockMentionsDatedArg(endArg, referenceDate))
           : new Date(9999, 11, 31);
       const limit = Number(limitArg);
       const title = extractTag(titleArg);
@@ -2479,24 +2492,7 @@ const processBlockTextToPromises = (s: string) => {
     const split = c.value.indexOf(":");
     const cmd = split < 0 ? c.value : c.value.substring(0, split);
     const afterColon = split < 0 ? "" : c.value.substring(split + 1);
-    let commandStack = 0;
-    const args = afterColon.split("").reduce((prev, cur, i, arr) => {
-      if (cur === "," && !commandStack && arr[i - 1] !== "\\") {
-        return [...prev, ""];
-      } else if (cur === "\\" && arr[i + 1] === ",") {
-        return prev;
-      } else {
-        if (cur === "%") {
-          if (arr[i - 1] === "<") {
-            commandStack++;
-          } else if (arr[i + 1] === ">") {
-            commandStack--;
-          }
-        }
-        const current = prev.slice(-1)[0] || "";
-        return [...prev.slice(0, -1), `${current}${cur}`];
-      }
-    }, [] as string[]);
+    const args = splitSmartBlockArgs(cmd, afterColon);
     const { handler, delayArgs, illegal } = handlerByCommand[cmd] || {};
     if (illegal) smartBlocksContext.illegalCommands.add(cmd);
     return (
@@ -2737,6 +2733,33 @@ const resolveRefs = (nodes: InputTextNode[]): InputTextNode[] =>
 const count = (t: InputTextNode[] = []): number =>
   t.map((c) => count(c.children) + 1).reduce((p, c) => p + c, 0);
 
+const sleep = (ms: number) =>
+  new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+const updateBlockStream = async ({
+  uid,
+  text,
+  delayMs,
+  ...rest
+}: {
+  uid: string;
+  text: string;
+  delayMs: number;
+} & Omit<Partial<InputTextNode>, "uid" | "children">) => {
+  const normalizedDelay = Number.isFinite(delayMs)
+    ? Math.max(0, Math.floor(delayMs))
+    : 0;
+  if (!text || !normalizedDelay) {
+    return updateBlock({ ...rest, uid, text });
+  }
+  for (let i = 1; i <= text.length; i += 1) {
+    await updateBlock({ ...rest, uid, text: text.slice(0, i) });
+    if (i < text.length) {
+      await sleep(normalizedDelay);
+    }
+  }
+};
+
 export const sbBomb = async ({
   srcUid,
   target: { uid, start = 0, end = start, isParent = false, order, windowId },
@@ -2744,6 +2767,8 @@ export const sbBomb = async ({
   mutableCursor,
   triggerUid = uid,
   fromDaily = false,
+  streamOutput = false,
+  streamOutputDelay = 0,
 }: {
   srcUid: string;
   target: {
@@ -2758,6 +2783,8 @@ export const sbBomb = async ({
   mutableCursor?: boolean;
   triggerUid?: string;
   fromDaily?: boolean;
+  streamOutput?: boolean;
+  streamOutputDelay?: number;
 }): Promise<0 | string> => {
   const finish = renderLoading(uid);
   resetContext({ targetUid: uid, variables, triggerUid });
@@ -2805,19 +2832,27 @@ export const sbBomb = async ({
                   .findIndex(
                     (c, i) => c !== (props.introContent || "").charAt(i)
                   );
-                return updateBlock({
-                  ...firstChild,
-                  uid,
-                  text: `${
-                    indexDiffered < 0
-                      ? textPostProcess
-                      : textPostProcess.slice(0, indexDiffered)
-                  }${firstChild.text || ""}${
-                    indexDiffered < 0
-                      ? ""
-                      : textPostProcess.substring(indexDiffered)
-                  }`,
-                });
+                const finalText = `${
+                  indexDiffered < 0
+                    ? textPostProcess
+                    : textPostProcess.slice(0, indexDiffered)
+                }${firstChild.text || ""}${
+                  indexDiffered < 0
+                    ? ""
+                    : textPostProcess.substring(indexDiffered)
+                }`;
+                return streamOutput
+                  ? updateBlockStream({
+                      ...firstChild,
+                      uid,
+                      text: finalText,
+                      delayMs: streamOutputDelay,
+                    })
+                  : updateBlock({
+                      ...firstChild,
+                      uid,
+                      text: finalText,
+                    });
               })
               .then(() =>
                 Promise.all(
