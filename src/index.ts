@@ -1039,6 +1039,10 @@ export default runExtension(async ({ extensionAPI }) => {
       unloads.forEach((u) => u());
       window.clearTimeout(getDailyConfig()["next-run-timeout"]);
       saveDailyConfig({ "next-run-timeout": 0 });
+      buttonOccurrences.clear();
+      buttonTextByBlockUid.clear();
+      buttonGenerationByBlockUid.clear();
+      buttonCleanupByElement.clear();
     },
   };
 });
