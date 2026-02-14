@@ -186,6 +186,83 @@ const getLevelsBelowParentUid = (
   return levels <= 0 || !levels ? tree : getTreeUptoLevel(tree, levels);
 };
 
+const getClipboardIndentUnit = (lines: string[]) => {
+  const spaceIndents = lines
+    .map((line) => line.match(/^[\t ]*/)?.[0] || "")
+    .filter((indent) => !indent.includes("\t"))
+    .map((indent) => indent.length)
+    .filter((length) => length > 0);
+  return spaceIndents.length ? Math.min(...spaceIndents) : 2;
+};
+
+const getClipboardIndentLevel = ({
+  line,
+  indentUnit,
+}: {
+  line: string;
+  indentUnit: number;
+}) => {
+  const indent = line.match(/^[\t ]*/)?.[0] || "";
+  const tabs = (indent.match(/\t/g) || []).length;
+  const spaces = indent.replace(/\t/g, "").length;
+  return tabs + (indentUnit > 0 ? Math.floor(spaces / indentUnit) : 0);
+};
+
+const normalizeClipboardNode = (node: InputTextNode): InputTextNode =>
+  node.children && node.children.length
+    ? { ...node, children: node.children.map(normalizeClipboardNode) }
+    : { ...node, children: undefined };
+
+const parseClipboardSplitText = ({
+  text,
+  noHyphens,
+  noExtraSpaces,
+}: {
+  text: string;
+  noHyphens: boolean;
+  noExtraSpaces: boolean;
+}): InputTextNode[] => {
+  const lines = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
+  const meaningful = lines.filter((line) => line.trim().length);
+  const indentUnit = getClipboardIndentUnit(meaningful);
+  const roots: InputTextNode[] = [];
+  const stack: InputTextNode[] = [];
+
+  lines.forEach((line) => {
+    if (!line.trim().length) {
+      roots.push({ text: "" });
+      stack.length = 0;
+      return;
+    }
+
+    const level = getClipboardIndentLevel({ line, indentUnit });
+    const cappedLevel = Math.min(Math.max(level, 0), stack.length);
+    let lineText = line.trimStart();
+    if (noHyphens) {
+      lineText = lineText.replace(/^[-*•]\s+/, "");
+    }
+    if (noExtraSpaces) {
+      lineText = lineText.replace(/\s\s+/g, " ");
+    }
+
+    const node: InputTextNode = { text: lineText, children: [] };
+
+    while (stack.length > cappedLevel) {
+      stack.pop();
+    }
+    if (!stack.length) {
+      roots.push(node);
+    } else {
+      const parent = stack[stack.length - 1];
+      parent.children = parent.children || [];
+      parent.children.push(node);
+    }
+    stack.push(node);
+  });
+
+  return roots.map(normalizeClipboardNode);
+};
+
 addNlpDateParser({
   pattern: () => /D[B,E]O(N)?[M,Y]/i,
   extract: (_, match) => {
@@ -1550,6 +1627,47 @@ export const COMMANDS: {
     },
   },
   {
+    text: "MOVEBLOCK",
+    help: "Moves a block under a new parent\n\n1. Block ref or uid to move (optional, defaults to current block)\n\n2. Parent ref, uid, or page title (optional, defaults to current parent)\n\n3. Order index or 'last' (optional, defaults to last)",
+    handler: async (blockArg = "", parentArg = "", orderArg = "last") => {
+      const sourceArg = smartBlocksContext.variables[blockArg] || blockArg;
+      const sourceUid =
+        extractRef(sourceArg) || sourceArg || smartBlocksContext.currentUid || "";
+      if (!sourceUid) {
+        return "--> MOVEBLOCK failed: source block was not found <--";
+      }
+
+      const rawParentArg = smartBlocksContext.variables[parentArg] || parentArg;
+      const targetParentUid =
+        getUidFromText(rawParentArg) ||
+        extractRef(rawParentArg) ||
+        rawParentArg ||
+        getParentUidByBlockUid(sourceUid);
+      if (!targetParentUid) {
+        return "--> MOVEBLOCK failed: target parent was not found <--";
+      }
+      if (sourceUid === targetParentUid) {
+        return "--> MOVEBLOCK failed: source block cannot be its own parent <--";
+      }
+
+      const order =
+        /^last$/i.test(orderArg) || !orderArg
+          ? getBasicTreeByParentUid(targetParentUid).length
+          : Math.max(0, Number(orderArg) || 0);
+
+      try {
+        await (window.roamAlphaAPI as any).moveBlock({
+          location: { "parent-uid": targetParentUid, order },
+          block: { uid: sourceUid },
+        });
+        return `((${sourceUid}))`;
+      } catch (e) {
+        const message = (e as Error)?.message || e;
+        return `--> MOVEBLOCK failed: ${message} <--`;
+      }
+    },
+  },
+  {
     text: "INDENT",
     help: "Indents the current block if indentation can be done at current block. ",
     handler: () => {
@@ -1791,21 +1909,24 @@ export const COMMANDS: {
         .catch((e) => `Failed to paste text: ${e.message}`);
       const postTrim = settings.has("trim") ? raw.trim() : raw;
       const postCarriageOne = settings.has("nocarriagereturn")
-        ? postTrim.replace(/\r\n/g, "")
+        ? postTrim.replace(/\r/g, "")
         : postTrim;
       const postCarriage = settings.has("returnasspace")
         ? postCarriageOne.replace(/(\r)?\n(\r)?/g, " ")
-        : postTrim;
-      const postHyphens = settings.has("nohyphens")
-        ? postCarriage.replace(/- /g, "")
-        : postCarriage;
-      const postSpaces = settings.has("noextraspaces")
-        ? postHyphens.replace(/\s\s+/g, " ")
-        : postHyphens;
-      const postSplit = settings.has("split")
-        ? postSpaces.split(/(?:\r)?\n/)
-        : [postSpaces];
-      return postSplit;
+        : postCarriageOne;
+      if (!settings.has("split")) {
+        const postHyphens = settings.has("nohyphens")
+          ? postCarriage.replace(/- /g, "")
+          : postCarriage;
+        return settings.has("noextraspaces")
+          ? postHyphens.replace(/\s\s+/g, " ")
+          : postHyphens;
+      }
+      return parseClipboardSplitText({
+        text: postCarriage,
+        noHyphens: settings.has("nohyphens"),
+        noExtraSpaces: settings.has("noextraspaces"),
+      });
     },
   },
   {

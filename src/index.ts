@@ -38,6 +38,7 @@ import XRegExp from "xregexp";
 import { PullBlock } from "roamjs-components/types";
 import getParentUidByBlockUid from "roamjs-components/queries/getParentUidByBlockUid";
 import getShallowTreeByParentUid from "roamjs-components/queries/getShallowTreeByParentUid";
+import getBasicTreeByParentUid from "roamjs-components/queries/getBasicTreeByParentUid";
 import extractRef from "roamjs-components/util/extractRef";
 import getDailyConfig from "./utils/getDailyConfig";
 import saveDailyConfig from "./utils/saveDailyConfig";
@@ -597,6 +598,66 @@ export default runExtension(async ({ extensionAPI }) => {
     },
   });
 
+  const ROAM_TABLE_REGEX = /\{\{\[\[table\]\]\}\}/i;
+  type TableNode = {
+    uid: string;
+    children?: TableNode[];
+  };
+
+  const getRoamTableUidRows = (nodes: TableNode[] = []): string[][] =>
+    nodes.flatMap((node) => {
+      if (!node?.uid) return [];
+      const children = (node.children || []).filter(
+        (c): c is TableNode => !!c?.uid
+      );
+      if (!children.length) return [[node.uid]];
+      const childRows = getRoamTableUidRows(children);
+      return childRows.length
+        ? childRows.map((row) => [node.uid, ...row])
+        : [[node.uid]];
+    });
+
+  const resolveRoamTableButtonBlock = ({
+    el,
+    tableUid,
+    label,
+  }: {
+    el: HTMLElement;
+    tableUid: string;
+    label: string;
+  }): { uid: string; text: string; occurrenceIndex: number } | null => {
+    const tableEl = el.closest("table");
+    const rowEl = el.closest("tr");
+    const cellEl = el.closest("td");
+    if (!tableEl || !rowEl || !cellEl) return null;
+
+    const tableRows = Array.from(tableEl.querySelectorAll("tr")).filter(
+      (row) => row.querySelectorAll("td").length > 0
+    );
+    const rowIndex = tableRows.indexOf(rowEl);
+    const cells = Array.from(rowEl.querySelectorAll("td"));
+    const columnIndex = cells.indexOf(cellEl);
+    if (rowIndex < 0 || columnIndex < 0) return null;
+
+    const uidRows = getRoamTableUidRows(
+      getBasicTreeByParentUid(tableUid) as unknown as TableNode[]
+    );
+    const uid = uidRows[rowIndex]?.[columnIndex];
+    if (!uid) return null;
+
+    const text = getTextByBlockUid(uid);
+    const sameLabelButtonsInCell = Array.from(
+      cellEl.querySelectorAll("button.bp3-button.bp3-small.dont-focus-block")
+    ).filter((button) => (button.textContent || "").trim() === label);
+    const occurrenceIndex = sameLabelButtonsInCell.indexOf(
+      el as HTMLButtonElement
+    );
+    const safeOccurrenceIndex = occurrenceIndex < 0 ? 0 : occurrenceIndex;
+
+    if (!parseSmartBlockButton(label, text, safeOccurrenceIndex)) return null;
+    return { uid, text, occurrenceIndex: safeOccurrenceIndex };
+  };
+
   const registerElAsSmartBlockTrigger = ({
     textContent,
     text,
@@ -614,7 +675,19 @@ export default runExtension(async ({ extensionAPI }) => {
   }) => {
     // We include textcontent here bc there could be multiple smartblocks in a block
     const label = textContent.trim();
-    const parsed = parseSmartBlockButton(label, text, occurrenceIndex);
+    const tableResolution =
+      ROAM_TABLE_REGEX.test(text) && !!el.closest("table")
+        ? resolveRoamTableButtonBlock({ el, tableUid: parentUid, label })
+        : null;
+    const resolvedParentUid = tableResolution?.uid || parentUid;
+    const resolvedText = tableResolution?.text || text;
+    const resolvedOccurrenceIndex =
+      tableResolution?.occurrenceIndex ?? occurrenceIndex;
+    const parsed = parseSmartBlockButton(
+      label,
+      resolvedText,
+      resolvedOccurrenceIndex
+    );
     if (parsed) {
       const { index, full, buttonContent, workflowName, variables } = parsed;
       const clickListener = () => {
@@ -629,7 +702,7 @@ export default runExtension(async ({ extensionAPI }) => {
               text: "Could not find custom workflow with the name:",
               children: [{ text: workflowName }],
             },
-            parentUid,
+            parentUid: resolvedParentUid,
           });
         } else {
           const keepButton =
@@ -653,29 +726,29 @@ export default runExtension(async ({ extensionAPI }) => {
             mutableCursor: !(
               workflows.find((w) => w.uid === srcUid)?.name || ""
             ).includes("<%NOCURSOR%>"),
-            triggerUid: parentUid,
+            triggerUid: resolvedParentUid,
           };
 
           if (applyToSibling) {
             const sbParentTree = getShallowTreeByParentUid(
-              getParentUidByBlockUid(parentUid)
+              getParentUidByBlockUid(resolvedParentUid)
             );
             const siblingIndex =
-              sbParentTree.findIndex((obj) => obj.uid === parentUid) +
+              sbParentTree.findIndex((obj) => obj.uid === resolvedParentUid) +
               (applyToSibling === "previous" ? -1 : 1);
             const siblingUid = sbParentTree[siblingIndex]?.uid;
             const siblingText = getTextByBlockUid(siblingUid);
 
             updateBlock({
-              uid: parentUid,
+              uid: resolvedParentUid,
               text:
                 clearBlock && keepButton
                   ? full
                   : clearBlock
                   ? ""
                   : keepButton
-                  ? text
-                  : `${text.substring(0, index)}${text.substring(
+                  ? resolvedText
+                  : `${resolvedText.substring(0, index)}${resolvedText.substring(
                       index + full.length
                     )}`,
             });
@@ -694,7 +767,7 @@ export default runExtension(async ({ extensionAPI }) => {
                 )
               : createBlock({
                   node: { text: "" },
-                  parentUid: getParentUidByBlockUid(parentUid),
+                  parentUid: getParentUidByBlockUid(resolvedParentUid),
                   order: siblingIndex === -1 ? 0 : siblingIndex,
                 }).then((targetUid) =>
                   sbBomb({
@@ -719,7 +792,7 @@ export default runExtension(async ({ extensionAPI }) => {
                 })
               : createBlock({
                   node: { text: "" },
-                  parentUid,
+                  parentUid: resolvedParentUid,
                   order,
                 }).then((targetUid) =>
                   sbBomb({
@@ -735,23 +808,23 @@ export default runExtension(async ({ extensionAPI }) => {
                 ),
               clearBlock
                 ? updateBlock({
-                    uid: parentUid,
+                    uid: resolvedParentUid,
                     text: full,
                   })
                 : "";
           } else {
             updateBlock({
-              uid: parentUid,
+              uid: resolvedParentUid,
               text: clearBlock
                 ? ""
-                : `${text.substring(0, index)}${text.substring(
+                : `${resolvedText.substring(0, index)}${resolvedText.substring(
                     index + full.length
                   )}`,
             }).then(() =>
               sbBomb({
                 ...props,
                 target: {
-                  uid: parentUid,
+                  uid: resolvedParentUid,
                   start: index,
                   end: index,
                 },
