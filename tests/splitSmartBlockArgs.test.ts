@@ -61,3 +61,15 @@ test("does not coalesce date tokens for non-BLOCKMENTIONSDATED commands", () => 
     splitSmartBlockArgs("ANYCOMMAND", "January 1, 2023")
   ).toEqual(["January 1", " 2023"]);
 });
+
+test("unclosed [[ in non-BLOCKMENTIONSDATED treats remaining as single arg", () => {
+  expect(
+    splitSmartBlockArgs("ANYCOMMAND", "one,[[unclosed,two,three")
+  ).toEqual(["one", "[[unclosed,two,three"]);
+});
+
+test("balanced [[ ]] followed by normal args splits correctly", () => {
+  expect(
+    splitSmartBlockArgs("ANYCOMMAND", "[[page ref]],normal,arg")
+  ).toEqual(["[[page ref]]", "normal", "arg"]);
+});
