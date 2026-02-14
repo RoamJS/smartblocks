@@ -13,3 +13,13 @@ test("falls back to alt hotkeys when control combos are exhausted", () => {
   );
   expect(getNextAvailableHotKey(taken)).toBe("alt+o");
 });
+
+test("throws when all modifier+suffix combos are exhausted", () => {
+  const allTaken: Record<string, string> = {};
+  for (const mod of ["control", "alt", "shift", "meta"]) {
+    for (const key of "opklijuyhgfdsawertqzxcvbnm1234567890".split("")) {
+      allTaken[`${mod}+${key}`] = `uid-${mod}-${key}`;
+    }
+  }
+  expect(() => getNextAvailableHotKey(allTaken)).toThrow();
+});
