@@ -1121,6 +1121,7 @@ export default runExtension(async ({ extensionAPI }) => {
       buttonTextByBlockUid.clear();
       buttonGenerationByBlockUid.clear();
       buttonCleanupByElement.clear();
+      buttonElementsByBlockUid.clear();
     },
   };
 });
