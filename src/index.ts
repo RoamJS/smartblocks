@@ -945,6 +945,8 @@ export default runExtension(async ({ extensionAPI }) => {
           unloads.delete(cleanup);
           b.removeAttribute("data-roamjs-smartblock-button");
           unload();
+          // Path 1: Remove element from block's button set.
+          // If this was the last button for the block, clear all tracking Maps.
           const blockButtons = buttonElementsByBlockUid.get(parentUid);
           if (blockButtons) {
             blockButtons.delete(b);
@@ -955,10 +957,12 @@ export default runExtension(async ({ extensionAPI }) => {
               buttonGenerationByBlockUid.delete(parentUid);
             }
           }
+          // Path 2: Decrement per-label occurrence count.
+          // Skip if the block text changed (new generation), since new
+          // buttons will have already reset the occurrence tracking.
           if ((buttonGenerationByBlockUid.get(parentUid) || 0) !== generation) {
             return;
           }
-          // Clean up occurrence tracking when button is removed
           const blockOccurrences = buttonOccurrences.get(parentUid);
           if (blockOccurrences) {
             const currentCount = blockOccurrences.get(label) || 0;
