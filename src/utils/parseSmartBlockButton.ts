@@ -1,3 +1,6 @@
+const escapeRegex = (value: string) =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 export const parseSmartBlockButton = (
   label: string,
   text: string,
@@ -12,8 +15,6 @@ export const parseSmartBlockButton = (
       variables: Record<string, string>;
     }
   | null => {
-  const escapeRegex = (value: string) =>
-    value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const trimmedLabel = label.trim();
   const buttonRegex = trimmedLabel
     ? new RegExp(
@@ -24,10 +25,15 @@ export const parseSmartBlockButton = (
 
   // Find all matches
   const matches = Array.from(text.matchAll(buttonRegex));
-  if (matches.length === 0 || occurrenceIndex >= matches.length) return null;
+  if (
+    matches.length === 0 ||
+    occurrenceIndex < 0 ||
+    occurrenceIndex >= matches.length
+  ) {
+    return null;
+  }
 
   const match = matches[occurrenceIndex];
-  if (!match) return null;
   const index = match.index;
   const full = match[0];
   const buttonContent = trimmedLabel ? match[1] || "" : "";
