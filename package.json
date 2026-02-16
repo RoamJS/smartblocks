@@ -21,7 +21,7 @@
   },
   "dependencies": {
     "lodash": "^4.17.21",
-    "roamjs-components": "^0.83.5",
+    "roamjs-components": "^0.86.6",
     "xregexp": "^5.1.0"
   },
   "samepage": {
