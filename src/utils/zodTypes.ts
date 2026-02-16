@@ -1,12 +1,25 @@
 import { InputTextNode } from "roamjs-components/types";
 import { z } from "zod";
 
+const zBlockViewType = z
+  .enum([
+    "outline",
+    "horizontal-outline",
+    "popout",
+    "tabs",
+    "comment",
+    "side",
+    "vertical",
+  ])
+  .or(z.literal("horizontal"));
+
 const zInputTextNodeBase = z.object({
   text: z.string(),
   uid: z.string().optional(),
   heading: z.number().optional(),
   textAlign: z.enum(["left", "center", "right", "justify"]).optional(),
   viewType: z.enum(["document", "bullet", "numbered"]).optional(),
+  blockViewType: zBlockViewType.optional(),
   open: z.boolean().optional(),
   props: z.record(z.unknown()).optional(),
 });

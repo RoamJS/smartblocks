@@ -2611,11 +2611,13 @@ export const proccessBlockWithSmartness = async (
     if (!children.length && oldExitBlock === "childless") {
       return [];
     }
+    const { blockViewType } = n;
     const { textAlign, viewType, heading, open } = n;
     return [
       {
         textAlign,
         viewType,
+        blockViewType,
         heading,
         open,
         ...props,
@@ -2624,6 +2626,7 @@ export const proccessBlockWithSmartness = async (
       ...nextBlocks.map((block) => ({
         textAlign,
         viewType,
+        blockViewType,
         heading,
         open,
         ...block,
