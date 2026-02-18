@@ -605,17 +605,13 @@ export default runExtension(async ({ extensionAPI }) => {
   };
 
   const getRoamTableUidRows = (nodes: TableNode[] = []): string[][] =>
-    nodes.flatMap((node) => {
-      if (!node?.uid) return [];
-      const children = (node.children || []).filter(
-        (c): c is TableNode => !!c?.uid
+    nodes
+      .filter((node): node is TableNode => !!node?.uid)
+      .map((rowNode) =>
+        (rowNode.children || [])
+          .filter((cell): cell is TableNode => !!cell?.uid)
+          .map((cell) => cell.uid)
       );
-      if (!children.length) return [[node.uid]];
-      const childRows = getRoamTableUidRows(children);
-      return childRows.length
-        ? childRows.map((row) => [node.uid, ...row])
-        : [[node.uid]];
-    });
 
   const resolveRoamTableButtonBlock = ({
     el,
