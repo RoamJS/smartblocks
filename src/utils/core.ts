@@ -70,6 +70,7 @@ import apiPost from "roamjs-components/util/apiPost";
 import deleteBlock from "roamjs-components/writes/deleteBlock";
 import { zCommandOutput } from "./zodTypes";
 import { z } from "zod";
+import splitSmartBlockArgs from "./splitSmartBlockArgs";
 
 type FormDialogProps = Parameters<typeof FormDialog>[0];
 const renderFormDialog = createOverlayRender<FormDialogProps>(
@@ -127,6 +128,17 @@ const getDateFromBlock = (args: { text: string; title: string }) => {
   const fromTitle = DAILY_NOTE_PAGE_TITLE_REGEX.exec(args.title)?.[0];
   if (fromTitle) return window.roamAlphaAPI.util.pageTitleToDate(fromTitle);
   return new Date("");
+};
+
+const parseBlockMentionsDatedArg = (dateArg: string, referenceDate: Date) => {
+  const normalizedArg = dateArg.trim().replace(/^first of\b/i, "start of");
+  const title =
+    DAILY_REF_REGEX.exec(normalizedArg)?.[1] ||
+    DAILY_NOTE_PAGE_TITLE_REGEX.exec(extractTag(normalizedArg))?.[0];
+  return title
+    ? window.roamAlphaAPI.util.pageTitleToDate(title) ||
+        parseNlpDate(normalizedArg, referenceDate)
+    : parseNlpDate(normalizedArg, referenceDate);
 };
 const getPageUidByBlockUid = (blockUid: string): string =>
   (
@@ -1218,11 +1230,11 @@ export const COMMANDS: {
       const undated = startArg === "-1" && endArg === "-1";
       const start =
         !undated && startArg && startArg !== "0"
-          ? startOfDay(parseNlpDate(startArg, referenceDate))
+          ? startOfDay(parseBlockMentionsDatedArg(startArg, referenceDate))
           : new Date(0);
       const end =
         !undated && endArg && endArg !== "0"
-          ? endOfDay(parseNlpDate(endArg, referenceDate))
+          ? endOfDay(parseBlockMentionsDatedArg(endArg, referenceDate))
           : new Date(9999, 11, 31);
       const limit = Number(limitArg);
       const title = extractTag(titleArg);
@@ -2479,24 +2491,7 @@ const processBlockTextToPromises = (s: string) => {
     const split = c.value.indexOf(":");
     const cmd = split < 0 ? c.value : c.value.substring(0, split);
     const afterColon = split < 0 ? "" : c.value.substring(split + 1);
-    let commandStack = 0;
-    const args = afterColon.split("").reduce((prev, cur, i, arr) => {
-      if (cur === "," && !commandStack && arr[i - 1] !== "\\") {
-        return [...prev, ""];
-      } else if (cur === "\\" && arr[i + 1] === ",") {
-        return prev;
-      } else {
-        if (cur === "%") {
-          if (arr[i - 1] === "<") {
-            commandStack++;
-          } else if (arr[i + 1] === ">") {
-            commandStack--;
-          }
-        }
-        const current = prev.slice(-1)[0] || "";
-        return [...prev.slice(0, -1), `${current}${cur}`];
-      }
-    }, [] as string[]);
+    const args = splitSmartBlockArgs(cmd, afterColon);
     const { handler, delayArgs, illegal } = handlerByCommand[cmd] || {};
     if (illegal) smartBlocksContext.illegalCommands.add(cmd);
     return (
