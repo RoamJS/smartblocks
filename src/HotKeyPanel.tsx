@@ -3,7 +3,7 @@ import React, { useMemo, useState, useRef, useEffect } from "react";
 import MenuItemSelect from "roamjs-components/components/MenuItemSelect";
 import { getCleanCustomWorkflows } from "./utils/core";
 import type { OnloadArgs } from "roamjs-components/types/native";
-import getNextAvailableHotKey from "./utils/getNextAvailableHotKey";
+import { createAddHotKeyUpdater } from "./utils/createAddHotKeyUpdater";
 
 const HotKeyEntry = ({
   hotkey,
@@ -157,16 +157,13 @@ const HotKeyPanel = (extensionAPI: OnloadArgs["extensionAPI"]) => () => {
           if (!workflows.length) return;
           const randomWorkflow =
             workflows[Math.floor(Math.random() * workflows.length)];
-          setKeys((currentKeys) => {
-            const nextHotkey = getNextAvailableHotKey(currentKeys);
-            const newKeys = Object.fromEntries(
-              Object.entries(currentKeys).concat([
-                [nextHotkey, randomWorkflow.uid],
-              ])
-            );
-            extensionAPI.settings.set("hot-keys", newKeys);
-            return newKeys;
-          });
+          setKeys(
+            createAddHotKeyUpdater({
+              randomWorkflowUid: randomWorkflow.uid,
+              setHotKeys: (newKeys) =>
+                extensionAPI.settings.set("hot-keys", newKeys),
+            })
+          );
         }}
       />
     </div>
