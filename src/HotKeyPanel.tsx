@@ -3,12 +3,12 @@ import React, { useMemo, useState, useRef, useEffect } from "react";
 import MenuItemSelect from "roamjs-components/components/MenuItemSelect";
 import { getCleanCustomWorkflows } from "./utils/core";
 import type { OnloadArgs } from "roamjs-components/types/native";
+import { createAddHotKeyUpdater } from "./utils/createAddHotKeyUpdater";
 
 const HotKeyEntry = ({
   hotkey,
   value,
   order,
-  keys,
   setKeys,
   extensionAPI,
   workflows,
@@ -17,8 +17,7 @@ const HotKeyEntry = ({
   hotkey: string;
   value: string;
   order: number;
-  keys: Record<string, string>;
-  setKeys: (r: Record<string, string>) => void;
+  setKeys: React.Dispatch<React.SetStateAction<Record<string, string>>>;
   extensionAPI: OnloadArgs["extensionAPI"];
   workflows: { uid: string }[];
   workflowNamesByUid: Record<string, string>;
@@ -53,16 +52,21 @@ const HotKeyEntry = ({
                 : parts.concat(e.key.toLowerCase())
             ).join("+");
             if (formatValue === hotkey) return;
-            const error = !formatValue || !!keys[formatValue];
-            const newKeys = Object.fromEntries(
-              Object.entries(keys).map((k, o) =>
-                o !== order ? k : [formatValue, k[1]]
-              )
-            );
-            setKeys(newKeys);
-            if (!error) {
+            setKeys((currentKeys) => {
+              if (
+                !formatValue ||
+                (formatValue !== hotkey && !!currentKeys[formatValue])
+              ) {
+                return currentKeys;
+              }
+              const newKeys = Object.fromEntries(
+                Object.entries(currentKeys).map((k, o) =>
+                  o !== order ? k : [formatValue, k[1]]
+                )
+              );
               extensionAPI.settings.set("hot-keys", newKeys);
-            }
+              return newKeys;
+            });
           }}
           intent={Intent.NONE}
         />
@@ -73,11 +77,15 @@ const HotKeyEntry = ({
           activeItem={value}
           items={workflows.map((w) => w.uid)}
           onItemSelect={(e) => {
-            const newKeys = Object.fromEntries(
-              Object.entries(keys).map((k, o) => (o !== order ? k : [k[0], e]))
-            );
-            setKeys(newKeys);
-            extensionAPI.settings.set("hot-keys", newKeys);
+            setKeys((currentKeys) => {
+              const newKeys = Object.fromEntries(
+                Object.entries(currentKeys).map((k, o) =>
+                  o !== order ? k : [k[0], e]
+                )
+              );
+              extensionAPI.settings.set("hot-keys", newKeys);
+              return newKeys;
+            });
           }}
           transformItem={(e) => workflowNamesByUid[e]}
           className={"w-full"}
@@ -89,11 +97,13 @@ const HotKeyEntry = ({
         style={{ width: 32, height: 32 }}
         minimal
         onClick={() => {
-          const newKeys = Object.fromEntries(
-            Object.entries(keys).filter((_, o) => o !== order)
-          );
-          setKeys(newKeys);
-          extensionAPI.settings.set("hot-keys", newKeys);
+          setKeys((currentKeys) => {
+            const newKeys = Object.fromEntries(
+              Object.entries(currentKeys).filter((_, o) => o !== order)
+            );
+            extensionAPI.settings.set("hot-keys", newKeys);
+            return newKeys;
+          });
         }}
       />
     </div>
@@ -126,14 +136,13 @@ const HotKeyPanel = (extensionAPI: OnloadArgs["extensionAPI"]) => () => {
       {Object.entries(keys).map(([key, value], order) => {
         return (
           <HotKeyEntry
-            key={order}
+            key={`${key}-${order}`}
             hotkey={key}
             value={value}
             order={order}
             workflows={workflows}
             workflowNamesByUid={workflowNamesByUid}
             extensionAPI={extensionAPI}
-            keys={keys}
             setKeys={setKeys}
           />
         );
@@ -145,13 +154,16 @@ const HotKeyPanel = (extensionAPI: OnloadArgs["extensionAPI"]) => () => {
         minimal
         style={{ marginTop: 8 }}
         onClick={async () => {
+          if (!workflows.length) return;
           const randomWorkflow =
             workflows[Math.floor(Math.random() * workflows.length)];
-          const newKeys = Object.fromEntries(
-            Object.entries(keys).concat([["control+o", randomWorkflow.uid]])
+          setKeys(
+            createAddHotKeyUpdater({
+              randomWorkflowUid: randomWorkflow.uid,
+              setHotKeys: (newKeys) =>
+                extensionAPI.settings.set("hot-keys", newKeys),
+            })
           );
-          setKeys(newKeys);
-          extensionAPI.settings.set("hot-keys", newKeys);
         }}
       />
     </div>
