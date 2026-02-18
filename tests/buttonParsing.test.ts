@@ -65,3 +65,68 @@ test("parses SmartBlock button for today's entry", () => {
     ButtonContent: "Create Today's Entry",
   });
 });
+
+test("parses multiple labeled SmartBlock buttons in the same block", () => {
+  const text =
+    "{{Run It:SmartBlock:WorkflowOne:RemoveButton=false}} and {{Run It:SmartBlock:WorkflowTwo:Icon=locate,Order=last}}";
+  const first = parseSmartBlockButton("Run It", text, 0);
+  const second = parseSmartBlockButton("Run It", text, 1);
+  expect(first?.workflowName).toBe("WorkflowOne");
+  expect(first?.variables).toMatchObject({
+    RemoveButton: "false",
+    ButtonContent: "Run It",
+  });
+  expect(second?.workflowName).toBe("WorkflowTwo");
+  expect(second?.variables).toMatchObject({
+    Icon: "locate",
+    Order: "last",
+    ButtonContent: "Run It",
+  });
+});
+
+test("parses multiple unlabeled SmartBlock buttons in the same block", () => {
+  const text =
+    "{{:SmartBlock:first:Icon=locate}} and {{:SmartBlock:second:RemoveButton=false}}";
+  const first = parseSmartBlockButton("", text, 0);
+  const second = parseSmartBlockButton("", text, 1);
+  expect(first?.buttonText).toBe("first:Icon=locate");
+  expect(first?.variables).toMatchObject({
+    Icon: "locate",
+    ButtonContent: "",
+  });
+  expect(second?.buttonText).toBe("second:RemoveButton=false");
+  expect(second?.variables).toMatchObject({
+    RemoveButton: "false",
+    ButtonContent: "",
+  });
+});
+
+test("returns null when occurrence index is out of bounds", () => {
+  const text = "{{Only One:SmartBlock:Workflow}}";
+  const result = parseSmartBlockButton("Only One", text, 2);
+  expect(result).toBeNull();
+});
+
+test("returns null when occurrence index is negative", () => {
+  const text = "{{Only One:SmartBlock:Workflow}}";
+  const result = parseSmartBlockButton("Only One", text, -1);
+  expect(result).toBeNull();
+});
+
+test("parses SmartBlock button label containing plus signs", () => {
+  const text = "{{Add+More:SmartBlock:PlusWorkflow}}";
+  const result = parseSmartBlockButton("Add+More", text);
+  expect(result?.workflowName).toBe("PlusWorkflow");
+  expect(result?.variables).toMatchObject({
+    ButtonContent: "Add+More",
+  });
+});
+
+test("parses SmartBlock button label with regex special characters", () => {
+  const text = "{{Add+(Test)[One]?:SmartBlock:WeirdWorkflow}}";
+  const result = parseSmartBlockButton("Add+(Test)[One]?", text);
+  expect(result?.workflowName).toBe("WeirdWorkflow");
+  expect(result?.variables).toMatchObject({
+    ButtonContent: "Add+(Test)[One]?",
+  });
+});
