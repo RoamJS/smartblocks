@@ -10,9 +10,9 @@ import ReactDOM from "react-dom";
 import { DAILY_NOTE_PAGE_REGEX } from "roamjs-components/date/constants";
 import getPageTitleByBlockUid from "roamjs-components/queries/getPageTitleByBlockUid";
 import getPageUidByPageTitle from "roamjs-components/queries/getPageUidByPageTitle";
-import getTextByBlockUid from "roamjs-components/queries/getTextByBlockUid";
 import type { OnloadArgs } from "roamjs-components/types/native";
 import { getCoords } from "./utils/dom";
+import getTriggerSelection from "./utils/getTriggerSelection";
 import {
   getVisibleCustomWorkflows,
   predefinedWorkflows,
@@ -23,25 +23,15 @@ import fuzzy from "fuzzy";
 
 type Props = {
   textarea: HTMLTextAreaElement;
-  triggerStart: number;
-  triggerRegex: RegExp;
+  trigger: string;
   isCustomOnly: boolean;
   extensionAPI: OnloadArgs["extensionAPI"];
 };
 
-// The block doesn't always have the trigger saved, causing weird race condition errors
-const waitForBlock = (uid: string, text: string): Promise<void> =>
-  getTextByBlockUid(uid) === text
-    ? Promise.resolve()
-    : new Promise((resolve) =>
-        setTimeout(() => resolve(waitForBlock(uid, text)), 10)
-      );
-
 const SmartblocksMenu = ({
   onClose,
   textarea,
-  triggerStart,
-  triggerRegex,
+  trigger,
   isCustomOnly,
   extensionAPI,
 }: { onClose: () => void } & Props) => {
@@ -75,6 +65,12 @@ const SmartblocksMenu = ({
     [filter, initialWorkflows]
   );
   const [activeIndex, setActiveIndex] = useState(0);
+  const getCurrentTextarea = useCallback(
+    () =>
+      (document.getElementById(textarea.id) as HTMLTextAreaElement | null) ||
+      textarea,
+    [textarea]
+  );
   const onSelect = useCallback(
     (index) => {
       if (!menuRef.current) return;
@@ -84,26 +80,29 @@ const SmartblocksMenu = ({
       const srcName = item.getAttribute("data-name");
       const srcUid = item.getAttribute("data-uid");
       if (!srcName || !srcUid) return;
-      const currentTextarea = document.getElementById(
-        textarea.id
-      ) as HTMLTextAreaElement;
-      waitForBlock(blockUid, textarea.value).then(() => {
-        onClose();
-        setTimeout(() => {
-          sbBomb({
-            srcUid,
-            target: {
-              uid: blockUid,
-              start: triggerStart,
-              end: currentTextarea.selectionStart,
-              windowId,
-            },
-            mutableCursor: !srcName.includes("<%NOCURSOR%>"),
-          });
-        }, 10);
+      const currentTextarea = getCurrentTextarea();
+      const selection = getTriggerSelection({
+        text: currentTextarea.value,
+        selectionStart: currentTextarea.selectionStart,
+        trigger,
       });
+      if (!selection) return onClose();
+      onClose();
+      setTimeout(() => {
+        sbBomb({
+          srcUid,
+          target: {
+            uid: blockUid,
+            originalText: selection.text,
+            start: selection.start,
+            end: selection.end,
+            windowId,
+          },
+          mutableCursor: !srcName.includes("<%NOCURSOR%>"),
+        });
+      }, 10);
     },
-    [menuRef, blockUid, onClose, triggerStart, textarea]
+    [menuRef, blockUid, getCurrentTextarea, onClose, trigger]
   );
   const keydownListener = useCallback(
     (e: KeyboardEvent) => {
@@ -137,10 +136,13 @@ const SmartblocksMenu = ({
       } else if (e.key === "Escape") {
         onClose();
       } else {
+        const currentTextarea = getCurrentTextarea();
         const value =
-          triggerRegex.exec(
-            textarea.value.substring(0, textarea.selectionStart)
-          )?.[1] || "";
+          getTriggerSelection({
+            text: currentTextarea.value,
+            selectionStart: currentTextarea.selectionStart,
+            trigger,
+          })?.filter || "";
         if (value) {
           setFilter(value);
         } else {
@@ -149,7 +151,7 @@ const SmartblocksMenu = ({
         }
       }
     },
-    [menuRef, setActiveIndex, setFilter, onClose, triggerRegex, textarea]
+    [menuRef, setActiveIndex, setFilter, onClose, getCurrentTextarea, trigger]
   );
   useEffect(() => {
     const listeningEl = !!textarea.closest(".rm-reference-item")

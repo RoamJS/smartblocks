@@ -2742,7 +2742,15 @@ const count = (t: InputTextNode[] = []): number =>
 
 export const sbBomb = async ({
   srcUid,
-  target: { uid, start = 0, end = start, isParent = false, order, windowId },
+  target: {
+    uid,
+    originalText,
+    start = 0,
+    end = start,
+    isParent = false,
+    order,
+    windowId,
+  },
   variables = {},
   mutableCursor,
   triggerUid = uid,
@@ -2751,6 +2759,7 @@ export const sbBomb = async ({
   srcUid: string;
   target: {
     uid: string;
+    originalText?: string;
     start?: number;
     end?: number;
     isParent?: boolean;
@@ -2770,9 +2779,9 @@ export const sbBomb = async ({
   const props: { introUid?: string; introContent?: string; suffix?: string } =
     {};
   if (!isParent) {
-    const originalText = getTextByBlockUid(uid);
-    const prefix = originalText.substring(0, start);
-    const suffix = originalText.substring(end);
+    const text = originalText ?? getTextByBlockUid(uid);
+    const prefix = text.substring(0, start);
+    const suffix = text.substring(end);
     await updateBlock({
       uid,
       text: `${prefix}${suffix}`,
