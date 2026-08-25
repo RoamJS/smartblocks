@@ -415,6 +415,7 @@ export default runExtension(async ({ extensionAPI }) => {
         render({
           textarea,
           trigger,
+          triggerStart: selection.start,
           isCustomOnly,
           extensionAPI,
           onClose: () => {

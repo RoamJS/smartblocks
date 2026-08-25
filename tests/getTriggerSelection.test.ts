@@ -33,6 +33,22 @@ test("treats regular expression characters in a trigger literally", () => {
   });
 });
 
+test("keeps the trigger occurrence that opened the menu", () => {
+  expect(
+    getTriggerSelection({
+      text: "/daily/plan suffix",
+      selectionStart: 11,
+      trigger: "/",
+      triggerStart: 0,
+    })
+  ).toEqual({
+    text: "/daily/plan suffix",
+    start: 0,
+    end: 11,
+    filter: "daily/plan",
+  });
+});
+
 test("returns a single text snapshot for the splice offsets", () => {
   const selection = getTriggerSelection({
     text: "keep this jjwrap suffix",

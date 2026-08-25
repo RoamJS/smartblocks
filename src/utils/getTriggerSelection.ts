@@ -20,15 +20,18 @@ const getTriggerSelection = ({
   text,
   selectionStart,
   trigger,
+  triggerStart,
 }: {
   text: string;
   selectionStart: number;
   trigger: string;
+  triggerStart?: number;
 }): TriggerSelection | undefined => {
   if (!trigger) return undefined;
   const valueToCursor = text.substring(0, selectionStart);
-  const start = valueToCursor.lastIndexOf(trigger);
-  return start < 0
+  const start = triggerStart ?? valueToCursor.lastIndexOf(trigger);
+  return start < 0 ||
+    valueToCursor.substring(start, start + trigger.length) !== trigger
     ? undefined
     : {
         text,

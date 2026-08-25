@@ -10,6 +10,7 @@ import ReactDOM from "react-dom";
 import { DAILY_NOTE_PAGE_REGEX } from "roamjs-components/date/constants";
 import getPageTitleByBlockUid from "roamjs-components/queries/getPageTitleByBlockUid";
 import getPageUidByPageTitle from "roamjs-components/queries/getPageUidByPageTitle";
+import getTextByBlockUid from "roamjs-components/queries/getTextByBlockUid";
 import type { OnloadArgs } from "roamjs-components/types/native";
 import { getCoords } from "./utils/dom";
 import getTriggerSelection from "./utils/getTriggerSelection";
@@ -24,14 +25,24 @@ import fuzzy from "fuzzy";
 type Props = {
   textarea: HTMLTextAreaElement;
   trigger: string;
+  triggerStart: number;
   isCustomOnly: boolean;
   extensionAPI: OnloadArgs["extensionAPI"];
 };
+
+// Roam may not have persisted the latest textarea input when a workflow is selected.
+const waitForBlock = (uid: string, text: string): Promise<void> =>
+  getTextByBlockUid(uid) === text
+    ? Promise.resolve()
+    : new Promise((resolve) =>
+        setTimeout(() => resolve(waitForBlock(uid, text)), 10)
+      );
 
 const SmartblocksMenu = ({
   onClose,
   textarea,
   trigger,
+  triggerStart,
   isCustomOnly,
   extensionAPI,
 }: { onClose: () => void } & Props) => {
@@ -85,24 +96,27 @@ const SmartblocksMenu = ({
         text: currentTextarea.value,
         selectionStart: currentTextarea.selectionStart,
         trigger,
+        triggerStart,
       });
       if (!selection) return onClose();
-      onClose();
-      setTimeout(() => {
-        sbBomb({
-          srcUid,
-          target: {
-            uid: blockUid,
-            originalText: selection.text,
-            start: selection.start,
-            end: selection.end,
-            windowId,
-          },
-          mutableCursor: !srcName.includes("<%NOCURSOR%>"),
-        });
-      }, 10);
+      waitForBlock(blockUid, selection.text).then(() => {
+        onClose();
+        setTimeout(() => {
+          sbBomb({
+            srcUid,
+            target: {
+              uid: blockUid,
+              originalText: selection.text,
+              start: selection.start,
+              end: selection.end,
+              windowId,
+            },
+            mutableCursor: !srcName.includes("<%NOCURSOR%>"),
+          });
+        }, 10);
+      });
     },
-    [menuRef, blockUid, getCurrentTextarea, onClose, trigger]
+    [menuRef, blockUid, getCurrentTextarea, onClose, trigger, triggerStart]
   );
   const keydownListener = useCallback(
     (e: KeyboardEvent) => {
@@ -142,6 +156,7 @@ const SmartblocksMenu = ({
             text: currentTextarea.value,
             selectionStart: currentTextarea.selectionStart,
             trigger,
+            triggerStart,
           })?.filter || "";
         if (value) {
           setFilter(value);
@@ -151,7 +166,15 @@ const SmartblocksMenu = ({
         }
       }
     },
-    [menuRef, setActiveIndex, setFilter, onClose, getCurrentTextarea, trigger]
+    [
+      menuRef,
+      setActiveIndex,
+      setFilter,
+      onClose,
+      getCurrentTextarea,
+      trigger,
+      triggerStart,
+    ]
   );
   useEffect(() => {
     const listeningEl = !!textarea.closest(".rm-reference-item")
