@@ -6,7 +6,7 @@
 
 **Build powerful, dynamic workflows in Roam—like programmable templates that can write, transform, and fetch data from your graph. Automate daily notes, meeting prep, task flows, and repeatable processes with a rich command system.**
 
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/RoamJS/smartblocks)
+[![RoamJS](https://roamjs.com/badges/website.svg)](https://roamjs.com/) [![DeepWiki](https://roamjs.com/badges/deepwiki.svg)](https://deepwiki.com/RoamJS/smartblocks) [![Slack](https://roamjs.com/badges/slack.svg)](https://roamresearch.slack.com/archives/C016N2B66JU)
 
 ## Overview
 
