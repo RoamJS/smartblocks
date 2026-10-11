@@ -13,6 +13,7 @@ import getPageUidByPageTitle from "roamjs-components/queries/getPageUidByPageTit
 import getTextByBlockUid from "roamjs-components/queries/getTextByBlockUid";
 import type { OnloadArgs } from "roamjs-components/types/native";
 import { getCoords } from "./utils/dom";
+import getTriggerSelection from "./utils/getTriggerSelection";
 import {
   getVisibleCustomWorkflows,
   predefinedWorkflows,
@@ -23,13 +24,13 @@ import fuzzy from "fuzzy";
 
 type Props = {
   textarea: HTMLTextAreaElement;
+  trigger: string;
   triggerStart: number;
-  triggerRegex: RegExp;
   isCustomOnly: boolean;
   extensionAPI: OnloadArgs["extensionAPI"];
 };
 
-// The block doesn't always have the trigger saved, causing weird race condition errors
+// Roam may not have persisted the latest textarea input when a workflow is selected.
 const waitForBlock = (uid: string, text: string): Promise<void> =>
   getTextByBlockUid(uid) === text
     ? Promise.resolve()
@@ -40,8 +41,8 @@ const waitForBlock = (uid: string, text: string): Promise<void> =>
 const SmartblocksMenu = ({
   onClose,
   textarea,
+  trigger,
   triggerStart,
-  triggerRegex,
   isCustomOnly,
   extensionAPI,
 }: { onClose: () => void } & Props) => {
@@ -75,6 +76,12 @@ const SmartblocksMenu = ({
     [filter, initialWorkflows]
   );
   const [activeIndex, setActiveIndex] = useState(0);
+  const getCurrentTextarea = useCallback(
+    () =>
+      (document.getElementById(textarea.id) as HTMLTextAreaElement | null) ||
+      textarea,
+    [textarea]
+  );
   const onSelect = useCallback(
     (index) => {
       if (!menuRef.current) return;
@@ -84,18 +91,24 @@ const SmartblocksMenu = ({
       const srcName = item.getAttribute("data-name");
       const srcUid = item.getAttribute("data-uid");
       if (!srcName || !srcUid) return;
-      const currentTextarea = document.getElementById(
-        textarea.id
-      ) as HTMLTextAreaElement;
-      waitForBlock(blockUid, textarea.value).then(() => {
+      const currentTextarea = getCurrentTextarea();
+      const selection = getTriggerSelection({
+        text: currentTextarea.value,
+        selectionStart: currentTextarea.selectionStart,
+        trigger,
+        triggerStart,
+      });
+      if (!selection) return onClose();
+      waitForBlock(blockUid, selection.text).then(() => {
         onClose();
         setTimeout(() => {
           sbBomb({
             srcUid,
             target: {
               uid: blockUid,
-              start: triggerStart,
-              end: currentTextarea.selectionStart,
+              originalText: selection.text,
+              start: selection.start,
+              end: selection.end,
               windowId,
             },
             mutableCursor: !srcName.includes("<%NOCURSOR%>"),
@@ -103,7 +116,7 @@ const SmartblocksMenu = ({
         }, 10);
       });
     },
-    [menuRef, blockUid, onClose, triggerStart, textarea]
+    [menuRef, blockUid, getCurrentTextarea, onClose, trigger, triggerStart]
   );
   const keydownListener = useCallback(
     (e: KeyboardEvent) => {
@@ -137,10 +150,14 @@ const SmartblocksMenu = ({
       } else if (e.key === "Escape") {
         onClose();
       } else {
+        const currentTextarea = getCurrentTextarea();
         const value =
-          triggerRegex.exec(
-            textarea.value.substring(0, textarea.selectionStart)
-          )?.[1] || "";
+          getTriggerSelection({
+            text: currentTextarea.value,
+            selectionStart: currentTextarea.selectionStart,
+            trigger,
+            triggerStart,
+          })?.filter || "";
         if (value) {
           setFilter(value);
         } else {
@@ -149,7 +166,15 @@ const SmartblocksMenu = ({
         }
       }
     },
-    [menuRef, setActiveIndex, setFilter, onClose, triggerRegex, textarea]
+    [
+      menuRef,
+      setActiveIndex,
+      setFilter,
+      onClose,
+      getCurrentTextarea,
+      trigger,
+      triggerStart,
+    ]
   );
   useEffect(() => {
     const listeningEl = !!textarea.closest(".rm-reference-item")

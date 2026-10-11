@@ -47,6 +47,9 @@ import getFullTreeByParentUid from "roamjs-components/queries/getFullTreeByParen
 import { zCommandOutput } from "./utils/zodTypes";
 import { IconNames } from "@blueprintjs/icons";
 import parseSmartBlockButton from "./utils/parseSmartBlockButton";
+import getTriggerSelection, {
+  resolveTrigger,
+} from "./utils/getTriggerSelection";
 
 const getLegacy42Setting = (name: string) => {
   const settings = Object.fromEntries(
@@ -194,14 +197,11 @@ export default runExtension(async ({ extensionAPI }) => {
   };
 
   let trigger = "jj";
-  let triggerRegex = /$^/;
   const refreshTrigger = (value: string) => {
-    trigger = (getLegacy42Setting("SmartBlockTrigger") || value || "jj")
-      .replace(/"/g, "")
-      .replace(/\\/g, "\\\\")
-      .replace(/\+/g, "\\+")
-      .trim();
-    triggerRegex = new RegExp(`${trigger}(.*)$`);
+    trigger = resolveTrigger({
+      legacyTrigger: getLegacy42Setting("SmartBlockTrigger"),
+      value,
+    });
   };
 
   let isCustomOnly = extensionAPI.settings.get("custom-only") as boolean;
@@ -405,13 +405,17 @@ export default runExtension(async ({ extensionAPI }) => {
         0,
         textarea.selectionStart
       );
-      const match = triggerRegex.exec(valueToCursor);
-      if (match) {
+      const selection = getTriggerSelection({
+        text: textarea.value,
+        selectionStart: textarea.selectionStart,
+        trigger,
+      });
+      if (selection) {
         menuLoaded = true;
         render({
           textarea,
-          triggerRegex,
-          triggerStart: match.index,
+          trigger,
+          triggerStart: selection.start,
           isCustomOnly,
           extensionAPI,
           onClose: () => {
