@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import {
   getMenuWorkflows,
+  getVisibleScrollTop,
   readPinnedWorkflowUids,
   nextMenuIndex,
   getMenuKeyAction,
@@ -68,6 +69,41 @@ test("empty results and malformed saved pins are safe", () => {
 test("keyboard navigation wraps in both directions", () => {
   expect(nextMenuIndex({ index: 0, count: 3, direction: -1 })).toBe(2);
   expect(nextMenuIndex({ index: 2, count: 3, direction: 1 })).toBe(0);
+});
+
+test("keyboard selections remain visible in a shortened results pane", () => {
+  expect(
+    getVisibleScrollTop({
+      scrollTop: 0,
+      viewportHeight: 160,
+      itemTop: 300,
+      itemHeight: 33,
+    }),
+  ).toBe(173);
+  expect(
+    getVisibleScrollTop({
+      scrollTop: 173,
+      viewportHeight: 160,
+      itemTop: 5,
+      itemHeight: 33,
+    }),
+  ).toBe(5);
+  expect(
+    getVisibleScrollTop({
+      scrollTop: 100,
+      viewportHeight: 160,
+      itemTop: 120,
+      itemHeight: 33,
+    }),
+  ).toBe(100);
+  expect(
+    getVisibleScrollTop({
+      scrollTop: 0,
+      viewportHeight: 90,
+      itemTop: 100,
+      itemHeight: 33,
+    }),
+  ).toBe(43);
 });
 test("preview and source shortcuts leave Enter and Ctrl navigation intact", () => {
   const action = (

@@ -2,6 +2,7 @@ import { Button, Menu, Popover, Position } from "@blueprintjs/core";
 import React, {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -20,6 +21,7 @@ import {
 import {
   getMenuKeyAction,
   getMenuWorkflows,
+  getVisibleScrollTop,
   nextMenuIndex,
   PINNED_WORKFLOWS_SETTING,
   readPinnedWorkflowUids,
@@ -79,6 +81,7 @@ const SmartblocksMenu = ({
   const [previewOpen, setPreviewOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const running = useRef(false);
+  const menuRef = useRef<HTMLUListElement>(null);
   const initialWorkflows = useMemo(
     (): { uid: string; name: string; children?: PreviewNode[] }[] => [
       ...getVisibleCustomWorkflows().sort(({ name: a }, { name: b }) =>
@@ -94,6 +97,35 @@ const SmartblocksMenu = ({
   );
   const index = Math.max(0, Math.min(activeIndex, workflows.length - 1));
   const selected = workflows[index];
+
+  const scrollSelectionIntoView = useCallback((): void => {
+    const list = menuRef.current;
+    const row = list?.querySelector<HTMLElement>(
+      ".roamjs-smartblocks-menu-row.is-active",
+    );
+    if (!list || !row) return;
+    list.scrollTop = getVisibleScrollTop({
+      scrollTop: list.scrollTop,
+      viewportHeight: list.clientHeight,
+      itemTop: row.offsetTop,
+      itemHeight: row.offsetHeight,
+    });
+  }, []);
+
+  useLayoutEffect(scrollSelectionIntoView, [
+    index,
+    workflows,
+    previewOpen,
+    scrollSelectionIntoView,
+  ]);
+
+  useEffect(() => {
+    const list = menuRef.current;
+    if (!list) return;
+    const observer = new ResizeObserver(scrollSelectionIntoView);
+    observer.observe(list);
+    return (): void => observer.disconnect();
+  }, [scrollSelectionIntoView]);
 
   const onSelect = useCallback(
     (selection: number): void => {
@@ -231,7 +263,8 @@ const SmartblocksMenu = ({
         >
           <div className="roamjs-smartblocks-menu-column min-w-0">
             <Menu
-              className="roamjs-smartblock-menu"
+              className="roamjs-smartblock-menu relative"
+              ulRef={menuRef}
               role="listbox"
               aria-label="SmartBlock workflows"
             >

@@ -51,6 +51,23 @@ export const nextMenuIndex = ({
   direction: 1 | -1;
 }): number => (count ? (index + direction + count) % count : 0);
 
+export const getVisibleScrollTop = ({
+  scrollTop,
+  viewportHeight,
+  itemTop,
+  itemHeight,
+}: {
+  scrollTop: number;
+  viewportHeight: number;
+  itemTop: number;
+  itemHeight: number;
+}): number => {
+  if (itemTop < scrollTop) return itemTop;
+  if (itemTop + itemHeight > scrollTop + viewportHeight)
+    return Math.max(0, itemTop + itemHeight - viewportHeight);
+  return scrollTop;
+};
+
 export type MenuKeyAction =
   | "next"
   | "previous"
