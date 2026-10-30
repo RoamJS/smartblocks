@@ -212,10 +212,9 @@ const SmartblocksMenu = ({
     [index, workflows.length, openSource, onSelect, onClose],
   );
 
-  useEffect(() => {
-    const listeningEl = textarea.closest(".rm-reference-item")
-      ? textarea.parentElement
-      : textarea;
+  useLayoutEffect(() => {
+    // Roam can replace the editor during linked-reference updates or resizing.
+    const listeningEl = textarea.parentElement || textarea;
     const inputListener = (event: Event): void => {
       if (!(event.target instanceof HTMLTextAreaElement)) return;
       const value = readFilter(event.target);
