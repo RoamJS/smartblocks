@@ -37,12 +37,22 @@ type Props = {
 };
 
 // Roam's textarea can update before its block has been persisted.
-const waitForBlock = (uid: string, text: string): Promise<void> =>
-  getTextByBlockUid(uid) === text
-    ? Promise.resolve()
-    : new Promise((resolve) =>
-        setTimeout(() => resolve(waitForBlock(uid, text)), 10),
-      );
+const waitForBlock = ({
+  uid,
+  text,
+  isActive,
+}: {
+  uid: string;
+  text: string;
+  isActive: () => boolean;
+}): Promise<boolean> =>
+  !isActive()
+    ? Promise.resolve(false)
+    : getTextByBlockUid(uid) === text
+      ? Promise.resolve(true)
+      : new Promise((resolve) =>
+          setTimeout(() => resolve(waitForBlock({ uid, text, isActive })), 10),
+        );
 
 const SmartblocksMenu = ({
   onClose,
@@ -81,6 +91,7 @@ const SmartblocksMenu = ({
   const [previewOpen, setPreviewOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const running = useRef(false);
+  const mounted = useRef(true);
   const menuRef = useRef<HTMLUListElement>(null);
   const initialWorkflows = useMemo(
     (): { uid: string; name: string; children?: PreviewNode[] }[] => [
@@ -97,6 +108,13 @@ const SmartblocksMenu = ({
   );
   const index = Math.max(0, Math.min(activeIndex, workflows.length - 1));
   const selected = workflows[index];
+
+  useLayoutEffect(() => {
+    mounted.current = true;
+    return (): void => {
+      mounted.current = false;
+    };
+  }, []);
 
   const scrollSelectionIntoView = useCallback((): void => {
     const list = menuRef.current;
@@ -139,7 +157,12 @@ const SmartblocksMenu = ({
       const text = current.value;
       const end = current.selectionStart;
       running.current = true;
-      waitForBlock(blockUid, text).then(() => {
+      waitForBlock({
+        uid: blockUid,
+        text,
+        isActive: () => mounted.current,
+      }).then((persisted) => {
+        if (!persisted) return;
         const latest = readTextarea();
         if (!latest || latest.value !== text) {
           onClose();
@@ -409,22 +432,30 @@ const SmartblocksMenu = ({
 };
 
 export const render = (props: Props): void => {
+  if (!props.textarea.parentElement || !props.textarea.isConnected) {
+    props.onClose();
+    return;
+  }
   const parent = document.createElement("span");
   const coords = getCoords(props.textarea);
   parent.style.position = "absolute";
   parent.style.left = `${coords.left}px`;
   parent.style.top = `${coords.top}px`;
   props.textarea.parentElement?.insertBefore(parent, props.textarea);
-  ReactDOM.render(
-    <SmartblocksMenu
-      {...props}
-      onClose={(): void => {
-        props.onClose();
-        ReactDOM.unmountComponentAtNode(parent);
-        parent.remove();
-      }}
-    />,
-    parent,
-  );
+  let closed = false;
+  const close = (): void => {
+    if (closed) return;
+    closed = true;
+    observer.disconnect();
+    props.onClose();
+    ReactDOM.unmountComponentAtNode(parent);
+    parent.remove();
+  };
+  const observer = new MutationObserver(() => {
+    if (!parent.isConnected || !document.getElementById(props.textarea.id))
+      close();
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+  ReactDOM.render(<SmartblocksMenu {...props} onClose={close} />, parent);
 };
 export default SmartblocksMenu;
