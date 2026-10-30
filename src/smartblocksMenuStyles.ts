@@ -2,6 +2,8 @@ const smartblocksMenuStyles = `
 .roamjs-smartblocks-picker {
   display: grid; grid-template-columns: minmax(0, 1fr);
   width: min(440px, calc(100vw - 24px)); background: white; color: #394b59;
+  max-height: calc(100vh - 24px);
+  max-height: calc(100dvh - 24px);
   border-radius: 8px; box-shadow: 0 8px 28px rgba(0, 0, 0, 0.18);
   overflow: hidden; font-size: 14px;
 }
@@ -13,7 +15,8 @@ const smartblocksMenuStyles = `
   width: 100%; height: 350px; overflow-y: auto; background: inherit;
   border-radius: 0; padding: 5px;
 }
-.roamjs-smartblocks-menu-column { min-width: 0; }
+.roamjs-smartblocks-menu-column { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.roamjs-smartblocks-menu-column .roamjs-smartblock-menu { flex: 1 1 350px; min-height: 0; }
 .roamjs-smartblocks-menu-row {
   display: flex; align-items: center; min-height: 33px;
   border-radius: 3px; padding-right: 3px;
@@ -38,6 +41,7 @@ const smartblocksMenuStyles = `
 .roamjs-smartblocks-pin-divider { border-top: 1px solid #e1e4e8; margin: 5px 7px; }
 .roamjs-smartblocks-empty { padding: 20px 12px; color: #5c7080; }
 .roamjs-smartblocks-footer {
+  flex-shrink: 0;
   box-sizing: border-box; min-height: 30px; display: flex; align-items: center;
   flex-wrap: wrap; gap: 8px; padding: 3px 8px;
   background: #ebeceb; border-top: 1px solid #d3d4d4; color: #394b59;
@@ -60,7 +64,7 @@ const smartblocksMenuStyles = `
   color: #5c7080; font-size: 10px; line-height: 12px; font-family: inherit;
 }
 .roamjs-smartblocks-preview {
-  min-width: 0; max-height: 380px; overflow: auto; padding: 14px 16px;
+  min-width: 0; min-height: 0; max-height: 380px; overflow: auto; padding: 14px 16px;
   border-left: 1px solid #dfe3e6; overflow-wrap: anywhere; white-space: pre-wrap;
 }
 .roamjs-smartblocks-preview-title { color: #5c7080; margin-bottom: 14px; }
@@ -76,7 +80,12 @@ const smartblocksMenuStyles = `
 .bp3-dark .roamjs-smartblocks-preview-note { color: #a7b6c2; }
 .bp3-dark .roamjs-smartblocks-preview-tree code { color: #8cc8ee; }
 @media (max-width: 560px) {
-  .roamjs-smartblocks-picker.is-preview-open { grid-template-columns: minmax(0, 1fr); }
+  .roamjs-smartblocks-picker.is-preview-open {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) minmax(0, 0.75fr);
+    height: min(640px, calc(100vh - 24px));
+    height: min(640px, calc(100dvh - 24px));
+  }
   .roamjs-smartblocks-preview { border-left: 0; border-top: 1px solid #dfe3e6; max-height: 260px; }
   .roamjs-smartblocks-footer-label { display: none; }
 }
