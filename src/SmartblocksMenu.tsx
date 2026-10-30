@@ -1,7 +1,6 @@
 import { Button, Menu, Popover, Position } from "@blueprintjs/core";
 import React, {
   useCallback,
-  useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -93,6 +92,7 @@ const SmartblocksMenu = ({
   const running = useRef(false);
   const mounted = useRef(true);
   const menuRef = useRef<HTMLUListElement>(null);
+  const menuResizeObserver = useRef<ResizeObserver | null>(null);
   const initialWorkflows = useMemo(
     (): { uid: string; name: string; children?: PreviewNode[] }[] => [
       ...getVisibleCustomWorkflows().sort(({ name: a }, { name: b }) =>
@@ -137,13 +137,18 @@ const SmartblocksMenu = ({
     scrollSelectionIntoView,
   ]);
 
-  useEffect(() => {
-    const list = menuRef.current;
-    if (!list) return;
-    const observer = new ResizeObserver(scrollSelectionIntoView);
-    observer.observe(list);
-    return (): void => observer.disconnect();
-  }, [scrollSelectionIntoView]);
+  const setMenuNode = useCallback(
+    (node: HTMLUListElement | null): void => {
+      menuResizeObserver.current?.disconnect();
+      menuResizeObserver.current = null;
+      menuRef.current = node;
+      if (!node) return;
+      menuResizeObserver.current = new ResizeObserver(scrollSelectionIntoView);
+      menuResizeObserver.current.observe(node);
+      scrollSelectionIntoView();
+    },
+    [scrollSelectionIntoView],
+  );
 
   const onSelect = useCallback(
     (selection: number): void => {
@@ -286,7 +291,7 @@ const SmartblocksMenu = ({
           <div className="roamjs-smartblocks-menu-column min-w-0">
             <Menu
               className="roamjs-smartblock-menu relative"
-              ulRef={menuRef}
+              ulRef={setMenuNode}
               role="listbox"
               aria-label="SmartBlock workflows"
             >
