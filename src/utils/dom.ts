@@ -31,12 +31,16 @@ export const getCoords = (t: HTMLTextAreaElement) => {
     "wordSpacing",
   ] as const;
 
-  const div = document.createElement("div");
+  // the textarea's own document and window: Roam's editor can render in a second one (the desktop
+  // Sidecar)
+  const doc = t.ownerDocument;
+  const win = doc.defaultView || window;
+  const div = doc.createElement("div");
   div.id = "input-textarea-caret-position-mirror-div";
-  document.body.appendChild(div);
+  doc.body.appendChild(div);
 
   const style = div.style;
-  const computed = getComputedStyle(t);
+  const computed = win.getComputedStyle(t);
 
   style.whiteSpace = "pre-wrap";
   style.wordWrap = "break-word";
@@ -53,15 +57,14 @@ export const getCoords = (t: HTMLTextAreaElement) => {
 
   div.textContent = t.value.substring(0, t.selectionStart);
 
-  const span = document.createElement("span");
+  const span = doc.createElement("span");
   span.textContent = t.value.substring(t.selectionStart) || ".";
   div.appendChild(span);
 
-  const doc = document.documentElement;
+  const html = doc.documentElement;
   const windowLeft =
-    (window.pageXOffset || doc.scrollLeft) - (doc.clientLeft || 0);
-  const windowTop =
-    (window.pageYOffset || doc.scrollTop) - (doc.clientTop || 0);
+    (win.pageXOffset || html.scrollLeft) - (html.clientLeft || 0);
+  const windowTop = (win.pageYOffset || html.scrollTop) - (html.clientTop || 0);
 
   const coordinates = {
     top:
@@ -73,6 +76,6 @@ export const getCoords = (t: HTMLTextAreaElement) => {
       9,
     left: windowLeft + span.offsetLeft + parseInt(computed.borderLeftWidth) - 1,
   };
-  document.body.removeChild(div);
+  doc.body.removeChild(div);
   return coordinates;
 };

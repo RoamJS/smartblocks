@@ -56,9 +56,19 @@ const SmartblocksMenu = ({
   const menuRef = useRef<HTMLUListElement>(null);
   const [filter, setFilter] = useState("");
   const initialWorkflows = useMemo(() => {
+    // built-ins that prompt are left out of the Sidecar: prompts open in the main window
+    const inMainWindow = textarea.ownerDocument === document;
     return getVisibleCustomWorkflows()
       .sort(({ name: a }, { name: b }) => a.localeCompare(b))
-      .concat(isCustomOnly ? [] : predefinedWorkflows);
+      .concat(
+        isCustomOnly
+          ? []
+          : predefinedWorkflows.filter(
+              (wf) =>
+                inMainWindow ||
+                !(wf.children || []).some((c) => c.text.includes("<%INPUT"))
+            )
+      );
   }, []);
   const workflows = useMemo(
     () =>
@@ -84,7 +94,7 @@ const SmartblocksMenu = ({
       const srcName = item.getAttribute("data-name");
       const srcUid = item.getAttribute("data-uid");
       if (!srcName || !srcUid) return;
-      const currentTextarea = document.getElementById(
+      const currentTextarea = textarea.ownerDocument.getElementById(
         textarea.id
       ) as HTMLTextAreaElement;
       waitForBlock(blockUid, textarea.value).then(() => {
@@ -173,6 +183,8 @@ const SmartblocksMenu = ({
         preventOverflow: { enabled: false },
       }}
       autoFocus={false}
+      enforceFocus={false}
+      portalContainer={textarea.ownerDocument.body}
       content={
         <Menu
           ulRef={menuRef}
@@ -233,23 +245,37 @@ const SmartblocksMenu = ({
 };
 
 export const render = (props: Props & { onClose: () => void }) => {
-  const parent = document.createElement("span");
+  const doc = props.textarea.ownerDocument;
+  const parent = doc.createElement("span");
   const coords = getCoords(props.textarea);
   parent.style.position = "absolute";
   parent.style.left = `${coords.left}px`;
   parent.style.top = `${coords.top}px`;
   props.textarea.parentElement?.insertBefore(parent, props.textarea);
-  ReactDOM.render(
-    <SmartblocksMenu
-      {...props}
-      onClose={() => {
-        props.onClose();
-        ReactDOM.unmountComponentAtNode(parent);
-        parent.remove();
-      }}
-    />,
-    parent
-  );
+  const block = window.roamAlphaAPI.ui.getFocusedBlock();
+  // close once its block is no longer being edited (a click elsewhere, the Sidecar hiding or
+  // losing the keyboard, another card) or its anchor is gone (Roam re-rendered the editor)
+  const observer = new (doc.defaultView || window).MutationObserver(() => {
+    const focused = window.roamAlphaAPI.ui.getFocusedBlock();
+    if (
+      !parent.isConnected ||
+      focused?.["block-uid"] !== block?.["block-uid"] ||
+      focused?.["window-id"] !== block?.["window-id"]
+    )
+      close();
+  });
+  observer.observe(doc.body, { childList: true, subtree: true });
+  let closed = false;
+  const close = () => {
+    if (closed) return;
+    closed = true;
+    observer.disconnect();
+    props.onClose();
+    ReactDOM.unmountComponentAtNode(parent);
+    parent.remove();
+  };
+  ReactDOM.render(<SmartblocksMenu {...props} onClose={close} />, parent);
+  return close;
 };
 
 export default SmartblocksMenu;
