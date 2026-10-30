@@ -223,7 +223,11 @@ const SmartblocksMenu = ({
         <div
           className={`roamjs-smartblocks-picker${previewOpen ? " is-preview-open" : ""}`}
           aria-label="SmartBlocks menu"
-          onMouseDown={(event): void => event.preventDefault()}
+          onMouseDown={(event): void => {
+            event.preventDefault();
+            event.stopPropagation();
+          }}
+          onClick={(event): void => event.stopPropagation()}
         >
           <div className="roamjs-smartblocks-menu-column min-w-0">
             <Menu
