@@ -26,3 +26,10 @@ The trigger could be customized by going to the SmartBlocks tab in your Roam Dep
 
 For WorkBench users: SmartBlocks appear in the WorkBench drop-down (triggered by `Ctrl-;`) for convenience.
 If you had a trigger defined by a `#42Setting`, that setting will take precedence over the config page.
+
+## Preview, pins, and workflow source
+
+- Press the right arrow to show the selected workflow's template. Up/down arrows change the selection and preview; the left arrow hides the preview. The preview displays source text and child blocks without executing commands, prompts, queries, or embedded macros.
+- Click a workflow's pin icon to keep it at the top of the unfiltered menu. Pins are stored in this graph's SmartBlocks extension settings. Search keeps its usual fuzzy ranking and never repeats a pinned workflow.
+- Press **Shift+Enter** (or click **Source** in the footer) to open a custom workflow's source block in Roam's right sidebar without running it. Built-in workflows have no source block, so their Source action is unavailable; their definitions are still visible in the preview.
+- **Enter**, clicking a workflow, and **Run** execute the selected workflow as usual. **Escape** dismisses the menu. Ctrl+J/N and Ctrl+K/P continue to move down/up.
