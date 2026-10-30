@@ -1550,6 +1550,50 @@ export const COMMANDS: {
     },
   },
   {
+    text: "MOVEBLOCK",
+    help: "Moves a block under a new parent\n\n1. Block ref or uid to move (optional, defaults to current block)\n\n2. Parent ref, uid, or page title (optional, defaults to current parent)\n\n3. Order index or 'last' (optional, defaults to last)",
+    handler: async (blockArg = "", parentArg = "", orderArg = "last") => {
+      const sourceArg = smartBlocksContext.variables[blockArg] || blockArg;
+      const sourceUid =
+        extractRef(sourceArg) || sourceArg || smartBlocksContext.currentUid || "";
+      if (!sourceUid) {
+        return "--> MOVEBLOCK failed: source block was not found <--";
+      }
+
+      const rawParentArg = smartBlocksContext.variables[parentArg] || parentArg;
+      const targetParentUid =
+        getUidFromText(rawParentArg) ||
+        extractRef(rawParentArg) ||
+        rawParentArg ||
+        getParentUidByBlockUid(sourceUid);
+      if (!targetParentUid) {
+        return "--> MOVEBLOCK failed: target parent was not found <--";
+      }
+      if (sourceUid === targetParentUid) {
+        return "--> MOVEBLOCK failed: source block cannot be its own parent <--";
+      }
+
+      const order =
+        /^last$/i.test(orderArg) || !orderArg
+          ? getBasicTreeByParentUid(targetParentUid).length
+          : Math.max(0, Number(orderArg) || 0);
+
+      if (typeof (window.roamAlphaAPI as any).moveBlock !== "function") {
+        return "--> MOVEBLOCK failed: moveBlock API not available <--";
+      }
+      try {
+        await (window.roamAlphaAPI as any).moveBlock({
+          location: { "parent-uid": targetParentUid, order },
+          block: { uid: sourceUid },
+        });
+        return `((${sourceUid}))`;
+      } catch (e) {
+        const message = e instanceof Error ? e.message : String(e);
+        return `--> MOVEBLOCK failed: ${message} <--`;
+      }
+    },
+  },
+  {
     text: "INDENT",
     help: "Indents the current block if indentation can be done at current block. ",
     handler: () => {
