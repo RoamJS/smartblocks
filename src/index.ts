@@ -389,12 +389,13 @@ export default runExtension(async ({ extensionAPI }) => {
     },
   };
 
-  let menuLoaded = false;
+  // the trigger menu open now, in whichever window: one at a time
+  let openMenu: { doc: Document; close: () => void } | undefined;
 
   const documentInputListener = (e: Event) => {
     const target = e.target as HTMLElement;
     if (
-      !menuLoaded &&
+      !openMenu &&
       target.tagName === "TEXTAREA" &&
       target.classList.contains("rm-block-input")
     ) {
@@ -407,18 +408,21 @@ export default runExtension(async ({ extensionAPI }) => {
       );
       const match = triggerRegex.exec(valueToCursor);
       if (match) {
-        menuLoaded = true;
-        render({
+        const menu = { doc: textarea.ownerDocument, close: () => {} };
+        menu.close = render({
           textarea,
           triggerRegex,
           triggerStart: match.index,
           isCustomOnly,
           extensionAPI,
           onClose: () => {
-            menuLoaded = false;
+            if (openMenu === menu) openMenu = undefined;
           },
         });
+        openMenu = menu;
       } else if (COMMAND_ENTRY_REGEX.test(valueToCursor)) {
+        // the command menu draws in the main window only
+        if (textarea.ownerDocument !== document) return;
         renderCursorMenu({
           initialItems: COMMANDS.filter((c) => !c.illegal)
             .filter((c) => !c.hidden)
@@ -542,6 +546,31 @@ export default runExtension(async ({ extensionAPI }) => {
     }
   };
   document.addEventListener("keydown", globalHotkeyListener);
+  // Roam's desktop Sidecar renders the editor in a second document: listen there too
+  (extensionAPI.ui as any)?.editorDocuments?.addCallback({
+    label: "trigger",
+    callback: ({
+      document: doc,
+      signal,
+    }: {
+      document: Document;
+      signal: AbortSignal;
+    }) => {
+      if (doc === document) return;
+      doc.addEventListener("input", documentInputListener, { signal });
+      // with no focused block, a hot key would write to the main window's page
+      doc.addEventListener(
+        "keydown",
+        (e) => {
+          if (window.roamAlphaAPI.ui.getFocusedBlock()) globalHotkeyListener(e);
+        },
+        { signal }
+      );
+      return () => {
+        if (openMenu?.doc === doc) openMenu.close();
+      };
+    },
+  });
   // We want to delay this so that remote changes could be applied first from multiple devices,
   // namely daily config settings.
   setTimeout(runDaily, 1000 * 10);
@@ -961,6 +990,7 @@ export default runExtension(async ({ extensionAPI }) => {
       REFRESH_SMARTBLOCKS_COMMAND_LABEL,
     ],
     unload: () => {
+      openMenu?.close();
       unloads.forEach((u) => u());
       window.clearTimeout(getDailyConfig()["next-run-timeout"]);
       saveDailyConfig({ "next-run-timeout": 0 });
