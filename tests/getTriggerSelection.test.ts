@@ -33,6 +33,36 @@ test("treats regular expression characters in a trigger literally", () => {
   });
 });
 
+test("rejects earlier-line triggers, including a pinned menu trigger", () => {
+  for (const newline of ["\n", "\r\n", "\r", "\u2028", "\u2029"]) {
+    const text = `for jj = 1:num_alpha${newline}Take notes`;
+    const input = { text, selectionStart: text.length, trigger: "jj" };
+
+    expect(getTriggerSelection(input)).toBeUndefined();
+    expect(getTriggerSelection({ ...input, triggerStart: 4 })).toBeUndefined();
+  }
+});
+
+test("returns absolute splice offsets for the nearest trigger on a later line", () => {
+  const prefix = "first jj line\nkeep jjold ";
+  const query = "jjworkflow";
+  const suffix = " suffix\nlast jj line";
+  const text = `${prefix}${query}${suffix}`;
+
+  expect(
+    getTriggerSelection({
+      text,
+      selectionStart: prefix.length + query.length,
+      trigger: "jj",
+    })
+  ).toEqual({
+    text,
+    start: prefix.length,
+    end: prefix.length + query.length,
+    filter: "workflow",
+  });
+});
+
 test("keeps the trigger occurrence that opened the menu", () => {
   expect(
     getTriggerSelection({

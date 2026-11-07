@@ -31,6 +31,7 @@ const getTriggerSelection = ({
   const valueToCursor = text.substring(0, selectionStart);
   const start = triggerStart ?? valueToCursor.lastIndexOf(trigger);
   return start < 0 ||
+    /[\r\n\u2028\u2029]/.test(valueToCursor.slice(start)) ||
     valueToCursor.substring(start, start + trigger.length) !== trigger
     ? undefined
     : {

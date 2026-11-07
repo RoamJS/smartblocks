@@ -83,14 +83,8 @@ const SmartblocksMenu = ({
     [textarea]
   );
   const onSelect = useCallback(
-    (index) => {
+    (index: number, event?: KeyboardEvent) => {
       if (!menuRef.current) return;
-      const item =
-        menuRef.current.children[index].querySelector(".bp3-menu-item");
-      if (!item) return;
-      const srcName = item.getAttribute("data-name");
-      const srcUid = item.getAttribute("data-uid");
-      if (!srcName || !srcUid) return;
       const currentTextarea = getCurrentTextarea();
       const selection = getTriggerSelection({
         text: currentTextarea.value,
@@ -99,6 +93,13 @@ const SmartblocksMenu = ({
         triggerStart,
       });
       if (!selection) return onClose();
+      event?.stopPropagation();
+      event?.preventDefault();
+      const item =
+        menuRef.current.children[index]?.querySelector(".bp3-menu-item");
+      const srcName = item?.getAttribute("data-name");
+      const srcUid = item?.getAttribute("data-uid");
+      if (!srcName || !srcUid) return;
       waitForBlock(blockUid, selection.text).then(() => {
         onClose();
         setTimeout(() => {
@@ -144,9 +145,7 @@ const SmartblocksMenu = ({
         e.preventDefault();
       } else if (e.key === "Enter") {
         const index = Number(menuRef.current.getAttribute("data-active-index"));
-        onSelect(index);
-        e.stopPropagation();
-        e.preventDefault();
+        onSelect(index, e);
       } else if (e.key === "Escape") {
         onClose();
       } else {
@@ -171,6 +170,7 @@ const SmartblocksMenu = ({
       setActiveIndex,
       setFilter,
       onClose,
+      onSelect,
       getCurrentTextarea,
       trigger,
       triggerStart,
