@@ -443,8 +443,7 @@ export default runExtension(async ({ extensionAPI }) => {
         render({
           textarea,
           trigger,
-          triggerStart: selection.start,
-          initialFilter: selection.filter,
+          initialSelection: selection,
           isCustomOnly,
           extensionAPI,
           onClose: () => {

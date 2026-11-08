@@ -13,7 +13,10 @@ import getPageUidByPageTitle from "roamjs-components/queries/getPageUidByPageTit
 import getTextByBlockUid from "roamjs-components/queries/getTextByBlockUid";
 import type { OnloadArgs } from "roamjs-components/types/native";
 import { getCoords } from "./utils/dom";
-import getTriggerSelection from "./utils/getTriggerSelection";
+import getTriggerSelection, {
+  isCurrentTriggerSelection,
+} from "./utils/getTriggerSelection";
+import type { TriggerSelection } from "./utils/getTriggerSelection";
 import {
   getVisibleCustomWorkflows,
   predefinedWorkflows,
@@ -25,8 +28,7 @@ import fuzzy from "fuzzy";
 type Props = {
   textarea: HTMLTextAreaElement;
   trigger: string;
-  triggerStart: number;
-  initialFilter: string;
+  initialSelection: TriggerSelection;
   isCustomOnly: boolean;
   extensionAPI: OnloadArgs["extensionAPI"];
 };
@@ -58,8 +60,7 @@ const SmartblocksMenu = ({
   onClose,
   textarea,
   trigger,
-  triggerStart,
-  initialFilter,
+  initialSelection,
   isCustomOnly,
   extensionAPI,
 }: { onClose: () => void } & Props) => {
@@ -74,7 +75,8 @@ const SmartblocksMenu = ({
   const menuRef = useRef<HTMLUListElement>(null);
   const pendingSelection = useRef<AbortController>();
   useEffect(() => () => pendingSelection.current?.abort(), []);
-  const [filter, setFilter] = useState(initialFilter);
+  const [selection, setSelection] = useState(initialSelection);
+  const { filter } = selection;
   const initialWorkflows = useMemo(() => {
     return getVisibleCustomWorkflows()
       .sort(({ name: a }, { name: b }) => a.localeCompare(b))
@@ -103,14 +105,12 @@ const SmartblocksMenu = ({
     (index: number, event?: KeyboardEvent) => {
       if (!menuRef.current) return;
       const currentTextarea = getCurrentTextarea();
-      if (!currentTextarea) return onClose();
-      const selection = getTriggerSelection({
-        text: currentTextarea.value,
-        selectionStart: currentTextarea.selectionStart,
-        trigger,
-        triggerStart,
-      });
-      if (!selection) return onClose();
+      if (
+        !currentTextarea ||
+        !isCurrentTriggerSelection(selection, currentTextarea)
+      ) {
+        return onClose();
+      }
       event?.stopPropagation();
       event?.preventDefault();
       const item =
@@ -150,7 +150,7 @@ const SmartblocksMenu = ({
         }, 10);
       });
     },
-    [menuRef, blockUid, getCurrentTextarea, onClose, trigger, triggerStart]
+    [menuRef, blockUid, getCurrentTextarea, onClose, selection, windowId]
   );
   const keydownListener = useCallback(
     (e: KeyboardEvent) => {
@@ -193,14 +193,14 @@ const SmartblocksMenu = ({
       const editor = event.target;
       if (!(editor instanceof HTMLTextAreaElement) || editor.id !== textarea.id)
         return;
-      const selection = getTriggerSelection({
+      const nextSelection = getTriggerSelection({
         text: editor.value,
         selectionStart: editor.selectionStart,
         trigger,
-        triggerStart,
+        previousSelection: selection,
       });
-      if (!selection) return onClose();
-      setFilter(selection.filter);
+      if (!nextSelection) return onClose();
+      setSelection(nextSelection);
       setActiveIndex(0);
     };
     listeningEl?.addEventListener("keydown", keydownListener);
@@ -209,7 +209,7 @@ const SmartblocksMenu = ({
       listeningEl?.removeEventListener("keydown", keydownListener);
       listeningEl?.removeEventListener("input", inputListener);
     };
-  }, [keydownListener, onClose, textarea, trigger, triggerStart]);
+  }, [keydownListener, onClose, textarea, trigger, selection]);
   return (
     <Popover
       onClose={onClose}

@@ -1,19 +1,23 @@
 import { expect, test } from "@playwright/test";
 import getTriggerSelection, {
+  isCurrentTriggerSelection,
   resolveTrigger,
 } from "../src/utils/getTriggerSelection";
 
 test("uses the trigger occurrence nearest the cursor", () => {
+  const prefix = "before jjmiddle ";
+  const query = "jjworkflow";
+  const text = `${prefix}${query} after`;
   expect(
     getTriggerSelection({
-      text: "beforejjmiddlejjworkflow after",
-      selectionStart: 24,
+      text,
+      selectionStart: prefix.length + query.length,
       trigger: "jj",
     })
   ).toEqual({
-    text: "beforejjmiddlejjworkflow after",
-    start: 14,
-    end: 24,
+    text,
+    start: prefix.length,
+    end: prefix.length + query.length,
     filter: "workflow",
   });
 });
@@ -33,13 +37,35 @@ test("treats regular expression characters in a trigger literally", () => {
   });
 });
 
+test("does not open the menu when the default trigger is typed inside a word", () => {
+  for (const text of ["foojj", "foojjbar", "ñjjbar", "id_jjbar"]) {
+    expect(
+      getTriggerSelection({ text, selectionStart: text.length, trigger: "jj" })
+    ).toBeUndefined();
+  }
+});
+
+test("skips overlapping in-word matches when pasting a trigger and query", () => {
+  const text = "jjjob";
+  expect(
+    getTriggerSelection({
+      text,
+      selectionStart: text.length,
+      trigger: "jj",
+      insertedLength: text.length,
+    })
+  ).toMatchObject({ start: 0, filter: "job" });
+});
+
 test("rejects earlier-line triggers, including a pinned menu trigger", () => {
   for (const newline of ["\n", "\r\n", "\r", "\u2028", "\u2029"]) {
     const text = `for jj = 1:num_alpha${newline}Take notes`;
     const input = { text, selectionStart: text.length, trigger: "jj" };
+    const previousSelection = getTriggerSelection({ ...input, selectionStart: 6 });
 
+    expect(previousSelection).toBeDefined();
     expect(getTriggerSelection(input)).toBeUndefined();
-    expect(getTriggerSelection({ ...input, triggerStart: 4 })).toBeUndefined();
+    expect(getTriggerSelection({ ...input, previousSelection })).toBeUndefined();
   }
 });
 
@@ -83,12 +109,17 @@ test("opens on the second j without activating an earlier same-line trigger", ()
 });
 
 test("keeps the trigger occurrence that opened the menu", () => {
+  const previousSelection = getTriggerSelection({
+    text: "/daily suffix",
+    selectionStart: 6,
+    trigger: "/",
+  });
   expect(
     getTriggerSelection({
       text: "/daily/plan suffix",
       selectionStart: 11,
       trigger: "/",
-      triggerStart: 0,
+      previousSelection,
     })
   ).toEqual({
     text: "/daily/plan suffix",
@@ -96,6 +127,36 @@ test("keeps the trigger occurrence that opened the menu", () => {
     end: 11,
     filter: "daily/plan",
   });
+});
+
+test("rejects execution when Ctrl+E moved the caret without input", () => {
+  const text = "keep jj existing suffix";
+  const trigger = "jj";
+  const caret = 7;
+  const selection = getTriggerSelection({ text, selectionStart: caret, trigger })!;
+  expect(isCurrentTriggerSelection(selection, {
+    value: text,
+    selectionStart: caret,
+    selectionEnd: caret,
+  })).toBe(true);
+  expect(isCurrentTriggerSelection(selection, {
+    value: text,
+    selectionStart: text.length,
+    selectionEnd: text.length,
+  })).toBe(false);
+  expect(isCurrentTriggerSelection(selection, {
+    value: text,
+    selectionStart: caret,
+    selectionEnd: text.length,
+  })).toBe(false);
+
+  const edited = `${text}x`;
+  expect(getTriggerSelection({
+    text: edited,
+    selectionStart: edited.length,
+    trigger,
+    previousSelection: selection,
+  })).toBeUndefined();
 });
 
 test("returns a single text snapshot for the splice offsets", () => {
