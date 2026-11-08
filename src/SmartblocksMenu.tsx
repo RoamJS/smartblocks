@@ -31,18 +31,27 @@ type Props = {
 };
 
 // Roam may not have persisted the latest textarea input when a workflow is selected.
-const waitForBlock = (
-  uid: string,
-  text: string,
-  closingEditorId?: string
-): Promise<void> =>
-  getTextByBlockUid(uid) === text &&
-  !(closingEditorId &&
-    document.getElementById(closingEditorId) instanceof HTMLTextAreaElement)
-    ? Promise.resolve()
-    : new Promise((resolve) =>
-        setTimeout(() => resolve(waitForBlock(uid, text, closingEditorId)), 10)
-      );
+const waitForBlock = async ({
+  uid,
+  text,
+  closingEditorId,
+  signal,
+}: {
+  uid: string;
+  text: string;
+  closingEditorId?: string;
+  signal: AbortSignal;
+}): Promise<boolean> => {
+  const deadline = Date.now() + 3000;
+  while (!signal.aborted && Date.now() < deadline) {
+    const editorStillOpen =
+      closingEditorId &&
+      document.getElementById(closingEditorId) instanceof HTMLTextAreaElement;
+    if (!editorStillOpen && getTextByBlockUid(uid) === text) return true;
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  return false;
+};
 
 const SmartblocksMenu = ({
   onClose,
@@ -61,6 +70,8 @@ const SmartblocksMenu = ({
     []
   );
   const menuRef = useRef<HTMLUListElement>(null);
+  const pendingSelection = useRef<AbortController>();
+  useEffect(() => () => pendingSelection.current?.abort(), []);
   const [filter, setFilter] = useState("");
   const initialWorkflows = useMemo(() => {
     return getVisibleCustomWorkflows()
@@ -105,12 +116,22 @@ const SmartblocksMenu = ({
         menuRef.current.children[index]?.querySelector(".bp3-menu-item");
       const srcName = item?.getAttribute("data-name");
       const srcUid = item?.getAttribute("data-uid");
-      if (!srcName || !srcUid) return;
+      if (!srcName || !srcUid || pendingSelection.current) return;
+      const controller = new AbortController();
+      pendingSelection.current = controller;
       // On click, capture the edit first, then wait for Roam to close the editor.
       const closingEditorId = !event ? currentTextarea.id : undefined;
       if (closingEditorId) currentTextarea.blur();
-      waitForBlock(blockUid, selection.text, closingEditorId).then(() => {
+      waitForBlock({
+        uid: blockUid,
+        text: selection.text,
+        closingEditorId,
+        signal: controller.signal,
+      }).then((saved) => {
+        if (controller.signal.aborted) return;
+        pendingSelection.current = undefined;
         onClose();
+        if (!saved) return;
         setTimeout(() => {
           sbBomb({
             srcUid,

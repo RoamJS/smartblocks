@@ -2771,6 +2771,9 @@ export const sbBomb = async ({
   triggerUid?: string;
   fromDaily?: boolean;
 }): Promise<0 | string> => {
+  // Trigger-menu offsets only apply to the editor snapshot they came from.
+  if (originalText !== undefined && getTextByBlockUid(uid) !== originalText)
+    return 0;
   const finish = renderLoading(uid);
   resetContext({ targetUid: uid, variables, triggerUid });
   const childNodes = PREDEFINED_REGEX.test(srcUid)
