@@ -93,16 +93,15 @@ const SmartblocksMenu = ({
     [filter, initialWorkflows]
   );
   const [activeIndex, setActiveIndex] = useState(0);
-  const getCurrentTextarea = useCallback(
-    () =>
-      (document.getElementById(textarea.id) as HTMLTextAreaElement | null) ||
-      textarea,
-    [textarea]
-  );
+  const getCurrentTextarea = useCallback(() => {
+    const editor = document.getElementById(textarea.id);
+    return editor instanceof HTMLTextAreaElement ? editor : undefined;
+  }, [textarea]);
   const onSelect = useCallback(
     (index: number, event?: KeyboardEvent) => {
       if (!menuRef.current) return;
       const currentTextarea = getCurrentTextarea();
+      if (!currentTextarea) return onClose();
       const selection = getTriggerSelection({
         text: currentTextarea.value,
         selectionStart: currentTextarea.selectionStart,
@@ -133,6 +132,8 @@ const SmartblocksMenu = ({
         onClose();
         if (!saved) return;
         setTimeout(() => {
+          const liveEditor = getCurrentTextarea();
+          if (liveEditor && liveEditor.value !== selection.text) return;
           sbBomb({
             srcUid,
             target: {
@@ -180,6 +181,7 @@ const SmartblocksMenu = ({
         onClose();
       } else {
         const currentTextarea = getCurrentTextarea();
+        if (!currentTextarea) return onClose();
         const value =
           getTriggerSelection({
             text: currentTextarea.value,
@@ -265,6 +267,7 @@ const SmartblocksMenu = ({
                     </>
                   }
                   active={i === activeIndex}
+                  shouldDismissPopover={false}
                   onMouseEnter={() => setActiveIndex(i)}
                   // Take the editor snapshot in onClick before letting Roam blur it.
                   onMouseDown={(event) => event.preventDefault()}
