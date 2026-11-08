@@ -21,24 +21,28 @@ const getTriggerSelection = ({
   selectionStart,
   trigger,
   triggerStart,
+  insertedLength = Infinity,
 }: {
   text: string;
   selectionStart: number;
   trigger: string;
   triggerStart?: number;
+  insertedLength?: number;
 }): TriggerSelection | undefined => {
   if (!trigger) return undefined;
   const valueToCursor = text.substring(0, selectionStart);
   const start = triggerStart ?? valueToCursor.lastIndexOf(trigger);
+  const triggerEnd = start + trigger.length;
   return start < 0 ||
+    triggerEnd <= selectionStart - insertedLength ||
     /[\r\n\u2028\u2029]/.test(valueToCursor.slice(start)) ||
-    valueToCursor.substring(start, start + trigger.length) !== trigger
+    valueToCursor.substring(start, triggerEnd) !== trigger
     ? undefined
     : {
         text,
         start,
         end: selectionStart,
-        filter: valueToCursor.substring(start + trigger.length),
+        filter: valueToCursor.substring(triggerEnd),
       };
 };
 

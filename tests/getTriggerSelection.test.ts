@@ -63,6 +63,25 @@ test("returns absolute splice offsets for the nearest trigger on a later line", 
   });
 });
 
+test("opens on the second j without activating an earlier same-line trigger", () => {
+  const prefix = "first jj stays\nkeep jjold ";
+  const insert = (value: string, insertedLength = 1) =>
+    getTriggerSelection({
+      text: `${prefix}${value} suffix`,
+      selectionStart: prefix.length + value.length,
+      trigger: "jj",
+      insertedLength,
+    });
+
+  expect(insert("j")).toBeUndefined();
+  expect(insert("jj")).toMatchObject({ start: prefix.length, filter: "" });
+  expect(insert("jjquery", 7)).toMatchObject({
+    start: prefix.length,
+    filter: "query",
+  });
+  expect(insert("jj", 0)).toBeUndefined();
+});
+
 test("keeps the trigger occurrence that opened the menu", () => {
   expect(
     getTriggerSelection({

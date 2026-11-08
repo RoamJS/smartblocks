@@ -405,10 +405,14 @@ export default runExtension(async ({ extensionAPI }) => {
         0,
         textarea.selectionStart
       );
+      const { data, inputType } = e as InputEvent;
       const selection = getTriggerSelection({
         text: textarea.value,
         selectionStart: textarea.selectionStart,
         trigger,
+        // An edit must finish a trigger, not just have one earlier on the line.
+        insertedLength:
+          data?.length ?? (inputType && !inputType.startsWith("insert") ? 0 : 1),
       });
       if (selection) {
         menuLoaded = true;

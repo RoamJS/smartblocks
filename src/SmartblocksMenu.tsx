@@ -188,8 +188,8 @@ const SmartblocksMenu = ({
             selectionStart: currentTextarea.selectionStart,
             trigger,
             triggerStart,
-          })?.filter || "";
-        if (value) {
+          })?.filter;
+        if (value !== undefined) {
           setFilter(value);
         } else {
           onClose();
