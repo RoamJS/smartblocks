@@ -76,3 +76,19 @@ export const getCoords = (t: HTMLTextAreaElement) => {
   document.body.removeChild(div);
   return coordinates;
 };
+
+export const createTriggerMenuEventBinding = (textarea: HTMLTextAreaElement) => {
+  // Roam can replace the textarea while its wrapper stays mounted.
+  const target = textarea.parentElement || textarea;
+  return (
+    keydownListener: (event: KeyboardEvent) => void,
+    inputListener: (event: Event) => void
+  ) => {
+    target?.addEventListener("keydown", keydownListener);
+    target?.addEventListener("input", inputListener);
+    return () => {
+      target?.removeEventListener("keydown", keydownListener);
+      target?.removeEventListener("input", inputListener);
+    };
+  };
+};

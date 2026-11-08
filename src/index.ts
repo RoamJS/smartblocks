@@ -48,6 +48,9 @@ import { zCommandOutput } from "./utils/zodTypes";
 import { IconNames } from "@blueprintjs/icons";
 import parseSmartBlockButton from "./utils/parseSmartBlockButton";
 import smartblocksMenuStyles from "./smartblocksMenuStyles";
+import getTriggerSelection, {
+  resolveTrigger,
+} from "./utils/getTriggerSelection";
 
 const getLegacy42Setting = (name: string) => {
   const settings = Object.fromEntries(
@@ -192,14 +195,11 @@ export default runExtension(async ({ extensionAPI }) => {
   };
 
   let trigger = "jj";
-  let triggerRegex = /$^/;
   const refreshTrigger = (value: string) => {
-    trigger = (getLegacy42Setting("SmartBlockTrigger") || value || "jj")
-      .replace(/"/g, "")
-      .replace(/\\/g, "\\\\")
-      .replace(/\+/g, "\\+")
-      .trim();
-    triggerRegex = new RegExp(`${trigger}(.*)$`);
+    trigger = resolveTrigger({
+      legacyTrigger: getLegacy42Setting("SmartBlockTrigger"),
+      value,
+    });
   };
 
   let isCustomOnly = extensionAPI.settings.get("custom-only") as boolean;
@@ -388,8 +388,26 @@ export default runExtension(async ({ extensionAPI }) => {
   };
 
   let menuLoaded = false;
+  let pasteSnapshot:
+    | { editor: HTMLTextAreaElement; retainedLength: number }
+    | undefined;
+
+  const capturePaste = (event: Event) => {
+    const editor = event.target;
+    pasteSnapshot =
+      editor instanceof HTMLTextAreaElement &&
+      editor.classList.contains("rm-block-input")
+        ? {
+            editor,
+            retainedLength:
+              editor.value.length - (editor.selectionEnd - editor.selectionStart),
+          }
+        : undefined;
+  };
 
   const documentInputListener = (e: Event) => {
+    const paste = pasteSnapshot;
+    pasteSnapshot = undefined;
     const target = e.target as HTMLElement;
     if (
       !menuLoaded &&
@@ -403,13 +421,27 @@ export default runExtension(async ({ extensionAPI }) => {
         0,
         textarea.selectionStart
       );
-      const match = triggerRegex.exec(valueToCursor);
-      if (match) {
+      const { data, inputType } = e as InputEvent;
+      const pastedLength =
+        inputType === "insertFromPaste" && paste?.editor === textarea
+          ? Math.max(0, textarea.value.length - paste.retainedLength)
+          : undefined;
+      const selection = getTriggerSelection({
+        text: textarea.value,
+        selectionStart: textarea.selectionStart,
+        trigger,
+        // An edit must finish a trigger, not just have one earlier on the line.
+        insertedLength:
+          pastedLength ??
+          data?.length ??
+          (inputType && !inputType.startsWith("insert") ? 0 : 1),
+      });
+      if (selection) {
         menuLoaded = true;
         render({
           textarea,
-          triggerRegex,
-          triggerStart: match.index,
+          trigger,
+          initialSelection: selection,
           isCustomOnly,
           extensionAPI,
           onClose: () => {
@@ -494,6 +526,7 @@ export default runExtension(async ({ extensionAPI }) => {
       }
     }
   };
+  document.addEventListener("paste", capturePaste, true);
   document.addEventListener("input", documentInputListener);
 
   const globalHotkeyListener = async (_e: Event) => {
@@ -959,6 +992,7 @@ export default runExtension(async ({ extensionAPI }) => {
       REFRESH_SMARTBLOCKS_COMMAND_LABEL,
     ],
     unload: () => {
+      document.removeEventListener("paste", capturePaste, true);
       unloads.forEach((u) => u());
       window.clearTimeout(getDailyConfig()["next-run-timeout"]);
       saveDailyConfig({ "next-run-timeout": 0 });
