@@ -1,7 +1,8 @@
 # Changelog
 
-## Unreleased
+## 1.15.0
 
-- Refresh the trigger menu with a native command footer and compact pinned workflows remembered in extension settings.
-- Press Right to preview the selected workflow without running commands, and Left to hide the preview.
-- Press Shift+Enter to open a custom workflow's source in the right sidebar. Enter still runs the workflow.
+- The `jj` menu now has a Roam-style shortcut footer. Pin frequently used SmartBlocks at the top of the menu. Pins stay in place after reloading Roam.
+- Press Right Arrow to preview the selected SmartBlock without running it. Press Left Arrow to close the preview.
+- Press Shift+Enter to open a custom SmartBlock's source in the right sidebar. Press Enter to run it.
+- Unnamed SmartBlocks stay out of the trigger menu until they have a name.

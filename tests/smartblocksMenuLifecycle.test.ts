@@ -12,7 +12,13 @@ import * as triggerSelection from "../src/utils/getTriggerSelection";
 import handleTriggerMenuKeydown from "../src/utils/handleTriggerMenuKeydown";
 import * as menuUtils from "../src/utils/smartblocksMenu";
 
-const menuFixture = () => {
+const menuFixture = ({
+  initialText = "jjAl",
+  workflows = [
+    { uid: "aaa", name: "Alpha" },
+    { uid: "bbb", name: "Alpine" },
+  ],
+} = {}) => {
   const { window } = new JSDOM(
     '<div class="rm-reference-item"><div><textarea id="editor"></textarea></div></div>',
   );
@@ -69,10 +75,7 @@ const menuFixture = () => {
     "./utils/getTriggerSelection": triggerSelection,
     "./utils/handleTriggerMenuKeydown": handleTriggerMenuKeydown,
     "./utils/core": {
-      getVisibleCustomWorkflows: () => [
-        { uid: "aaa", name: "Alpha" },
-        { uid: "bbb", name: "Alpine" },
-      ],
+      getVisibleCustomWorkflows: () => workflows,
       predefinedWorkflows: [],
       PREDEFINED_REGEX: /^predefined/,
       sbBomb: (execution: (typeof executions)[number]) =>
@@ -98,8 +101,8 @@ const menuFixture = () => {
   );
   const editor = window.document.querySelector("textarea")!;
   const wrapper = editor.parentElement!;
-  editor.value = "jjAl";
-  editor.setSelectionRange(4, 4);
+  editor.value = initialText;
+  editor.setSelectionRange(initialText.length, initialText.length);
   const initialSelection = getTriggerSelection({
     text: editor.value,
     selectionStart: editor.selectionStart,
@@ -170,6 +173,38 @@ test("keeps keyboard selection working after a linked-reference editor is replac
     menu.cleanup();
   }
 });
+
+for (const action of ["Enter", "click"] as const) {
+  test(`${action} runs the first named workflow when unnamed drafts exist`, async () => {
+    const menu = menuFixture({
+      initialText: "jj",
+      workflows: [
+        { uid: "unnamed", name: "" },
+        { uid: "spaces", name: "   " },
+        { uid: "aaa", name: "Alpha" },
+      ],
+    });
+    try {
+      menu.save(menu.editor.value);
+      if (action === "Enter") {
+        menu.press(menu.editor, "Enter");
+      } else {
+        menu.editor.blur = () => menu.editor.remove();
+        const firstRow = menu.document.querySelector<HTMLButtonElement>(
+          ".roamjs-smartblocks-workflow",
+        )!;
+        act(() => firstRow.click());
+      }
+      await expect
+        .poll(() => menu.executions.map(({ srcUid }) => srcUid), {
+          timeout: 1000,
+        })
+        .toEqual(["aaa"]);
+    } finally {
+      menu.cleanup();
+    }
+  });
+}
 
 test("a changed query cancels the pending save and the next Enter runs once", async () => {
   const menu = menuFixture();

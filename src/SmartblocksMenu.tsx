@@ -112,9 +112,9 @@ const SmartblocksMenu = ({
   const menuResizeObserver = useRef<ResizeObserver | null>(null);
   const initialWorkflows = useMemo(
     (): { uid: string; name: string; children?: PreviewNode[] }[] => [
-      ...getVisibleCustomWorkflows().sort(({ name: a }, { name: b }) =>
-        a.localeCompare(b),
-      ),
+      ...getVisibleCustomWorkflows()
+        .filter(({ name }) => name.trim().length > 0)
+        .sort(({ name: a }, { name: b }) => a.localeCompare(b)),
       ...(isCustomOnly ? [] : predefinedWorkflows),
     ],
     [isCustomOnly],
