@@ -31,11 +31,17 @@ type Props = {
 };
 
 // Roam may not have persisted the latest textarea input when a workflow is selected.
-const waitForBlock = (uid: string, text: string): Promise<void> =>
-  getTextByBlockUid(uid) === text
+const waitForBlock = (
+  uid: string,
+  text: string,
+  closingEditorId?: string
+): Promise<void> =>
+  getTextByBlockUid(uid) === text &&
+  !(closingEditorId &&
+    document.getElementById(closingEditorId) instanceof HTMLTextAreaElement)
     ? Promise.resolve()
     : new Promise((resolve) =>
-        setTimeout(() => resolve(waitForBlock(uid, text)), 10)
+        setTimeout(() => resolve(waitForBlock(uid, text, closingEditorId)), 10)
       );
 
 const SmartblocksMenu = ({
@@ -100,7 +106,10 @@ const SmartblocksMenu = ({
       const srcName = item?.getAttribute("data-name");
       const srcUid = item?.getAttribute("data-uid");
       if (!srcName || !srcUid) return;
-      waitForBlock(blockUid, selection.text).then(() => {
+      // On click, capture the edit first, then wait for Roam to close the editor.
+      const closingEditorId = !event ? currentTextarea.id : undefined;
+      if (closingEditorId) currentTextarea.blur();
+      waitForBlock(blockUid, selection.text, closingEditorId).then(() => {
         onClose();
         setTimeout(() => {
           sbBomb({
@@ -236,6 +245,8 @@ const SmartblocksMenu = ({
                   }
                   active={i === activeIndex}
                   onMouseEnter={() => setActiveIndex(i)}
+                  // Take the editor snapshot in onClick before letting Roam blur it.
+                  onMouseDown={(event) => event.preventDefault()}
                   onClick={() => onSelect(i)}
                 />
               );
