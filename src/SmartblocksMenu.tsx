@@ -179,44 +179,35 @@ const SmartblocksMenu = ({
         onSelect(index, e);
       } else if (e.key === "Escape") {
         onClose();
-      } else {
-        const currentTextarea = getCurrentTextarea();
-        if (!currentTextarea) return onClose();
-        const value =
-          getTriggerSelection({
-            text: currentTextarea.value,
-            selectionStart: currentTextarea.selectionStart,
-            trigger,
-            triggerStart,
-          })?.filter;
-        if (value !== undefined) {
-          setFilter(value);
-        } else {
-          onClose();
-          return;
-        }
       }
     },
-    [
-      menuRef,
-      setActiveIndex,
-      setFilter,
-      onClose,
-      onSelect,
-      getCurrentTextarea,
-      trigger,
-      triggerStart,
-    ]
+    [onClose, onSelect]
   );
   useEffect(() => {
     const listeningEl = !!textarea.closest(".rm-reference-item")
       ? textarea.parentElement // Roam rerenders a new textarea in linked references on every keypress
       : textarea;
+    const inputListener = (event: Event) => {
+      const editor = event.target;
+      if (!(editor instanceof HTMLTextAreaElement) || editor.id !== textarea.id)
+        return;
+      const selection = getTriggerSelection({
+        text: editor.value,
+        selectionStart: editor.selectionStart,
+        trigger,
+        triggerStart,
+      });
+      if (!selection) return onClose();
+      setFilter(selection.filter);
+      setActiveIndex(0);
+    };
     listeningEl?.addEventListener("keydown", keydownListener);
+    listeningEl?.addEventListener("input", inputListener);
     return () => {
       listeningEl?.removeEventListener("keydown", keydownListener);
+      listeningEl?.removeEventListener("input", inputListener);
     };
-  }, [keydownListener]);
+  }, [keydownListener, onClose, textarea, trigger, triggerStart]);
   return (
     <Popover
       onClose={onClose}
