@@ -17,6 +17,7 @@ import getTriggerSelection, {
   isCurrentTriggerSelection,
 } from "./utils/getTriggerSelection";
 import type { TriggerSelection } from "./utils/getTriggerSelection";
+import handleTriggerMenuKeydown from "./utils/handleTriggerMenuKeydown";
 import {
   getVisibleCustomWorkflows,
   predefinedWorkflows,
@@ -153,37 +154,17 @@ const SmartblocksMenu = ({
     [menuRef, blockUid, getCurrentTextarea, onClose, selection, windowId]
   );
   const keydownListener = useCallback(
-    (e: KeyboardEvent) => {
-      if (!menuRef.current) return;
-      const isDown =
-        e.key === "ArrowDown" ||
-        (e.ctrlKey && (e.key === "n" || e.key === "j"));
-      const isUp =
-        e.key === "ArrowUp" ||
-        (e.ctrlKey && (e.key === "p" || e.key === "k"));
-      if (isDown) {
-        const index = Number(menuRef.current.getAttribute("data-active-index"));
-        const count = menuRef.current.childElementCount;
-        setActiveIndex((index + 1) % count);
-        e.stopPropagation();
-        e.preventDefault();
-      } else if (isUp) {
-        const index = Number(menuRef.current.getAttribute("data-active-index"));
-        const count = menuRef.current.childElementCount;
-        setActiveIndex((index - 1 + count) % count);
-        e.stopPropagation();
-        e.preventDefault();
-      } else if (e.key == "ArrowLeft" || e.key === "ArrowRight") {
-        e.stopPropagation();
-        e.preventDefault();
-      } else if (e.key === "Enter") {
-        const index = Number(menuRef.current.getAttribute("data-active-index"));
-        onSelect(index, e);
-      } else if (e.key === "Escape") {
-        onClose();
-      }
-    },
-    [onClose, onSelect]
+    (event: KeyboardEvent) =>
+      handleTriggerMenuKeydown({
+        event,
+        menu: menuRef.current,
+        editor: getCurrentTextarea(),
+        selection,
+        setActiveIndex,
+        onSelect,
+        onClose,
+      }),
+    [getCurrentTextarea, onClose, onSelect, selection]
   );
   useEffect(() => {
     const listeningEl = !!textarea.closest(".rm-reference-item")
