@@ -390,8 +390,26 @@ export default runExtension(async ({ extensionAPI }) => {
   };
 
   let menuLoaded = false;
+  let pasteSnapshot:
+    | { editor: HTMLTextAreaElement; retainedLength: number }
+    | undefined;
+
+  const capturePaste = (event: Event) => {
+    const editor = event.target;
+    pasteSnapshot =
+      editor instanceof HTMLTextAreaElement &&
+      editor.classList.contains("rm-block-input")
+        ? {
+            editor,
+            retainedLength:
+              editor.value.length - (editor.selectionEnd - editor.selectionStart),
+          }
+        : undefined;
+  };
 
   const documentInputListener = (e: Event) => {
+    const paste = pasteSnapshot;
+    pasteSnapshot = undefined;
     const target = e.target as HTMLElement;
     if (
       !menuLoaded &&
@@ -406,13 +424,19 @@ export default runExtension(async ({ extensionAPI }) => {
         textarea.selectionStart
       );
       const { data, inputType } = e as InputEvent;
+      const pastedLength =
+        inputType === "insertFromPaste" && paste?.editor === textarea
+          ? Math.max(0, textarea.value.length - paste.retainedLength)
+          : undefined;
       const selection = getTriggerSelection({
         text: textarea.value,
         selectionStart: textarea.selectionStart,
         trigger,
         // An edit must finish a trigger, not just have one earlier on the line.
         insertedLength:
-          data?.length ?? (inputType && !inputType.startsWith("insert") ? 0 : 1),
+          pastedLength ??
+          data?.length ??
+          (inputType && !inputType.startsWith("insert") ? 0 : 1),
       });
       if (selection) {
         menuLoaded = true;
@@ -420,6 +444,7 @@ export default runExtension(async ({ extensionAPI }) => {
           textarea,
           trigger,
           triggerStart: selection.start,
+          initialFilter: selection.filter,
           isCustomOnly,
           extensionAPI,
           onClose: () => {
@@ -504,6 +529,7 @@ export default runExtension(async ({ extensionAPI }) => {
       }
     }
   };
+  document.addEventListener("paste", capturePaste, true);
   document.addEventListener("input", documentInputListener);
 
   const globalHotkeyListener = async (_e: Event) => {
@@ -969,6 +995,7 @@ export default runExtension(async ({ extensionAPI }) => {
       REFRESH_SMARTBLOCKS_COMMAND_LABEL,
     ],
     unload: () => {
+      document.removeEventListener("paste", capturePaste, true);
       unloads.forEach((u) => u());
       window.clearTimeout(getDailyConfig()["next-run-timeout"]);
       saveDailyConfig({ "next-run-timeout": 0 });

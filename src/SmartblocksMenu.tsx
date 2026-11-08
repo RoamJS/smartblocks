@@ -26,6 +26,7 @@ type Props = {
   textarea: HTMLTextAreaElement;
   trigger: string;
   triggerStart: number;
+  initialFilter: string;
   isCustomOnly: boolean;
   extensionAPI: OnloadArgs["extensionAPI"];
 };
@@ -58,6 +59,7 @@ const SmartblocksMenu = ({
   textarea,
   trigger,
   triggerStart,
+  initialFilter,
   isCustomOnly,
   extensionAPI,
 }: { onClose: () => void } & Props) => {
@@ -72,7 +74,7 @@ const SmartblocksMenu = ({
   const menuRef = useRef<HTMLUListElement>(null);
   const pendingSelection = useRef<AbortController>();
   useEffect(() => () => pendingSelection.current?.abort(), []);
-  const [filter, setFilter] = useState("");
+  const [filter, setFilter] = useState(initialFilter);
   const initialWorkflows = useMemo(() => {
     return getVisibleCustomWorkflows()
       .sort(({ name: a }, { name: b }) => a.localeCompare(b))
