@@ -12,7 +12,7 @@ import getPageTitleByBlockUid from "roamjs-components/queries/getPageTitleByBloc
 import getPageUidByPageTitle from "roamjs-components/queries/getPageUidByPageTitle";
 import getTextByBlockUid from "roamjs-components/queries/getTextByBlockUid";
 import type { OnloadArgs } from "roamjs-components/types/native";
-import { getCoords } from "./utils/dom";
+import { createTriggerMenuEventBinding, getCoords } from "./utils/dom";
 import getTriggerSelection, {
   isCurrentTriggerSelection,
 } from "./utils/getTriggerSelection";
@@ -166,10 +166,11 @@ const SmartblocksMenu = ({
       }),
     [getCurrentTextarea, onClose, onSelect, selection]
   );
+  const bindEvents = useMemo(
+    () => createTriggerMenuEventBinding(textarea),
+    [textarea]
+  );
   useEffect(() => {
-    const listeningEl = !!textarea.closest(".rm-reference-item")
-      ? textarea.parentElement // Roam rerenders a new textarea in linked references on every keypress
-      : textarea;
     const inputListener = (event: Event) => {
       const editor = event.target;
       if (!(editor instanceof HTMLTextAreaElement) || editor.id !== textarea.id)
@@ -184,13 +185,8 @@ const SmartblocksMenu = ({
       setSelection(nextSelection);
       setActiveIndex(0);
     };
-    listeningEl?.addEventListener("keydown", keydownListener);
-    listeningEl?.addEventListener("input", inputListener);
-    return () => {
-      listeningEl?.removeEventListener("keydown", keydownListener);
-      listeningEl?.removeEventListener("input", inputListener);
-    };
-  }, [keydownListener, onClose, textarea, trigger, selection]);
+    return bindEvents(keydownListener, inputListener);
+  }, [bindEvents, keydownListener, onClose, textarea, trigger, selection]);
   return (
     <Popover
       onClose={onClose}
