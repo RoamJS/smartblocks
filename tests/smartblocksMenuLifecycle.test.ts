@@ -14,6 +14,7 @@ import * as menuUtils from "../src/utils/smartblocksMenu";
 
 const menuFixture = ({
   initialText = "jjAl",
+  initialCaret = initialText.length,
   workflows = [
     { uid: "aaa", name: "Alpha" },
     { uid: "bbb", name: "Alpine" },
@@ -43,7 +44,11 @@ const menuFixture = ({
     },
   };
   let savedText = "";
-  const executions: { srcUid: string; target: { originalText: string } }[] = [];
+  const executions: {
+    srcUid: string;
+    target: { originalText: string; start: number; end: number };
+  }[] = [];
+  const savedPins: string[][] = [];
   // Use the real menu, editor events and React lifecycle without Roam services.
   const stubs: Record<string, unknown> = {
     "@blueprintjs/core": {
@@ -51,11 +56,25 @@ const menuFixture = ({
         className,
         text,
         onClick,
-      }: {
-        className?: string;
+        disabled,
+        "aria-expanded": expanded,
+        "aria-pressed": pressed,
+        "aria-selected": selected,
+      }: React.ButtonHTMLAttributes<HTMLButtonElement> & {
         text: React.ReactNode;
-        onClick: () => void;
-      }) => React.createElement("button", { className, onClick }, text),
+      }) =>
+        React.createElement(
+          "button",
+          {
+            className,
+            onClick,
+            disabled,
+            "aria-expanded": expanded,
+            "aria-pressed": pressed,
+            "aria-selected": selected,
+          },
+          text,
+        ),
       Menu: ({
         ulRef,
         children,
@@ -102,7 +121,7 @@ const menuFixture = ({
   const editor = window.document.querySelector("textarea")!;
   const wrapper = editor.parentElement!;
   editor.value = initialText;
-  editor.setSelectionRange(initialText.length, initialText.length);
+  editor.setSelectionRange(initialCaret, initialCaret);
   const initialSelection = getTriggerSelection({
     text: editor.value,
     selectionStart: editor.selectionStart,
@@ -116,7 +135,15 @@ const menuFixture = ({
       trigger: "jj",
       initialSelection: initialSelection!,
       isCustomOnly: true,
-      extensionAPI: { settings: { get: () => [] } } as never,
+      extensionAPI: {
+        settings: {
+          get: () => [],
+          set: (key: string, pins: string[]) => {
+            expect(key).toBe(menuUtils.PINNED_WORKFLOWS_SETTING);
+            savedPins.push(pins);
+          },
+        },
+      } as never,
       onClose: () => {},
     }),
   );
@@ -125,22 +152,32 @@ const menuFixture = ({
     wrapper,
     document: window.document,
     executions,
+    savedPins,
     save: (text: string): void => {
       savedText = text;
     },
-    type: (target: HTMLTextAreaElement, text: string): void =>
+    type: (
+      target: HTMLTextAreaElement,
+      text: string,
+      caret = text.length,
+    ): void =>
       act(() => {
         target.value = text;
-        target.setSelectionRange(text.length, text.length);
+        target.setSelectionRange(caret, caret);
         target.dispatchEvent(new window.Event("input", { bubbles: true }));
       }),
-    press: (target: HTMLTextAreaElement, key: string): void =>
+    press: (
+      target: HTMLTextAreaElement,
+      key: string,
+      modifiers: KeyboardEventInit = {},
+    ): void =>
       act(() => {
         target.dispatchEvent(
           new window.KeyboardEvent("keydown", {
             key,
             bubbles: true,
             cancelable: true,
+            ...modifiers,
           }),
         );
       }),
@@ -155,6 +192,54 @@ const menuFixture = ({
     },
   };
 };
+
+test("the footer and keyboard toggle pinning without changing the editor", () => {
+  const menu = menuFixture({ initialText: "jj" });
+  try {
+    const actions = Array.from(menu.document.querySelectorAll("footer button"));
+    const [preview, pin] = actions;
+    expect(actions.map((button) => button.firstChild?.textContent)).toEqual([
+      "Preview",
+      "Pin",
+      "Source",
+      "Run",
+    ]);
+    expect(preview.getAttribute("aria-expanded")).toBe("false");
+    expect(preview.textContent).toBe("Preview→");
+    expect(pin.getAttribute("aria-pressed")).toBe("false");
+
+    menu.press(menu.editor, "ArrowDown");
+    menu.press(menu.editor, "ArrowRight");
+    expect(preview.getAttribute("aria-expanded")).toBe("true");
+    expect(preview.textContent).toBe("Preview←");
+    const shortcut = { ctrlKey: true, shiftKey: true };
+    menu.press(menu.editor, "Enter", shortcut);
+    menu.press(menu.editor, "Enter", { ...shortcut, repeat: true });
+    expect(menu.savedPins).toEqual([["bbb"]]);
+    expect(pin.getAttribute("aria-pressed")).toBe("true");
+    expect(
+      menu.document.querySelector("ul [aria-selected='true']")?.textContent,
+    ).toBe("Alpine");
+    expect(
+      menu.document.querySelector("ul .roamjs-smartblocks-workflow")?.textContent,
+    ).toBe("Alpine");
+
+    menu.press(menu.editor, "Enter", shortcut);
+    expect(menu.savedPins).toEqual([["bbb"], []]);
+    expect(pin.getAttribute("aria-pressed")).toBe("false");
+    act(() => pin.click());
+    expect(menu.savedPins).toEqual([["bbb"], [], ["bbb"]]);
+    expect(pin.getAttribute("aria-pressed")).toBe("true");
+    menu.press(menu.editor, "ArrowLeft");
+    expect(preview.getAttribute("aria-expanded")).toBe("false");
+    expect(preview.textContent).toBe("Preview→");
+    expect(pin.firstChild?.textContent).toBe("Pin");
+    expect(menu.editor.value).toBe("jj");
+    expect(menu.executions).toEqual([]);
+  } finally {
+    menu.cleanup();
+  }
+});
 
 test("keeps keyboard selection working after a linked-reference editor is replaced", async () => {
   const menu = menuFixture();
@@ -175,6 +260,45 @@ test("keeps keyboard selection working after a linked-reference editor is replac
 });
 
 for (const action of ["Enter", "click"] as const) {
+  test(`${action} uses the ranked result and replaces only the original trigger and query`, async () => {
+    const before = "Keep this ";
+    const invocation = "jj  notes  ";
+    const after = " and keep this too";
+    const end = before.length + invocation.length;
+    const text = before + invocation + after;
+    const menu = menuFixture({
+      initialText: before + "jj" + after,
+      initialCaret: before.length + "jj".length,
+      workflows: [
+        { uid: "meeting", name: "Meeting notes" },
+        { uid: "notes", name: "Notes" },
+      ],
+    });
+    try {
+      menu.type(menu.editor, text, end);
+      menu.save(text);
+      if (action === "Enter") {
+        menu.press(menu.editor, "Enter");
+      } else {
+        menu.editor.blur = () => menu.editor.remove();
+        const firstRow = menu.document.querySelector<HTMLButtonElement>(
+          ".roamjs-smartblocks-workflow",
+        )!;
+        act(() => firstRow.click());
+      }
+      await expect
+        .poll(() => menu.executions, { timeout: 1000 })
+        .toMatchObject([
+          {
+            srcUid: "notes",
+            target: { originalText: text, start: before.length, end },
+          },
+        ]);
+    } finally {
+      menu.cleanup();
+    }
+  });
+
   test(`${action} runs the first named workflow when unnamed drafts exist`, async () => {
     const menu = menuFixture({
       initialText: "jj",

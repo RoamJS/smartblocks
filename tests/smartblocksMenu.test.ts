@@ -15,15 +15,70 @@ const workflows = [
 ];
 
 test("pins are stable unique rows before the unchanged remainder", () => {
-  const results = getMenuWorkflows({
-    workflows,
-    filter: "",
-    pinnedUids: ["d", "b", "b", "missing"],
-  });
-  expect(results.map((w) => w.uid)).toEqual(["b", "d", "a", "c"]);
-  expect(results.map((w) => w.pinned)).toEqual([true, true, false, false]);
+  for (const filter of ["", "   "]) {
+    const results = getMenuWorkflows({
+      workflows,
+      filter,
+      pinnedUids: ["d", "b", "b", "missing"],
+    });
+    expect(results.map((w) => w.uid)).toEqual(["b", "d", "a", "c"]);
+    expect(results.map((w) => w.pinned)).toEqual([true, true, false, false]);
+  }
   expect(workflows.map((w) => w.uid)).toEqual(["a", "b", "c", "d"]);
 });
+
+test("workflow search favors direct matches and preserves fuzzy abbreviations", () => {
+  const candidates = [
+    "A keynote outline",
+    "A review checklist",
+    "Focus time",
+    "Meeting notes",
+    "Notes",
+    "Project notes",
+    "Review weekly",
+    "Weekly review",
+    "Time 24",
+    "Time AM/PM",
+  ].map((name) => ({ uid: name, name }));
+  const search = (filter: string) =>
+    getMenuWorkflows({ workflows: candidates, filter, pinnedUids: [] }).map(
+      ({ name }) => name,
+    );
+
+  expect(search("time")).toEqual(["Time 24", "Time AM/PM", "Focus time"]);
+  expect(search("review")).toEqual([
+    "Review weekly",
+    "A review checklist",
+    "Weekly review",
+  ]);
+  expect(search("note")).toEqual([
+    "Notes",
+    "Project notes",
+    "Meeting notes",
+    "A keynote outline",
+  ]);
+  expect(search(" notes ")).toEqual(["Notes", "Project notes", "Meeting notes"]);
+  expect(search("TIME 24 ")).toEqual(["Time 24"]);
+  expect(search("mtg")).toEqual(["Meeting notes"]);
+});
+
+test("ranking applies before the ten-result cap", () => {
+  const candidates = [
+    ...Array.from({ length: 12 }, (_, i) => ({
+      uid: `archive-${i}`,
+      name: `Archive time ${i}`,
+    })),
+    { uid: "time", name: "Time 24" },
+  ];
+  const results = getMenuWorkflows({
+    workflows: candidates,
+    filter: "time",
+    pinnedUids: [],
+  });
+  expect(results).toHaveLength(10);
+  expect(results[0].uid).toBe("time");
+});
+
 test("pins do not reorder fuzzy search or duplicate results", () => {
   const base = getMenuWorkflows({ workflows, filter: "meet", pinnedUids: [] });
   const pinned = getMenuWorkflows({
@@ -116,6 +171,8 @@ test("preview and source shortcuts leave Enter and Ctrl navigation intact", () =
   expect(action("ArrowLeft")).toBe("hide-preview");
   expect(action("Enter")).toBe("run");
   expect(action("Enter", false, true)).toBe("source");
+  expect(action("Enter", true, true)).toBe("toggle-pin");
+  expect(action("Enter", true, true, true)).toBeUndefined();
   expect(action("Escape")).toBe("close");
   for (const key of ["j", "n"]) expect(action(key, true)).toBe("next");
   for (const key of ["k", "p"]) expect(action(key, true)).toBe("previous");

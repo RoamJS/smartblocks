@@ -99,6 +99,7 @@ const SmartblocksMenu = ({
   }, [textarea]);
   const [selection, setSelection] = useState(initialSelection);
   const { filter } = selection;
+  const isSearching = filter.trim().length > 0;
   const [pinnedUids, setPinnedUids] = useState(() =>
     readPinnedWorkflowUids(extensionAPI.settings.get(PINNED_WORKFLOWS_SETTING)),
   );
@@ -227,20 +228,23 @@ const SmartblocksMenu = ({
     });
   }, [selected, onClose]);
 
-  const togglePin = (uid: string): void => {
-    const next = pinnedUids.includes(uid)
-      ? pinnedUids.filter((pinned) => pinned !== uid)
-      : [...pinnedUids, uid];
-    extensionAPI.settings.set(PINNED_WORKFLOWS_SETTING, next);
-    setPinnedUids(next);
-    setActiveIndex(
-      getMenuWorkflows({
-        workflows: initialWorkflows,
-        filter,
-        pinnedUids: next,
-      }).findIndex((workflow) => workflow.uid === uid),
-    );
-  };
+  const togglePin = useCallback(
+    (uid: string): void => {
+      const next = pinnedUids.includes(uid)
+        ? pinnedUids.filter((pinned) => pinned !== uid)
+        : [...pinnedUids, uid];
+      extensionAPI.settings.set(PINNED_WORKFLOWS_SETTING, next);
+      setPinnedUids(next);
+      setActiveIndex(
+        getMenuWorkflows({
+          workflows: initialWorkflows,
+          filter,
+          pinnedUids: next,
+        }).findIndex((workflow) => workflow.uid === uid),
+      );
+    },
+    [extensionAPI, filter, initialWorkflows, pinnedUids],
+  );
 
   const keydownListener = useCallback(
     (event: KeyboardEvent): void => {
@@ -262,6 +266,9 @@ const SmartblocksMenu = ({
             );
           else if (action === "show-preview") setPreviewOpen(true);
           else if (action === "hide-preview") setPreviewOpen(false);
+          else if (action === "toggle-pin") {
+            if (selected) togglePin(selected.uid);
+          }
           else if (action === "source") openSource();
           else if (action === "run") onSelect(index, false);
           else if (action === "close") onClose();
@@ -275,7 +282,9 @@ const SmartblocksMenu = ({
       onSelect,
       onClose,
       readTextarea,
+      selected,
       selection,
+      togglePin,
     ],
   );
 
@@ -351,7 +360,7 @@ const SmartblocksMenu = ({
               {workflows.length ? (
                 workflows.map((workflow, i) => (
                   <React.Fragment key={workflow.uid}>
-                    {!filter &&
+                    {!isSearching &&
                       i > 0 &&
                       workflows[i - 1].pinned &&
                       !workflow.pinned && (
@@ -415,56 +424,82 @@ const SmartblocksMenu = ({
               )}
             </Menu>
             <footer className="roamjs-smartblocks-footer">
-              <span className="roamjs-smartblocks-footer-label">
-                SmartBlocks
-              </span>
-              <div className="roamjs-smartblocks-footer-actions">
-                <Button
-                  minimal
-                  aria-expanded={previewOpen}
-                  onClick={(): void => setPreviewOpen(!previewOpen)}
-                  text={
-                    <>
-                      {previewOpen ? "Hide preview" : "Preview"}
-                      <kbd>{previewOpen ? "←" : "→"}</kbd>
-                    </>
-                  }
-                />
-                <span
-                  className="roamjs-smartblocks-footer-divider"
-                  aria-hidden="true"
-                />
-                <Button
-                  minimal
-                  disabled={!selected || PREDEFINED_REGEX.test(selected.uid)}
-                  title={
-                    selected && PREDEFINED_REGEX.test(selected.uid)
-                      ? "Built-in workflows have no source block"
-                      : "Open workflow source in the right sidebar"
-                  }
-                  onClick={openSource}
-                  text={
-                    <>
-                      Source<kbd>⇧ ↵</kbd>
-                    </>
-                  }
-                />
-                <span
-                  className="roamjs-smartblocks-footer-divider"
-                  aria-hidden="true"
-                />
-                <Button
-                  minimal
-                  className="roamjs-smartblocks-run"
-                  disabled={!selected}
-                  onClick={(): void => onSelect(index, true)}
-                  text={
-                    <>
-                      Run<kbd>↵</kbd>
-                    </>
-                  }
-                />
-              </div>
+              <Button
+                minimal
+                aria-expanded={previewOpen}
+                aria-keyshortcuts={previewOpen ? "ArrowLeft" : "ArrowRight"}
+                onClick={(): void => setPreviewOpen(!previewOpen)}
+                text={
+                  <>
+                    Preview
+                    <kbd aria-hidden="true">{previewOpen ? "←" : "→"}</kbd>
+                  </>
+                }
+              />
+              <span
+                className="roamjs-smartblocks-footer-divider"
+                aria-hidden="true"
+              />
+              <Button
+                minimal
+                disabled={!selected}
+                aria-pressed={selected?.pinned ?? false}
+                aria-keyshortcuts="Control+Shift+Enter"
+                title={selected?.pinned ? "Unpin workflow" : "Pin workflow"}
+                onClick={(): void => {
+                  if (selected) togglePin(selected.uid);
+                }}
+                text={
+                  <>
+                    Pin
+                    <span className="roamjs-smartblocks-keys" aria-hidden="true">
+                      <kbd>ctrl</kbd>
+                      <kbd>shift</kbd>
+                      <kbd>↵</kbd>
+                    </span>
+                  </>
+                }
+              />
+              <span
+                className="roamjs-smartblocks-footer-divider"
+                aria-hidden="true"
+              />
+              <Button
+                minimal
+                disabled={!selected || PREDEFINED_REGEX.test(selected.uid)}
+                aria-keyshortcuts="Shift+Enter"
+                title={
+                  selected && PREDEFINED_REGEX.test(selected.uid)
+                    ? "Built-in workflows have no source block"
+                    : "Open workflow source in the right sidebar"
+                }
+                onClick={openSource}
+                text={
+                  <>
+                    Source
+                    <span className="roamjs-smartblocks-keys" aria-hidden="true">
+                      <kbd>shift</kbd>
+                      <kbd>↵</kbd>
+                    </span>
+                  </>
+                }
+              />
+              <span
+                className="roamjs-smartblocks-footer-divider"
+                aria-hidden="true"
+              />
+              <Button
+                minimal
+                className="roamjs-smartblocks-run"
+                disabled={!selected}
+                aria-keyshortcuts="Enter"
+                onClick={(): void => onSelect(index, true)}
+                text={
+                  <>
+                    Run<kbd aria-hidden="true">↵</kbd>
+                  </>
+                }
+              />
             </footer>
           </div>
           {previewOpen &&

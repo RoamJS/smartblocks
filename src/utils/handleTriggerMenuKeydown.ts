@@ -24,6 +24,7 @@ const handleTriggerMenuKeydown = ({
   if (!action) return;
   event.stopPropagation();
   event.preventDefault();
+  if (action === "toggle-pin" && event.repeat) return;
   onAction(action);
 };
 

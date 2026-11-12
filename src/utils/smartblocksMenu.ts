@@ -14,6 +14,20 @@ export const readPinnedWorkflowUids = (value: unknown): string[] =>
       )
     : [];
 
+const getMatchRank = (name: string, query: string): number => {
+  const title = name.toLowerCase();
+  if (title === query) return 0;
+  if (title.startsWith(query)) return 1;
+
+  let matchIndex = title.indexOf(query);
+  if (matchIndex < 0) return 4;
+  while (matchIndex >= 0) {
+    if (!/[\p{L}\p{M}\p{N}]$/u.test(title.slice(0, matchIndex))) return 2;
+    matchIndex = title.indexOf(query, matchIndex + 1);
+  }
+  return 3;
+};
+
 export const getMenuWorkflows = <T extends MenuWorkflow>({
   workflows,
   filter,
@@ -24,13 +38,21 @@ export const getMenuWorkflows = <T extends MenuWorkflow>({
   pinnedUids: string[];
 }): MenuResult<T>[] => {
   const pins = new Set(pinnedUids);
-  const results = filter
+  const query = filter.trim().toLowerCase();
+  const results = query
     ? fuzzy
-        .filter(filter, workflows, {
+        .filter(query, workflows, {
           extract: (workflow) => workflow.name,
           pre: "<b>",
           post: "</b>",
         })
+        .map(({ original, string }) => ({
+          original,
+          string,
+          rank: getMatchRank(original.name, query),
+        }))
+        // A stable sort preserves the fuzzy score order within each rank.
+        .sort((a, b) => a.rank - b.rank)
         .map(({ original, string }) => ({ ...original, displayName: string }))
     : workflows
         .filter((workflow) => pins.has(workflow.uid))
@@ -73,6 +95,7 @@ export type MenuKeyAction =
   | "previous"
   | "show-preview"
   | "hide-preview"
+  | "toggle-pin"
   | "source"
   | "run"
   | "close"
@@ -95,7 +118,10 @@ export const getMenuKeyAction = ({
     return "previous";
   if (key === "ArrowRight") return "show-preview";
   if (key === "ArrowLeft") return "hide-preview";
-  if (key === "Enter") return shiftKey ? "source" : "run";
+  if (key === "Enter") {
+    if (ctrlKey && shiftKey) return "toggle-pin";
+    return shiftKey ? "source" : "run";
+  }
   if (key === "Escape") return "close";
   return undefined;
 };
