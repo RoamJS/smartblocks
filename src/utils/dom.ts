@@ -78,10 +78,8 @@ export const getCoords = (t: HTMLTextAreaElement) => {
 };
 
 export const createTriggerMenuEventBinding = (textarea: HTMLTextAreaElement) => {
-  // Roam can replace a linked-reference textarea while its wrapper stays mounted.
-  const target = textarea.closest(".rm-reference-item")
-    ? textarea.parentElement
-    : textarea;
+  // Roam can replace the textarea while its wrapper stays mounted.
+  const target = textarea.parentElement || textarea;
   return (
     keydownListener: (event: KeyboardEvent) => void,
     inputListener: (event: Event) => void

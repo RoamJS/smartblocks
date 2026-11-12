@@ -1,49 +1,31 @@
 import { isCurrentTriggerSelection } from "./getTriggerSelection";
 import type { TriggerSelection } from "./getTriggerSelection";
+import { getMenuKeyAction } from "./smartblocksMenu";
+import type { MenuKeyAction } from "./smartblocksMenu";
 
 const handleTriggerMenuKeydown = ({
   event,
-  menu,
   editor,
   selection,
-  setActiveIndex,
-  onSelect,
+  onAction,
   onClose,
 }: {
   event: KeyboardEvent;
-  menu: HTMLUListElement | null;
-  editor: HTMLTextAreaElement | undefined;
+  editor: HTMLTextAreaElement;
   selection: TriggerSelection;
-  setActiveIndex: (index: number) => void;
-  onSelect: (index: number, event: KeyboardEvent) => void;
+  onAction: (action: NonNullable<MenuKeyAction>) => void;
   onClose: () => void;
 }): void => {
-  if (!menu) return;
-  if (!editor || !isCurrentTriggerSelection(selection, editor)) {
+  if (!isCurrentTriggerSelection(selection, editor)) {
     onClose();
     return;
   }
-
-  const isDown =
-    event.key === "ArrowDown" ||
-    (event.ctrlKey && (event.key === "n" || event.key === "j"));
-  const isUp =
-    event.key === "ArrowUp" ||
-    (event.ctrlKey && (event.key === "p" || event.key === "k"));
-  if (isDown || isUp) {
-    const index = Number(menu.getAttribute("data-active-index"));
-    const count = menu.childElementCount;
-    setActiveIndex((index + (isDown ? 1 : count - 1)) % count);
-    event.stopPropagation();
-    event.preventDefault();
-  } else if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
-    event.stopPropagation();
-    event.preventDefault();
-  } else if (event.key === "Enter") {
-    onSelect(Number(menu.getAttribute("data-active-index")), event);
-  } else if (event.key === "Escape") {
-    onClose();
-  }
+  const action = getMenuKeyAction(event);
+  if (!action) return;
+  event.stopPropagation();
+  event.preventDefault();
+  if (action === "toggle-pin" && event.repeat) return;
+  onAction(action);
 };
 
 export default handleTriggerMenuKeydown;

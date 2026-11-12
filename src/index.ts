@@ -47,6 +47,7 @@ import getFullTreeByParentUid from "roamjs-components/queries/getFullTreeByParen
 import { zCommandOutput } from "./utils/zodTypes";
 import { IconNames } from "@blueprintjs/icons";
 import parseSmartBlockButton from "./utils/parseSmartBlockButton";
+import smartblocksMenuStyles from "./smartblocksMenuStyles";
 import getTriggerSelection, {
   resolveTrigger,
 } from "./utils/getTriggerSelection";
@@ -64,7 +65,8 @@ const getLegacy42Setting = (name: string) => {
 const COMMAND_ENTRY_REGEX = /<%$/;
 const COLORS = ["darkblue", "darkred", "darkgreen", "darkgoldenrod"];
 export default runExtension(async ({ extensionAPI }) => {
-  const style = addStyle(`.roamjs-smartblocks-popover-target {
+  const style = addStyle(`${smartblocksMenuStyles}
+.roamjs-smartblocks-popover-target {
   display:inline-block;
   height:14px;
   width:17px;
@@ -105,10 +107,6 @@ export default runExtension(async ({ extensionAPI }) => {
 
 .roamjs-smartblocks-store-tabs {
   height: 48px;
-}
-
-.roamjs-smartblock-menu {
-  width: 300px;
 }
 
 .roamjs-hotkey-dropdown .bp3-menu {
