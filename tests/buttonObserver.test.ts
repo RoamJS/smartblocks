@@ -1,5 +1,8 @@
 import { test, expect } from "@playwright/test";
 import { JSDOM } from "jsdom";
+import { createElement } from "react";
+import { render } from "react-dom";
+import { readFileSync } from "fs";
 import observeSmartBlockButtons from "../src/utils/observeSmartBlockButtons";
 import parseSmartBlockButton from "../src/utils/parseSmartBlockButton";
 
@@ -19,34 +22,37 @@ test("binds duplicate captions by rendered position, including literals and gene
     targets: string[] = [];
   let uid = "same-uid";
   const seen: HTMLElement[] = [];
+  let nativeClicks = 0;
+  const cleanup = new Function(
+    ...["el", "iconElement", "clickListener"],
+    readFileSync("src/index.ts", "utf8").match(
+      /el.insertBefore\(iconElement, el.firstChild\);\s*return \(\) => \{([\s\S]*?)\};/
+    )![1]
+  );
+  const buttonProps = {
+    className: "bp3-button bp3-small dont-focus-block",
+    onClick: () => nativeClicks++,
+  };
   const button = () => {
     const wrapper = document.createElement("span");
-    wrapper.innerHTML =
-      '<button class="bp3-button bp3-small dont-focus-block">b</button>';
+    render(createElement("button", buttonProps, "b"), wrapper);
     return wrapper;
   };
-  const scope = (className = "roam-block") => {
-    const el = document.createElement("div");
-    el.className = className;
-    app.append(el);
-    return el;
-  };
   const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
-  const main = scope(),
-    other = scope(),
-    ref = scope("rm-block-ref");
-  main.append(button(), button());
-  other.append(button(), button());
-  ref.append(button(), button());
+  const [main, other, ref] = ["roam-block", "roam-block", "rm-block-ref"].map(
+    (className) => {
+      const el = document.createElement("div");
+      el.className = className;
+      el.append(button(), button());
+      app.append(el);
+      return el;
+    }
+  );
   const observer = observeSmartBlockButtons({
     getUid: () => uid,
     getText: () => text,
     register: ({ el, text, parentUid, occurrenceIndex }) => {
-      const parsed = parseSmartBlockButton(
-        el.textContent || "",
-        text,
-        occurrenceIndex
-      );
+      const parsed = parseSmartBlockButton("b", text, occurrenceIndex);
       if (!parsed) return () => {};
       seen.push(el);
       const click = () => {
@@ -56,10 +62,7 @@ test("binds duplicate captions by rendered position, including literals and gene
       el.addEventListener("click", click);
       const icon = document.createElement("span");
       el.prepend(icon);
-      return () => {
-        el.removeEventListener("click", click);
-        icon.remove();
-      };
+      return () => cleanup(el, icon, click);
     },
   });
   const expectClicks = (el: Element, expected: readonly string[]) => {
@@ -115,10 +118,8 @@ test("binds duplicate captions by rendered position, including literals and gene
     expectClicks(main, ["UserDNPToday", "UserDNPDateSelect"]);
     if (generic)
       expect(
-        main
-          .querySelector("button")!
-          .hasAttribute("data-roamjs-smartblock-button")
-      ).toBe(false);
+        main.querySelector("button")!.dataset.roamjsSmartblockButton
+      ).toBeUndefined();
   }
 
   // Nested references own their buttons even when the UID is the same.
@@ -134,18 +135,22 @@ test("binds duplicate captions by rendered position, including literals and gene
   expect(calls).toEqual(["UserDNPToday", "UserDNPDateSelect"]);
 
   // React can preserve identical DOM when only the underlying source changes.
-  let nativeClicks = 0;
-  other.addEventListener("click", () => nativeClicks++);
+  nativeClicks = 0;
   for (const [source, expected] of [
     [second + " " + first, ["UserDNPDateSelect", "UserDNPToday"]],
     ["{{b}} " + first, [null, "UserDNPToday"]],
     [first + " {{b}}", ["UserDNPToday", null]],
     [first, [null, null]],
   ] as const) {
+    const icon = other.querySelector("button")!.firstElementChild;
     text = source;
     Array.from(other.children).forEach((el, i) =>
       expectClicks(el, expected[i] ? [expected[i]!] : [])
     );
+    await Promise.resolve();
+    if (icon) expect(icon.isConnected).toBe(true);
+    await flush();
+    if (icon) expect(icon.isConnected).toBe(false);
   }
   expect(nativeClicks).toBe(8);
   text = first + " " + second;
@@ -159,5 +164,7 @@ test("binds duplicate captions by rendered position, including literals and gene
   calls.length = 0;
   seen.forEach((b) => b.click());
   expect(calls).toEqual([]);
+  await flush();
+  expect(app.querySelector("button span")).toBeNull();
   dom.window.close();
 });

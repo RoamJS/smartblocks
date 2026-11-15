@@ -801,7 +801,8 @@ export default runExtension(async ({ extensionAPI }) => {
 
         el.insertBefore(iconElement, el.firstChild);
         return () => {
-          iconElement?.remove();
+          // Keep the clicked icon attached until delegated handlers finish.
+          setTimeout(() => iconElement?.remove(), 0);
           el.removeEventListener("click", clickListener);
         };
       }

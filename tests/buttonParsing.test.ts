@@ -66,7 +66,7 @@ test("parses SmartBlock button for today's entry", () => {
   });
 });
 
-for (const label of ["Run It", ""]) {
+for (const label of ["Run It", "", "Add+More", "Add+(Test)[One]?"]) {
   test(`selects each duplicate caption ${JSON.stringify(label)}`, () => {
     const text = `{{${label}:SmartBlock:First:RemoveButton=false}} {{${label}:42SmartBlock:Second:Icon=locate}}`;
     expect(parseSmartBlockButton(label, text, 0)).toMatchObject({
@@ -86,15 +86,6 @@ test("rejects invalid occurrence indices", () => {
       parseSmartBlockButton("b", "{{b:SmartBlock:Only}}", index)
     ).toBeNull();
 });
-for (const label of ["Add+More", "Add+(Test)[One]?"]) {
-  test(`parses the literal caption ${label}`, () => {
-    expect(
-      parseSmartBlockButton(label, `{{${label}:SmartBlock:Workflow}}`)
-        ?.variables
-    ).toMatchObject({ ButtonContent: label });
-  });
-}
-
 for (const prefix of [
   "`{{b}}`",
   "`{{b:SmartBlock:Hidden}}`",
