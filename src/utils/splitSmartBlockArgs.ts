@@ -8,24 +8,22 @@ const YEAR_REGEX = /^\d{4}$/;
  * BLOCKMENTIONSDATED signature: (limit, title, startDate, endDate, sort, format, ...search)
  * Positions 0-1 (limit, title) are passed through unchanged.
  * Starting at position 2, up to 2 date tokens are coalesced (startDate + endDate).
- * The `mergedDates < 2` guard stops coalescing after both date slots are filled.
+ * The output position stops coalescing after both date slots are filled.
  */
 const coalesceBlockMentionsDatedDates = (args: string[]) => {
   const merged = args.slice(0, 2);
   let i = 2;
-  let mergedDates = 0;
   while (i < args.length) {
     const current = args[i] || "";
     const next = args[i + 1];
     if (
-      mergedDates < 2 &&
+      merged.length < 4 &&
       typeof next === "string" &&
       MONTH_DAY_REGEX.test(current.trim()) &&
       YEAR_REGEX.test(next.trim())
     ) {
       merged.push(`${current.trimEnd()}, ${next.trimStart()}`);
       i += 2;
-      mergedDates += 1;
     } else {
       merged.push(current);
       i += 1;
@@ -37,7 +35,7 @@ const coalesceBlockMentionsDatedDates = (args: string[]) => {
 const splitSmartBlockArgs = (cmd: string, afterColon: string) => {
   let commandStack = 0;
   let pageRefStack = 0;
-  const args = [] as string[];
+  const args = afterColon ? [""] : [];
   for (let i = 0; i < afterColon.length; i += 1) {
     const cur = afterColon[i];
     const prev = afterColon[i - 1];
@@ -46,9 +44,9 @@ const splitSmartBlockArgs = (cmd: string, afterColon: string) => {
       commandStack += 1;
     } else if (cur === "%" && next === ">" && commandStack) {
       commandStack -= 1;
-    } else if (cur === "[" && next === "[") {
+    } else if (!commandStack && cur === "[" && next === "[") {
       pageRefStack += 1;
-    } else if (cur === "]" && prev === "]" && pageRefStack) {
+    } else if (!commandStack && cur === "]" && prev === "]" && pageRefStack) {
       pageRefStack -= 1;
     }
     if (cur === "," && !commandStack && !pageRefStack && prev !== "\\") {
@@ -57,12 +55,7 @@ const splitSmartBlockArgs = (cmd: string, afterColon: string) => {
     } else if (cur === "\\" && next === ",") {
       continue;
     }
-    const current = args[args.length - 1] || "";
-    if (!args.length) {
-      args.push(cur);
-    } else {
-      args[args.length - 1] = `${current}${cur}`;
-    }
+    args[args.length - 1] += cur;
   }
   return cmd.toUpperCase() === "BLOCKMENTIONSDATED"
     ? coalesceBlockMentionsDatedDates(args)
