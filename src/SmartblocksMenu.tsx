@@ -12,7 +12,12 @@ import getPageTitleByBlockUid from "roamjs-components/queries/getPageTitleByBloc
 import getPageUidByPageTitle from "roamjs-components/queries/getPageUidByPageTitle";
 import getTextByBlockUid from "roamjs-components/queries/getTextByBlockUid";
 import type { OnloadArgs } from "roamjs-components/types/native";
-import { getCoords } from "./utils/dom";
+import { createTriggerMenuEventBinding, getCoords } from "./utils/dom";
+import getTriggerSelection, {
+  isCurrentTriggerSelection,
+} from "./utils/getTriggerSelection";
+import type { TriggerSelection } from "./utils/getTriggerSelection";
+import handleTriggerMenuKeydown from "./utils/handleTriggerMenuKeydown";
 import {
   getVisibleCustomWorkflows,
   predefinedWorkflows,
@@ -23,25 +28,40 @@ import fuzzy from "fuzzy";
 
 type Props = {
   textarea: HTMLTextAreaElement;
-  triggerStart: number;
-  triggerRegex: RegExp;
+  trigger: string;
+  initialSelection: TriggerSelection;
   isCustomOnly: boolean;
   extensionAPI: OnloadArgs["extensionAPI"];
 };
 
-// The block doesn't always have the trigger saved, causing weird race condition errors
-const waitForBlock = (uid: string, text: string): Promise<void> =>
-  getTextByBlockUid(uid) === text
-    ? Promise.resolve()
-    : new Promise((resolve) =>
-        setTimeout(() => resolve(waitForBlock(uid, text)), 10)
-      );
+// Roam may not have persisted the latest textarea input when a workflow is selected.
+const waitForBlock = async ({
+  uid,
+  text,
+  closingEditorId,
+  signal,
+}: {
+  uid: string;
+  text: string;
+  closingEditorId?: string;
+  signal: AbortSignal;
+}): Promise<boolean> => {
+  const deadline = Date.now() + 3000;
+  while (!signal.aborted && Date.now() < deadline) {
+    const editorStillOpen =
+      closingEditorId &&
+      document.getElementById(closingEditorId) instanceof HTMLTextAreaElement;
+    if (!editorStillOpen && getTextByBlockUid(uid) === text) return true;
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  return false;
+};
 
 const SmartblocksMenu = ({
   onClose,
   textarea,
-  triggerStart,
-  triggerRegex,
+  trigger,
+  initialSelection,
   isCustomOnly,
   extensionAPI,
 }: { onClose: () => void } & Props) => {
@@ -54,7 +74,10 @@ const SmartblocksMenu = ({
     []
   );
   const menuRef = useRef<HTMLUListElement>(null);
-  const [filter, setFilter] = useState("");
+  const pendingSelection = useRef<AbortController>();
+  useEffect(() => () => pendingSelection.current?.abort(), []);
+  const [selection, setSelection] = useState(initialSelection);
+  const { filter } = selection;
   const initialWorkflows = useMemo(() => {
     return getVisibleCustomWorkflows()
       .sort(({ name: a }, { name: b }) => a.localeCompare(b))
@@ -75,27 +98,52 @@ const SmartblocksMenu = ({
     [filter, initialWorkflows]
   );
   const [activeIndex, setActiveIndex] = useState(0);
+  const getCurrentTextarea = useCallback(() => {
+    const editor = document.getElementById(textarea.id);
+    return editor instanceof HTMLTextAreaElement ? editor : undefined;
+  }, [textarea]);
   const onSelect = useCallback(
-    (index) => {
+    (index: number, event?: KeyboardEvent) => {
       if (!menuRef.current) return;
+      const currentTextarea = getCurrentTextarea();
+      if (
+        !currentTextarea ||
+        !isCurrentTriggerSelection(selection, currentTextarea)
+      ) {
+        return onClose();
+      }
+      event?.stopPropagation();
+      event?.preventDefault();
       const item =
-        menuRef.current.children[index].querySelector(".bp3-menu-item");
-      if (!item) return;
-      const srcName = item.getAttribute("data-name");
-      const srcUid = item.getAttribute("data-uid");
-      if (!srcName || !srcUid) return;
-      const currentTextarea = document.getElementById(
-        textarea.id
-      ) as HTMLTextAreaElement;
-      waitForBlock(blockUid, textarea.value).then(() => {
+        menuRef.current.children[index]?.querySelector(".bp3-menu-item");
+      const srcName = item?.getAttribute("data-name");
+      const srcUid = item?.getAttribute("data-uid");
+      if (!srcName || !srcUid || pendingSelection.current) return;
+      const controller = new AbortController();
+      pendingSelection.current = controller;
+      // On click, capture the edit first, then wait for Roam to close the editor.
+      const closingEditorId = !event ? currentTextarea.id : undefined;
+      if (closingEditorId) currentTextarea.blur();
+      waitForBlock({
+        uid: blockUid,
+        text: selection.text,
+        closingEditorId,
+        signal: controller.signal,
+      }).then((saved) => {
+        if (controller.signal.aborted) return;
+        pendingSelection.current = undefined;
         onClose();
+        if (!saved) return;
         setTimeout(() => {
+          const liveEditor = getCurrentTextarea();
+          if (liveEditor && liveEditor.value !== selection.text) return;
           sbBomb({
             srcUid,
             target: {
               uid: blockUid,
-              start: triggerStart,
-              end: currentTextarea.selectionStart,
+              originalText: selection.text,
+              start: selection.start,
+              end: selection.end,
               windowId,
             },
             mutableCursor: !srcName.includes("<%NOCURSOR%>"),
@@ -103,63 +151,42 @@ const SmartblocksMenu = ({
         }, 10);
       });
     },
-    [menuRef, blockUid, onClose, triggerStart, textarea]
+    [menuRef, blockUid, getCurrentTextarea, onClose, selection, windowId]
   );
   const keydownListener = useCallback(
-    (e: KeyboardEvent) => {
-      if (!menuRef.current) return;
-      const isDown =
-        e.key === "ArrowDown" ||
-        (e.ctrlKey && (e.key === "n" || e.key === "j"));
-      const isUp =
-        e.key === "ArrowUp" ||
-        (e.ctrlKey && (e.key === "p" || e.key === "k"));
-      if (isDown) {
-        const index = Number(menuRef.current.getAttribute("data-active-index"));
-        const count = menuRef.current.childElementCount;
-        setActiveIndex((index + 1) % count);
-        e.stopPropagation();
-        e.preventDefault();
-      } else if (isUp) {
-        const index = Number(menuRef.current.getAttribute("data-active-index"));
-        const count = menuRef.current.childElementCount;
-        setActiveIndex((index - 1 + count) % count);
-        e.stopPropagation();
-        e.preventDefault();
-      } else if (e.key == "ArrowLeft" || e.key === "ArrowRight") {
-        e.stopPropagation();
-        e.preventDefault();
-      } else if (e.key === "Enter") {
-        const index = Number(menuRef.current.getAttribute("data-active-index"));
-        onSelect(index);
-        e.stopPropagation();
-        e.preventDefault();
-      } else if (e.key === "Escape") {
-        onClose();
-      } else {
-        const value =
-          triggerRegex.exec(
-            textarea.value.substring(0, textarea.selectionStart)
-          )?.[1] || "";
-        if (value) {
-          setFilter(value);
-        } else {
-          onClose();
-          return;
-        }
-      }
-    },
-    [menuRef, setActiveIndex, setFilter, onClose, triggerRegex, textarea]
+    (event: KeyboardEvent) =>
+      handleTriggerMenuKeydown({
+        event,
+        menu: menuRef.current,
+        editor: getCurrentTextarea(),
+        selection,
+        setActiveIndex,
+        onSelect,
+        onClose,
+      }),
+    [getCurrentTextarea, onClose, onSelect, selection]
+  );
+  const bindEvents = useMemo(
+    () => createTriggerMenuEventBinding(textarea),
+    [textarea]
   );
   useEffect(() => {
-    const listeningEl = !!textarea.closest(".rm-reference-item")
-      ? textarea.parentElement // Roam rerenders a new textarea in linked references on every keypress
-      : textarea;
-    listeningEl?.addEventListener("keydown", keydownListener);
-    return () => {
-      listeningEl?.removeEventListener("keydown", keydownListener);
+    const inputListener = (event: Event) => {
+      const editor = event.target;
+      if (!(editor instanceof HTMLTextAreaElement) || editor.id !== textarea.id)
+        return;
+      const nextSelection = getTriggerSelection({
+        text: editor.value,
+        selectionStart: editor.selectionStart,
+        trigger,
+        previousSelection: selection,
+      });
+      if (!nextSelection) return onClose();
+      setSelection(nextSelection);
+      setActiveIndex(0);
     };
-  }, [keydownListener]);
+    return bindEvents(keydownListener, inputListener);
+  }, [bindEvents, keydownListener, onClose, textarea, trigger, selection]);
   return (
     <Popover
       onClose={onClose}
@@ -210,7 +237,10 @@ const SmartblocksMenu = ({
                     </>
                   }
                   active={i === activeIndex}
+                  shouldDismissPopover={false}
                   onMouseEnter={() => setActiveIndex(i)}
+                  // Take the editor snapshot in onClick before letting Roam blur it.
+                  onMouseDown={(event) => event.preventDefault()}
                   onClick={() => onSelect(i)}
                 />
               );
