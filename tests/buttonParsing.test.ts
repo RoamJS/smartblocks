@@ -66,67 +66,76 @@ test("parses SmartBlock button for today's entry", () => {
   });
 });
 
-test("parses multiple labeled SmartBlock buttons in the same block", () => {
-  const text =
-    "{{Run It:SmartBlock:WorkflowOne:RemoveButton=false}} and {{Run It:SmartBlock:WorkflowTwo:Icon=locate,Order=last}}";
-  const first = parseSmartBlockButton("Run It", text, 0);
-  const second = parseSmartBlockButton("Run It", text, 1);
-  expect(first?.workflowName).toBe("WorkflowOne");
-  expect(first?.variables).toMatchObject({
-    RemoveButton: "false",
+for (const label of ["Run It", ""]) {
+  test(`selects each duplicate caption ${JSON.stringify(label)}`, () => {
+    const text = `{{${label}:SmartBlock:First:RemoveButton=false}} {{${label}:42SmartBlock:Second:Icon=locate}}`;
+    expect(parseSmartBlockButton(label, text, 0)).toMatchObject({
+      workflowName: "First",
+      variables: { RemoveButton: "false", ButtonContent: label },
+    });
+    expect(parseSmartBlockButton(label, text, 1)).toMatchObject({
+      workflowName: "Second",
+      variables: { Icon: "locate", ButtonContent: label },
+    });
+  });
+}
+
+test("rejects invalid occurrence indices", () => {
+  for (const index of [-1, 2, NaN, Infinity, 0.5])
+    expect(
+      parseSmartBlockButton("b", "{{b:SmartBlock:Only}}", index)
+    ).toBeNull();
+});
+for (const label of ["Add+More", "Add+(Test)[One]?"]) {
+  test(`parses the literal caption ${label}`, () => {
+    expect(
+      parseSmartBlockButton(label, `{{${label}:SmartBlock:Workflow}}`)
+        ?.variables
+    ).toMatchObject({ ButtonContent: label });
+  });
+}
+
+for (const prefix of [
+  "`{{b}}`",
+  "`{{b:SmartBlock:Hidden}}`",
+  "```\n{{b}}\n```",
+  "````{{b}}````",
+  "`````{{b}}`````",
+  "`unterminated",
+]) {
+  test(`ignores only rendered code literals: ${prefix}`, () => {
+    const first = "{{b:SmartBlock:First}}",
+      second = "{{b:SmartBlock:Second}}";
+    const text = prefix + " " + first + " " + second;
+    expect(parseSmartBlockButton("b", text, 0)?.workflowName).toBe("First");
+    expect(parseSmartBlockButton("b", text, 1)?.index).toBe(
+      text.indexOf(second)
+    );
+  });
+}
+for (const generic of [
+  "{{b}}",
+  "{{ b }}",
+  "{{[[b]]}}",
+  "{{b:Other:ignored}}",
+  "{{a/b}}",
+]) {
+  test(`reserves the native macro position: ${generic}`, () => {
+    const text =
+      generic + " {{ b :SmartBlock:First}} {{[[b]]:SmartBlock:Second}}";
+    expect(parseSmartBlockButton("b", text, 0)).toBeNull();
+    expect(parseSmartBlockButton("b", text, 1)?.workflowName).toBe("First");
+    expect(parseSmartBlockButton("b", text, 2)?.workflowName).toBe("Second");
+  });
+}
+test("preserves raw offsets while normalizing captions and whitespace", () => {
+  const full = "{{ [[Run  It]] :SmartBlock:First:Value={x}}}";
+  const parsed = parseSmartBlockButton("Run It", "😀 " + full);
+  expect(parsed?.index).toBe(3);
+  expect(parsed?.full).toBe(full);
+  expect(parsed?.variables).toMatchObject({
+    Value: "{x}",
     ButtonContent: "Run It",
   });
-  expect(second?.workflowName).toBe("WorkflowTwo");
-  expect(second?.variables).toMatchObject({
-    Icon: "locate",
-    Order: "last",
-    ButtonContent: "Run It",
-  });
-});
-
-test("parses multiple unlabeled SmartBlock buttons in the same block", () => {
-  const text =
-    "{{:SmartBlock:first:Icon=locate}} and {{:SmartBlock:second:RemoveButton=false}}";
-  const first = parseSmartBlockButton("", text, 0);
-  const second = parseSmartBlockButton("", text, 1);
-  expect(first?.buttonText).toBe("first:Icon=locate");
-  expect(first?.variables).toMatchObject({
-    Icon: "locate",
-    ButtonContent: "",
-  });
-  expect(second?.buttonText).toBe("second:RemoveButton=false");
-  expect(second?.variables).toMatchObject({
-    RemoveButton: "false",
-    ButtonContent: "",
-  });
-});
-
-test("returns null when occurrence index is out of bounds", () => {
-  const text = "{{Only One:SmartBlock:Workflow}}";
-  const result = parseSmartBlockButton("Only One", text, 2);
-  expect(result).toBeNull();
-});
-
-test("returns null when occurrence index is negative", () => {
-  const text = "{{Only One:SmartBlock:Workflow}}";
-  const result = parseSmartBlockButton("Only One", text, -1);
-  expect(result).toBeNull();
-});
-
-test("parses SmartBlock button label containing plus signs", () => {
-  const text = "{{Add+More:SmartBlock:PlusWorkflow}}";
-  const result = parseSmartBlockButton("Add+More", text);
-  expect(result?.workflowName).toBe("PlusWorkflow");
-  expect(result?.variables).toMatchObject({
-    ButtonContent: "Add+More",
-  });
-});
-
-test("parses SmartBlock button label with regex special characters", () => {
-  const text = "{{Add+(Test)[One]?:SmartBlock:WeirdWorkflow}}";
-  const result = parseSmartBlockButton("Add+(Test)[One]?", text);
-  expect(result?.workflowName).toBe("WeirdWorkflow");
-  expect(result?.variables).toMatchObject({
-    ButtonContent: "Add+(Test)[One]?",
-  });
+  expect(parseSmartBlockButton("b", "{{b:SmartBlock:`literal`}}")).toBeNull();
 });

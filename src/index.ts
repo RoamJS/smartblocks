@@ -47,6 +47,7 @@ import getFullTreeByParentUid from "roamjs-components/queries/getFullTreeByParen
 import { zCommandOutput } from "./utils/zodTypes";
 import { IconNames } from "@blueprintjs/icons";
 import parseSmartBlockButton from "./utils/parseSmartBlockButton";
+import observeSmartBlockButtons from "./utils/observeSmartBlockButtons";
 
 const getLegacy42Setting = (name: string) => {
   const settings = Object.fromEntries(
@@ -813,108 +814,14 @@ export default runExtension(async ({ extensionAPI }) => {
   };
 
   const unloads = new Set<() => void>();
-  // Track button occurrences per block: blockUid -> label -> count
-  const buttonOccurrences = new Map<string, Map<string, number>>();
-  const buttonTextByBlockUid = new Map<string, string>();
-  const buttonGenerationByBlockUid = new Map<string, number>();
-  const buttonCleanupByElement = new Map<HTMLElement, () => void>();
-  const buttonElementsByBlockUid = new Map<string, Set<HTMLElement>>();
-
-  const buttonLogoObserver = createHTMLObserver({
-    className: "bp3-button bp3-small dont-focus-block",
-    tag: "BUTTON",
-    callback: (b) => {
-      const parentUid = getBlockUidFromTarget(b);
-      if (parentUid && !b.hasAttribute("data-roamjs-smartblock-button")) {
-        // Clean up disconnected elements first so stale counts don't break
-        // occurrence tracking during re-renders.
-        const trackedButtons = buttonElementsByBlockUid.get(parentUid);
-        if (trackedButtons) {
-          Array.from(trackedButtons).forEach((el) => {
-            if (!el.isConnected) {
-              buttonCleanupByElement.get(el)?.();
-            }
-          });
-        }
-
-        const text = getTextByBlockUid(parentUid);
-        b.setAttribute("data-roamjs-smartblock-button", "true");
-
-        const cachedText = buttonTextByBlockUid.get(parentUid);
-        if (cachedText !== text) {
-          buttonTextByBlockUid.set(parentUid, text);
-          buttonGenerationByBlockUid.set(
-            parentUid,
-            (buttonGenerationByBlockUid.get(parentUid) || 0) + 1
-          );
-          buttonOccurrences.set(parentUid, new Map());
-        } else if (!buttonOccurrences.has(parentUid)) {
-          buttonOccurrences.set(parentUid, new Map());
-        }
-
-        // Track occurrence index for buttons with the same label in the same block
-        const label = (b.textContent || "").trim();
-        const blockOccurrences = buttonOccurrences.get(parentUid)!;
-        const occurrenceIndex = blockOccurrences.get(label) || 0;
-        blockOccurrences.set(label, occurrenceIndex + 1);
-        const generation = buttonGenerationByBlockUid.get(parentUid) || 0;
-
-        const unload = registerElAsSmartBlockTrigger({
-          textContent: b.textContent || "",
-          text,
-          el: b,
-          parentUid,
-          occurrenceIndex,
-        });
-        const cleanup = () => {
-          if (!buttonCleanupByElement.has(b)) return;
-          buttonCleanupByElement.delete(b);
-          unloads.delete(cleanup);
-          b.removeAttribute("data-roamjs-smartblock-button");
-          unload();
-          const blockButtons = buttonElementsByBlockUid.get(parentUid);
-          if (blockButtons) {
-            blockButtons.delete(b);
-            if (blockButtons.size === 0) {
-              buttonElementsByBlockUid.delete(parentUid);
-              buttonOccurrences.delete(parentUid);
-              buttonTextByBlockUid.delete(parentUid);
-              buttonGenerationByBlockUid.delete(parentUid);
-            }
-          }
-          if ((buttonGenerationByBlockUid.get(parentUid) || 0) !== generation) {
-            return;
-          }
-          // Clean up occurrence tracking when button is removed
-          const blockOccurrences = buttonOccurrences.get(parentUid);
-          if (blockOccurrences) {
-            const currentCount = blockOccurrences.get(label) || 0;
-            if (currentCount <= 1) {
-              blockOccurrences.delete(label);
-              if (blockOccurrences.size === 0) {
-                buttonOccurrences.delete(parentUid);
-                if (!buttonElementsByBlockUid.get(parentUid)?.size) {
-                  buttonTextByBlockUid.delete(parentUid);
-                  buttonGenerationByBlockUid.delete(parentUid);
-                }
-              }
-            } else {
-              blockOccurrences.set(label, currentCount - 1);
-            }
-          }
-        };
-        const blockButtons =
-          buttonElementsByBlockUid.get(parentUid) || new Set<HTMLElement>();
-        blockButtons.add(b);
-        buttonElementsByBlockUid.set(parentUid, blockButtons);
-        buttonCleanupByElement.set(b, cleanup);
-        unloads.add(cleanup);
-      }
-    },
-    removeCallback: (b) => {
-      buttonCleanupByElement.get(b)?.();
-    },
+  const buttonLogoObserver = observeSmartBlockButtons({
+    register: (args) =>
+      registerElAsSmartBlockTrigger({
+        ...args,
+        textContent: args.el.textContent || "",
+      }),
   });
+  unloads.add(buttonLogoObserver.unload);
 
   const todoObserver = createHTMLObserver({
     tag: "LABEL",
