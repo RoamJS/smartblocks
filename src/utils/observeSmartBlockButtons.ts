@@ -100,11 +100,21 @@ const observeSmartBlockButtons = ({
       if (scope.isConnected) refresh(scope);
     });
   });
+  // Source-only edits may produce no mutations. Refresh before button listeners run.
+  const onClick = (event: MouseEvent) => {
+    const button = (event.target as Element).closest?.(selector);
+    const scope = button && scopeOf(button);
+    if (scope) refresh(scope);
+  };
+  document.addEventListener("click", onClick, true);
   const scopes = new Set<Element>();
   collect(document.body, scopes);
   scopes.forEach(refresh);
   return Object.assign(observer, {
-    unload: () => states.forEach((_, scope) => clear(scope)),
+    unload: () => {
+      document.removeEventListener("click", onClick, true);
+      states.forEach((_, scope) => clear(scope));
+    },
   });
 };
 export default observeSmartBlockButtons;

@@ -62,9 +62,11 @@ test("binds duplicate captions by rendered position, including literals and gene
       };
     },
   });
-  const expectClicks = (el: Element, expected: string[]) => {
+  const expectClicks = (el: Element, expected: readonly string[]) => {
     calls.length = 0;
-    el.querySelectorAll<HTMLButtonElement>("button").forEach((b) => b.click());
+    el.querySelectorAll<HTMLButtonElement>("button").forEach((b) =>
+      ((b.firstElementChild as HTMLElement) || b).click()
+    );
     expect(calls).toEqual(expected);
   };
   for (const el of [main, other, ref])
@@ -131,18 +133,24 @@ test("binds duplicate captions by rendered position, including literals and gene
   own.forEach((b) => b.click());
   expect(calls).toEqual(["UserDNPToday", "UserDNPDateSelect"]);
 
-  // A source edit with persistent button nodes refreshes captured workflow data.
-  text = second + " " + first;
-  main.append(document.createTextNode(" "));
-  await flush();
-  calls.length = 0;
-  own.forEach((b) => b.click());
-  expect(calls).toEqual(["UserDNPDateSelect", "UserDNPToday"]);
-
+  // React can preserve identical DOM when only the underlying source changes.
+  let nativeClicks = 0;
+  other.addEventListener("click", () => nativeClicks++);
+  for (const [source, expected] of [
+    [second + " " + first, ["UserDNPDateSelect", "UserDNPToday"]],
+    ["{{b}} " + first, [null, "UserDNPToday"]],
+    [first + " {{b}}", ["UserDNPToday", null]],
+    [first, [null, null]],
+  ] as const) {
+    text = source;
+    Array.from(other.children).forEach((el, i) =>
+      expectClicks(el, expected[i] ? [expected[i]!] : [])
+    );
+  }
+  expect(nativeClicks).toBe(8);
+  text = first + " " + second;
   uid = "new-uid";
   targets.length = 0;
-  main.append(document.createTextNode(" "));
-  await flush();
   own.forEach((b) => b.click());
   expect(targets).toEqual([uid, uid]);
 
