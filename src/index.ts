@@ -47,6 +47,7 @@ import getFullTreeByParentUid from "roamjs-components/queries/getFullTreeByParen
 import { zCommandOutput } from "./utils/zodTypes";
 import { IconNames } from "@blueprintjs/icons";
 import parseSmartBlockButton from "./utils/parseSmartBlockButton";
+import observeSmartBlockButtons from "./utils/observeSmartBlockButtons";
 import getTriggerSelection, {
   resolveTrigger,
 } from "./utils/getTriggerSelection";
@@ -636,16 +637,18 @@ export default runExtension(async ({ extensionAPI }) => {
     el,
     parentUid,
     hideIcon,
+    occurrenceIndex = 0,
   }: {
     textContent: string;
     text: string;
     el: HTMLElement;
     parentUid: string;
     hideIcon?: boolean;
+    occurrenceIndex?: number;
   }) => {
     // We include textcontent here bc there could be multiple smartblocks in a block
     const label = textContent.trim();
-    const parsed = parseSmartBlockButton(label, text);
+    const parsed = parseSmartBlockButton(label, text, occurrenceIndex);
     if (parsed) {
       const { index, full, buttonContent, workflowName, variables } = parsed;
       const clickListener = () => {
@@ -831,7 +834,8 @@ export default runExtension(async ({ extensionAPI }) => {
 
         el.insertBefore(iconElement, el.firstChild);
         return () => {
-          iconElement?.remove();
+          // Keep the clicked icon attached until delegated handlers finish.
+          setTimeout(() => iconElement?.remove(), 0);
           el.removeEventListener("click", clickListener);
         };
       }
@@ -844,30 +848,14 @@ export default runExtension(async ({ extensionAPI }) => {
   };
 
   const unloads = new Set<() => void>();
-  const buttonLogoObserver = createHTMLObserver({
-    className: "bp3-button bp3-small dont-focus-block",
-    tag: "BUTTON",
-    callback: (b) => {
-      const parentUid = getBlockUidFromTarget(b);
-      if (parentUid && !b.hasAttribute("data-roamjs-smartblock-button")) {
-        const text = getTextByBlockUid(parentUid);
-        b.setAttribute("data-roamjs-smartblock-button", "true");
-
-        // We include textcontent here bc there could be multiple smartblocks in a block
-        // TODO: if multiple smartblocks have the same textContent, we need to distinguish them
-        const unload = registerElAsSmartBlockTrigger({
-          textContent: b.textContent || "",
-          text,
-          el: b,
-          parentUid,
-        });
-        unloads.add(() => {
-          b.removeAttribute("data-roamjs-smartblock-button");
-          unload();
-        });
-      }
-    },
+  const buttonLogoObserver = observeSmartBlockButtons({
+    register: (args) =>
+      registerElAsSmartBlockTrigger({
+        ...args,
+        textContent: args.el.textContent || "",
+      }),
   });
+  unloads.add(buttonLogoObserver.unload);
 
   const todoObserver = createHTMLObserver({
     tag: "LABEL",

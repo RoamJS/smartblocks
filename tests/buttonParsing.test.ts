@@ -65,3 +65,68 @@ test("parses SmartBlock button for today's entry", () => {
     ButtonContent: "Create Today's Entry",
   });
 });
+
+for (const label of ["Run It", "", "Add+More", "Add+(Test)[One]?"]) {
+  test(`selects each duplicate caption ${JSON.stringify(label)}`, () => {
+    const text = `{{${label}:SmartBlock:First:RemoveButton=false}} {{${label}:42SmartBlock:Second:Icon=locate}}`;
+    expect(parseSmartBlockButton(label, text, 0)).toMatchObject({
+      workflowName: "First",
+      variables: { RemoveButton: "false", ButtonContent: label },
+    });
+    expect(parseSmartBlockButton(label, text, 1)).toMatchObject({
+      workflowName: "Second",
+      variables: { Icon: "locate", ButtonContent: label },
+    });
+  });
+}
+
+test("rejects invalid occurrence indices", () => {
+  for (const index of [-1, 2, NaN, Infinity, 0.5])
+    expect(
+      parseSmartBlockButton("b", "{{b:SmartBlock:Only}}", index)
+    ).toBeNull();
+});
+for (const prefix of [
+  "`{{b}}`",
+  "`{{b:SmartBlock:Hidden}}`",
+  "```\n{{b}}\n```",
+  "````{{b}}````",
+  "`````{{b}}`````",
+  "`unterminated",
+]) {
+  test(`ignores only rendered code literals: ${prefix}`, () => {
+    const first = "{{b:SmartBlock:First}}",
+      second = "{{b:SmartBlock:Second}}";
+    const text = prefix + " " + first + " " + second;
+    expect(parseSmartBlockButton("b", text, 0)?.workflowName).toBe("First");
+    expect(parseSmartBlockButton("b", text, 1)?.index).toBe(
+      text.indexOf(second)
+    );
+  });
+}
+for (const generic of [
+  "{{b}}",
+  "{{ b }}",
+  "{{[[b]]}}",
+  "{{b:Other:ignored}}",
+  "{{a/b}}",
+]) {
+  test(`reserves the native macro position: ${generic}`, () => {
+    const text =
+      generic + " {{ b :SmartBlock:First}} {{[[b]]:SmartBlock:Second}}";
+    expect(parseSmartBlockButton("b", text, 0)).toBeNull();
+    expect(parseSmartBlockButton("b", text, 1)?.workflowName).toBe("First");
+    expect(parseSmartBlockButton("b", text, 2)?.workflowName).toBe("Second");
+  });
+}
+test("preserves raw offsets while normalizing captions and whitespace", () => {
+  const full = "{{ [[Run  It]] :SmartBlock:First:Value={x}}}";
+  const parsed = parseSmartBlockButton("Run It", "😀 " + full);
+  expect(parsed?.index).toBe(3);
+  expect(parsed?.full).toBe(full);
+  expect(parsed?.variables).toMatchObject({
+    Value: "{x}",
+    ButtonContent: "Run It",
+  });
+  expect(parseSmartBlockButton("b", "{{b:SmartBlock:`literal`}}")).toBeNull();
+});
