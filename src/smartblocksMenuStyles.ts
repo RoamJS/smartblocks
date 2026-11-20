@@ -35,7 +35,10 @@ const smartblocksMenuStyles = `
   min-width: 26px; min-height: 27px; padding: 4px; color: #5c7080;
 }
 .roamjs-smartblocks-pin .bp3-icon svg { width: 12px; height: 12px; }
-.roamjs-smartblocks-pin[aria-pressed="true"] { color: #106ba3; }
+.roamjs-smartblocks-pin[aria-pressed="true"] {
+  --co-button__minimal-icon: var(--smartblocks-pinned-icon, #106ba3);
+  color: var(--co-button__minimal-icon);
+}
 @media (hover: hover) {
   .roamjs-smartblocks-pin[aria-pressed="false"] { opacity: 0; pointer-events: none; }
   .roamjs-smartblocks-menu-row:hover .roamjs-smartblocks-pin[aria-pressed="false"],
@@ -44,6 +47,7 @@ const smartblocksMenuStyles = `
 .roamjs-smartblocks-pin-divider { border-top: 1px solid #e1e4e8; margin: 5px 7px; }
 .roamjs-smartblocks-empty { padding: 20px 12px; color: #5c7080; }
 .roamjs-smartblocks-footer {
+  --smartblocks-active-fill: var(--roamjs-selected, rgba(0, 0, 0, 0.11));
   flex-shrink: 0;
   box-sizing: border-box; min-height: 30px; display: flex; align-items: center;
   justify-content: flex-end; flex-wrap: wrap; gap: 3px; padding: 3px 6px;
@@ -56,7 +60,9 @@ const smartblocksMenuStyles = `
 }
 .roamjs-smartblocks-footer .bp3-button[aria-expanded="true"],
 .roamjs-smartblocks-footer .bp3-button[aria-pressed="true"] {
-  background: var(--roamjs-selected, rgba(0, 0, 0, 0.11));
+  /* Roam themes can apply minimal-button colors with !important. */
+  --bc-button__minimal: var(--smartblocks-active-fill);
+  background-color: var(--smartblocks-active-fill);
 }
 .roamjs-smartblocks-footer .bp3-button-text { display: flex; align-items: center; gap: 5px; white-space: nowrap; }
 .roamjs-smartblocks-keys { display: inline-flex; gap: 2px; }
@@ -76,15 +82,24 @@ const smartblocksMenuStyles = `
 .roamjs-smartblocks-preview-tree li { padding: 3px 0; }
 .roamjs-smartblocks-preview-tree code { color: #106ba3; background: transparent; font-size: 12px; white-space: pre-wrap; }
 .roamjs-smartblocks-preview-note { margin-top: 18px; color: #5c7080; font-size: 11px; }
-.bp3-dark .roamjs-smartblocks-picker { background: #293742; color: #f5f8fa; }
+.bp3-dark .roamjs-smartblocks-picker {
+  --smartblocks-text: var(--roamjs-text, var(--cdt-primary-text, #f5f8fa));
+  --smartblocks-pinned-icon: #8cc8ee;
+  --co-button__minimal: var(--smartblocks-text);
+  --co-button__minimal-icon: var(--roamjs-muted, var(--cdt-secondary-text, #bbcbd6));
+  background: var(--roamjs-surface, var(--cdt-popover-surface, #293742));
+  color: var(--smartblocks-text);
+}
+.bp3-dark .roamjs-smartblocks-picker .roamjs-smartblock-menu { color: var(--smartblocks-text); }
 .bp3-dark .roamjs-smartblocks-menu-row.is-active { background: #495761; }
-.bp3-dark .roamjs-smartblocks-footer { background: #202b33; color: #f5f8fa; }
-.bp3-dark .roamjs-smartblocks-footer .bp3-button[aria-expanded="true"],
-.bp3-dark .roamjs-smartblocks-footer .bp3-button[aria-pressed="true"] {
-  background: var(--roamjs-selected, rgba(255, 255, 255, 0.14));
+.bp3-dark .roamjs-smartblocks-footer {
+  --smartblocks-active-fill: var(--roamjs-selected, rgba(255, 255, 255, 0.14));
+  background: var(--roamjs-footer, var(--cdt-elevated-surface, #202b33));
+  color: var(--smartblocks-text);
 }
 .bp3-dark .roamjs-smartblocks-footer kbd { background: rgba(255, 255, 255, 0.12); }
 .bp3-dark .roamjs-smartblocks-pin,
+.bp3-dark .roamjs-smartblocks-empty,
 .bp3-dark .roamjs-smartblocks-preview-title,
 .bp3-dark .roamjs-smartblocks-preview-note { color: #a7b6c2; }
 .bp3-dark .roamjs-smartblocks-preview-tree code { color: #8cc8ee; }
