@@ -10,9 +10,9 @@
 
 # Overview
 
-SmartBlocks includes a number of predefined workflows out of the box. Each of them represents a quick SmartBlock template for common functionality. To use these predefined workflows, simply type the keystrokes in the trigger. Predefined workflows will be prefixed with a gear icon.
+Type your trigger (the default is `jj`) to see available workflows. A gear icon marks each built-in workflow, such as **today** or **tomorrow**.
 
-![](media/predefined-icon.png)
+<img src="media/predefined-icon.png" width="400" alt="The SmartBlocks menu with today selected and gear icons beside today, tomorrow, and yesterday.">
 
 ## Predefined Workflows
 
