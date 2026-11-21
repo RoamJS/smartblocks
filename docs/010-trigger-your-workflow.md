@@ -14,11 +14,11 @@ Each workflow, whether predefined or customized, is initiated in the same way. A
 
 # How to Trigger a SmartBlock Workflow
 
-**Trigger:** keystrokes you type to initiate the workflow defined in your SmartBlock
-To initiate a SmartBlocks workflow, type the keystrokes that initiate the workflow. By default, this is `jj` (two j's). A list will popup with available SmartBlocks Actions. Keep typing the name of the workflow to filter the list, using the up and down arrow to navigate.
-Press enter or click on the workflow you want to run
+Type `jj` in a block to open the workflow menu. Start typing a workflow name to filter the list. Use the up and down arrows to select a workflow, then press **Enter** or click its name to run it.
 
-![](media/how-to-trigger.gif)
+This 29-second walkthrough shows how to preview Meeting Agenda, pin it, open its source in the sidebar, and run it in the current block.
+
+https://github.com/user-attachments/assets/d62b472c-da11-41a5-afe7-92874a621757
 
 The trigger could be customized by going to the SmartBlocks tab in your Roam Depot Settings and editing the `Trigger` field.
 
