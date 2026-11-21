@@ -1,17 +1,15 @@
-import { Menu, MenuItem, Popover, Position } from "@blueprintjs/core";
+import { Button, Menu, Popover, Position } from "@blueprintjs/core";
 import React, {
   useCallback,
-  useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
 } from "react";
 import ReactDOM from "react-dom";
-import { DAILY_NOTE_PAGE_REGEX } from "roamjs-components/date/constants";
-import getPageTitleByBlockUid from "roamjs-components/queries/getPageTitleByBlockUid";
-import getPageUidByPageTitle from "roamjs-components/queries/getPageUidByPageTitle";
 import getTextByBlockUid from "roamjs-components/queries/getTextByBlockUid";
 import type { OnloadArgs } from "roamjs-components/types/native";
+import WorkflowPreview, { PreviewNode } from "./components/WorkflowPreview";
 import { createTriggerMenuEventBinding, getCoords } from "./utils/dom";
 import getTriggerSelection, {
   isCurrentTriggerSelection,
@@ -24,7 +22,13 @@ import {
   PREDEFINED_REGEX,
   sbBomb,
 } from "./utils/core";
-import fuzzy from "fuzzy";
+import {
+  getMenuWorkflows,
+  getVisibleScrollTop,
+  nextMenuIndex,
+  PINNED_WORKFLOWS_SETTING,
+  readPinnedWorkflowUids,
+} from "./utils/smartblocksMenu";
 
 type Props = {
   textarea: HTMLTextAreaElement;
@@ -32,26 +36,39 @@ type Props = {
   initialSelection: TriggerSelection;
   isCustomOnly: boolean;
   extensionAPI: OnloadArgs["extensionAPI"];
+  onClose: () => void;
 };
 
-// Roam may not have persisted the latest textarea input when a workflow is selected.
+const isRunControl = (target: EventTarget): boolean =>
+  target instanceof Element &&
+  Boolean(
+    target.closest(".roamjs-smartblocks-workflow, .roamjs-smartblocks-run"),
+  );
+
+// Roam's textarea can update before its block has been persisted.
 const waitForBlock = async ({
   uid,
-  text,
-  closingEditorId,
+  selection,
+  readTextarea,
+  closeEditor,
   signal,
 }: {
   uid: string;
-  text: string;
-  closingEditorId?: string;
+  selection: TriggerSelection;
+  readTextarea: () => HTMLTextAreaElement | null;
+  closeEditor: boolean;
   signal: AbortSignal;
 }): Promise<boolean> => {
   const deadline = Date.now() + 3000;
   while (!signal.aborted && Date.now() < deadline) {
-    const editorStillOpen =
-      closingEditorId &&
-      document.getElementById(closingEditorId) instanceof HTMLTextAreaElement;
-    if (!editorStillOpen && getTextByBlockUid(uid) === text) return true;
+    const editor = readTextarea();
+    if (
+      !closeEditor &&
+      (!editor || !isCurrentTriggerSelection(selection, editor))
+    )
+      return false;
+    if ((!closeEditor || !editor) && getTextByBlockUid(uid) === selection.text)
+      return true;
     await new Promise((resolve) => setTimeout(resolve, 10));
   }
   return false;
@@ -59,86 +76,135 @@ const waitForBlock = async ({
 
 const SmartblocksMenu = ({
   onClose,
+  anchor,
   textarea,
   trigger,
   initialSelection,
   isCustomOnly,
   extensionAPI,
-}: { onClose: () => void } & Props) => {
+}: Props & { anchor: HTMLElement }): React.ReactElement => {
   const { ["block-uid"]: blockUid, ["window-id"]: windowId } = useMemo(
     () =>
       window.roamAlphaAPI.ui.getFocusedBlock() || {
         "block-uid": "",
         "window-id": "",
       },
-    []
+    [],
   );
-  const menuRef = useRef<HTMLUListElement>(null);
-  const pendingSelection = useRef<AbortController>();
-  useEffect(() => () => pendingSelection.current?.abort(), []);
+  const readTextarea = useCallback((): HTMLTextAreaElement | null => {
+    const editor = textarea.ownerDocument.getElementById(textarea.id);
+    return editor?.tagName === "TEXTAREA"
+      ? (editor as HTMLTextAreaElement)
+      : null;
+  }, [textarea]);
   const [selection, setSelection] = useState(initialSelection);
   const { filter } = selection;
-  const initialWorkflows = useMemo(() => {
-    return getVisibleCustomWorkflows()
-      .sort(({ name: a }, { name: b }) => a.localeCompare(b))
-      .concat(isCustomOnly ? [] : predefinedWorkflows);
-  }, []);
-  const workflows = useMemo(
-    () =>
-      (filter
-        ? fuzzy
-            .filter(filter, initialWorkflows, {
-              extract: (s) => s.name,
-              pre: "<b>",
-              post: "</b>",
-            })
-            .map((r) => ({ ...r.original, displayName: r.string }))
-        : initialWorkflows.map((r) => ({ ...r, displayName: r.name }))
-      ).slice(0, 10),
-    [filter, initialWorkflows]
+  const isSearching = filter.trim().length > 0;
+  const [pinnedUids, setPinnedUids] = useState(() =>
+    readPinnedWorkflowUids(extensionAPI.settings.get(PINNED_WORKFLOWS_SETTING)),
   );
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
-  const getCurrentTextarea = useCallback(() => {
-    const editor = document.getElementById(textarea.id);
-    return editor instanceof HTMLTextAreaElement ? editor : undefined;
-  }, [textarea]);
+  const pendingSelection = useRef<{
+    controller: AbortController;
+    closeEditor: boolean;
+  }>();
+  const menuRef = useRef<HTMLUListElement | null>(null);
+  const menuResizeObserver = useRef<ResizeObserver | null>(null);
+  const initialWorkflows = useMemo(
+    (): { uid: string; name: string; children?: PreviewNode[] }[] => [
+      ...getVisibleCustomWorkflows()
+        .filter(({ name }) => name.trim().length > 0)
+        .sort(({ name: a }, { name: b }) => a.localeCompare(b)),
+      ...(isCustomOnly ? [] : predefinedWorkflows),
+    ],
+    [isCustomOnly],
+  );
+  const workflows = useMemo(
+    () => getMenuWorkflows({ workflows: initialWorkflows, filter, pinnedUids }),
+    [filter, initialWorkflows, pinnedUids],
+  );
+  const index = Math.max(0, Math.min(activeIndex, workflows.length - 1));
+  const selected = workflows[index];
+
+  useLayoutEffect(() => {
+    const observer = new MutationObserver(() => {
+      // A pointer run deliberately blurs the editor before Roam saves it.
+      if (pendingSelection.current?.closeEditor) return;
+      if (!anchor.isConnected || !readTextarea()) onClose();
+    });
+    observer.observe(textarea.ownerDocument.body, {
+      childList: true,
+      subtree: true,
+    });
+    return (): void => {
+      observer.disconnect();
+      pendingSelection.current?.controller.abort();
+    };
+  }, [anchor, onClose, readTextarea, textarea]);
+
+  const scrollSelectionIntoView = useCallback((): void => {
+    const list = menuRef.current;
+    const row = list?.querySelector<HTMLElement>(
+      ".roamjs-smartblocks-menu-row.is-active",
+    );
+    if (!list || !row) return;
+    list.scrollTop = getVisibleScrollTop({
+      scrollTop: list.scrollTop,
+      viewportHeight: list.clientHeight,
+      itemTop: row.offsetTop,
+      itemHeight: row.offsetHeight,
+    });
+  }, []);
+
+  useLayoutEffect(scrollSelectionIntoView, [
+    index,
+    workflows,
+    previewOpen,
+    scrollSelectionIntoView,
+  ]);
+
+  const setMenuNode = useCallback(
+    (node: HTMLUListElement | null): void => {
+      menuResizeObserver.current?.disconnect();
+      menuResizeObserver.current = null;
+      menuRef.current = node;
+      if (!node) return;
+      menuResizeObserver.current = new ResizeObserver(scrollSelectionIntoView);
+      menuResizeObserver.current.observe(node);
+      scrollSelectionIntoView();
+    },
+    [scrollSelectionIntoView],
+  );
+
   const onSelect = useCallback(
-    (index: number, event?: KeyboardEvent) => {
-      if (!menuRef.current) return;
-      const currentTextarea = getCurrentTextarea();
-      if (
-        !currentTextarea ||
-        !isCurrentTriggerSelection(selection, currentTextarea)
-      ) {
-        return onClose();
+    (workflowIndex: number, closeEditor: boolean): void => {
+      const workflow = workflows[workflowIndex];
+      const current = readTextarea();
+      if (!workflow || pendingSelection.current) return;
+      if (!current || !isCurrentTriggerSelection(selection, current)) {
+        onClose();
+        return;
       }
-      event?.stopPropagation();
-      event?.preventDefault();
-      const item =
-        menuRef.current.children[index]?.querySelector(".bp3-menu-item");
-      const srcName = item?.getAttribute("data-name");
-      const srcUid = item?.getAttribute("data-uid");
-      if (!srcName || !srcUid || pendingSelection.current) return;
       const controller = new AbortController();
-      pendingSelection.current = controller;
-      // On click, capture the edit first, then wait for Roam to close the editor.
-      const closingEditorId = !event ? currentTextarea.id : undefined;
-      if (closingEditorId) currentTextarea.blur();
+      pendingSelection.current = { controller, closeEditor };
+      if (closeEditor) current.blur();
       waitForBlock({
         uid: blockUid,
-        text: selection.text,
-        closingEditorId,
+        selection,
+        readTextarea,
+        closeEditor,
         signal: controller.signal,
-      }).then((saved) => {
+      }).then((persisted) => {
         if (controller.signal.aborted) return;
         pendingSelection.current = undefined;
         onClose();
-        if (!saved) return;
+        if (!persisted) return;
         setTimeout(() => {
-          const liveEditor = getCurrentTextarea();
+          const liveEditor = readTextarea();
           if (liveEditor && liveEditor.value !== selection.text) return;
           sbBomb({
-            srcUid,
+            srcUid: workflow.uid,
             target: {
               uid: blockUid,
               originalText: selection.text,
@@ -146,140 +212,340 @@ const SmartblocksMenu = ({
               end: selection.end,
               windowId,
             },
-            mutableCursor: !srcName.includes("<%NOCURSOR%>"),
+            mutableCursor: !workflow.name.includes("<%NOCURSOR%>"),
           });
         }, 10);
       });
     },
-    [menuRef, blockUid, getCurrentTextarea, onClose, selection, windowId]
+    [workflows, readTextarea, blockUid, onClose, selection, windowId],
   );
+
+  const openSource = useCallback((): void => {
+    if (!selected || PREDEFINED_REGEX.test(selected.uid)) return;
+    onClose();
+    void window.roamAlphaAPI.ui.rightSidebar.addWindow({
+      window: { type: "block", "block-uid": selected.uid },
+    });
+  }, [selected, onClose]);
+
+  const togglePin = useCallback(
+    (uid: string): void => {
+      const next = pinnedUids.includes(uid)
+        ? pinnedUids.filter((pinned) => pinned !== uid)
+        : [...pinnedUids, uid];
+      extensionAPI.settings.set(PINNED_WORKFLOWS_SETTING, next);
+      setPinnedUids(next);
+      setActiveIndex(
+        getMenuWorkflows({
+          workflows: initialWorkflows,
+          filter,
+          pinnedUids: next,
+        }).findIndex((workflow) => workflow.uid === uid),
+      );
+    },
+    [extensionAPI, filter, initialWorkflows, pinnedUids],
+  );
+
   const keydownListener = useCallback(
-    (event: KeyboardEvent) =>
+    (event: KeyboardEvent): void => {
+      const editor = readTextarea();
+      if (!editor || event.target !== editor) return;
       handleTriggerMenuKeydown({
         event,
-        menu: menuRef.current,
-        editor: getCurrentTextarea(),
+        editor,
         selection,
-        setActiveIndex,
-        onSelect,
         onClose,
-      }),
-    [getCurrentTextarea, onClose, onSelect, selection]
+        onAction: (action) => {
+          if (action === "next" || action === "previous")
+            setActiveIndex(
+              nextMenuIndex({
+                index,
+                count: workflows.length,
+                direction: action === "next" ? 1 : -1,
+              }),
+            );
+          else if (action === "show-preview") setPreviewOpen(true);
+          else if (action === "hide-preview") setPreviewOpen(false);
+          else if (action === "toggle-pin") {
+            if (selected) togglePin(selected.uid);
+          }
+          else if (action === "source") openSource();
+          else if (action === "run") onSelect(index, false);
+          else if (action === "close") onClose();
+        },
+      });
+    },
+    [
+      index,
+      workflows.length,
+      openSource,
+      onSelect,
+      onClose,
+      readTextarea,
+      selected,
+      selection,
+      togglePin,
+    ],
   );
+
   const bindEvents = useMemo(
     () => createTriggerMenuEventBinding(textarea),
-    [textarea]
+    [textarea],
   );
-  useEffect(() => {
-    const inputListener = (event: Event) => {
-      const editor = event.target;
-      if (!(editor instanceof HTMLTextAreaElement) || editor.id !== textarea.id)
-        return;
+  useLayoutEffect(() => {
+    const inputListener = (event: Event): void => {
+      const editor = readTextarea();
+      if (!editor || event.target !== editor) return;
+      pendingSelection.current?.controller.abort();
+      pendingSelection.current = undefined;
       const nextSelection = getTriggerSelection({
         text: editor.value,
         selectionStart: editor.selectionStart,
         trigger,
         previousSelection: selection,
       });
-      if (!nextSelection) return onClose();
+      if (!nextSelection || !anchor.isConnected) return onClose();
       setSelection(nextSelection);
       setActiveIndex(0);
     };
     return bindEvents(keydownListener, inputListener);
-  }, [bindEvents, keydownListener, onClose, textarea, trigger, selection]);
+  }, [
+    anchor,
+    bindEvents,
+    keydownListener,
+    onClose,
+    readTextarea,
+    selection,
+    trigger,
+  ]);
+
   return (
     <Popover
       onClose={onClose}
-      isOpen={true}
+      isOpen
       canEscapeKeyClose
       minimal
       target={<span />}
       position={Position.BOTTOM_LEFT}
       modifiers={{
-        flip: { enabled: false },
-        preventOverflow: { enabled: false },
+        flip: { enabled: true },
+        preventOverflow: {
+          enabled: true,
+          boundariesElement: "viewport",
+          padding: 12,
+        },
       }}
       autoFocus={false}
+      enforceFocus={false}
       content={
-        <Menu
-          ulRef={menuRef}
-          data-active-index={activeIndex}
-          className={"roamjs-smartblock-menu"}
+        <div
+          className={`roamjs-smartblocks-picker${previewOpen ? " is-preview-open" : ""}`}
+          aria-label="SmartBlocks menu"
+          onMouseDown={(event): void => {
+            event.preventDefault();
+            if (!isRunControl(event.target)) event.stopPropagation();
+          }}
+          onClick={(event): void => {
+            // Roam needs the run click to leave edit mode and commit the block.
+            if (!isRunControl(event.target)) event.stopPropagation();
+          }}
         >
-          {workflows.length ? (
-            workflows.map((wf, i) => {
-              return (
-                <MenuItem
-                  key={wf.uid}
-                  data-uid={wf.uid}
-                  data-name={wf.name}
-                  text={
-                    <>
-                      <img
-                        src={
-                          PREDEFINED_REGEX.test(wf.uid)
-                            ? "https://raw.githubusercontent.com/RoamJS/smartblocks/main/src/img/gear.png"
-                            : "https://raw.githubusercontent.com/RoamJS/smartblocks/main/src/img/lego3blocks.png"
+          <div className="roamjs-smartblocks-menu-column min-w-0">
+            <Menu
+              className="roamjs-smartblock-menu relative"
+              ulRef={setMenuNode}
+              role="listbox"
+              aria-label="SmartBlock workflows"
+            >
+              {workflows.length ? (
+                workflows.map((workflow, i) => (
+                  <React.Fragment key={workflow.uid}>
+                    {!isSearching &&
+                      i > 0 &&
+                      workflows[i - 1].pinned &&
+                      !workflow.pinned && (
+                        <li
+                          className="roamjs-smartblocks-pin-divider"
+                          role="presentation"
+                        />
+                      )}
+                    <li
+                      className={`roamjs-smartblocks-menu-row${i === index ? " is-active" : ""}`}
+                      role="presentation"
+                      onMouseEnter={(): void => setActiveIndex(i)}
+                    >
+                      <Button
+                        minimal
+                        alignText="left"
+                        className="roamjs-smartblocks-workflow"
+                        icon={
+                          PREDEFINED_REGEX.test(workflow.uid) ? "cog" : "cube"
                         }
-                        alt={""}
-                        width={15}
-                        style={{ marginRight: 4 }}
+                        role="option"
+                        aria-selected={i === index}
+                        data-uid={workflow.uid}
+                        data-name={workflow.name}
+                        onClick={(): void => onSelect(i, true)}
+                        text={
+                          <>
+                            {workflow.displayName
+                              .split(/<b>(.*?)<\/b>/)
+                              .map((part, partIndex) =>
+                                partIndex % 2 ? (
+                                  <b key={partIndex}>{part}</b>
+                                ) : (
+                                  <React.Fragment key={partIndex}>
+                                    {part}
+                                  </React.Fragment>
+                                ),
+                              )}
+                          </>
+                        }
                       />
-                      {wf.displayName
-                        .split(/<b>(.*?)<\/b>/)
-                        .map((part, i) =>
-                          i % 2 === 1 ? (
-                            <b key={i}>{part}</b>
-                          ) : (
-                            <span key={i}>{part}</span>
-                          )
-                        )}
-                    </>
-                  }
-                  active={i === activeIndex}
-                  shouldDismissPopover={false}
-                  onMouseEnter={() => setActiveIndex(i)}
-                  // Take the editor snapshot in onClick before letting Roam blur it.
-                  onMouseDown={(event) => event.preventDefault()}
-                  onClick={() => onSelect(i)}
-                />
-              );
-            })
-          ) : (
-            <MenuItem
-              text={
-                <span style={{ opacity: 0.75 }}>
-                  <i>No Workflows Found</i>
-                </span>
-              }
-              active={false}
-              disabled={true}
-            />
-          )}
-        </Menu>
+                      <Button
+                        minimal
+                        small
+                        icon="pin"
+                        className="roamjs-smartblocks-pin"
+                        aria-label={`${workflow.pinned ? "Unpin" : "Pin"} ${workflow.name}`}
+                        aria-pressed={workflow.pinned}
+                        title={
+                          workflow.pinned ? "Unpin workflow" : "Pin workflow"
+                        }
+                        onClick={(): void => togglePin(workflow.uid)}
+                      />
+                    </li>
+                  </React.Fragment>
+                ))
+              ) : (
+                <li role="presentation" className="roamjs-smartblocks-empty">
+                  No Workflows Found
+                </li>
+              )}
+            </Menu>
+            <footer className="roamjs-smartblocks-footer">
+              <Button
+                minimal
+                aria-expanded={previewOpen}
+                aria-keyshortcuts={previewOpen ? "ArrowLeft" : "ArrowRight"}
+                onClick={(): void => setPreviewOpen(!previewOpen)}
+                text={
+                  <>
+                    Preview
+                    <kbd aria-hidden="true">{previewOpen ? "←" : "→"}</kbd>
+                  </>
+                }
+              />
+              <span
+                className="roamjs-smartblocks-footer-divider"
+                aria-hidden="true"
+              />
+              <Button
+                minimal
+                disabled={!selected}
+                aria-pressed={selected?.pinned ?? false}
+                aria-keyshortcuts="Control+Shift+Enter"
+                title={selected?.pinned ? "Unpin workflow" : "Pin workflow"}
+                onClick={(): void => {
+                  if (selected) togglePin(selected.uid);
+                }}
+                text={
+                  <>
+                    Pin
+                    <span className="roamjs-smartblocks-keys" aria-hidden="true">
+                      <kbd>ctrl</kbd>
+                      <kbd>shift</kbd>
+                      <kbd>↵</kbd>
+                    </span>
+                  </>
+                }
+              />
+              <span
+                className="roamjs-smartblocks-footer-divider"
+                aria-hidden="true"
+              />
+              <Button
+                minimal
+                disabled={!selected || PREDEFINED_REGEX.test(selected.uid)}
+                aria-keyshortcuts="Shift+Enter"
+                title={
+                  selected && PREDEFINED_REGEX.test(selected.uid)
+                    ? "Built-in workflows have no source block"
+                    : "Open workflow source in the right sidebar"
+                }
+                onClick={openSource}
+                text={
+                  <>
+                    Source
+                    <span className="roamjs-smartblocks-keys" aria-hidden="true">
+                      <kbd>shift</kbd>
+                      <kbd>↵</kbd>
+                    </span>
+                  </>
+                }
+              />
+              <span
+                className="roamjs-smartblocks-footer-divider"
+                aria-hidden="true"
+              />
+              <Button
+                minimal
+                className="roamjs-smartblocks-run"
+                disabled={!selected}
+                aria-keyshortcuts="Enter"
+                onClick={(): void => onSelect(index, true)}
+                text={
+                  <>
+                    Run<kbd aria-hidden="true">↵</kbd>
+                  </>
+                }
+              />
+            </footer>
+          </div>
+          {previewOpen &&
+            (selected ? (
+              <WorkflowPreview
+                key={selected.uid}
+                uid={selected.uid}
+                name={selected.name}
+                children={selected.children}
+              />
+            ) : (
+              <aside
+                className="roamjs-smartblocks-preview"
+                aria-label="Workflow preview"
+              >
+                No workflow selected.
+              </aside>
+            ))}
+        </div>
       }
     />
   );
 };
 
-export const render = (props: Props & { onClose: () => void }) => {
-  const parent = document.createElement("span");
+export const render = (props: Props): void => {
+  if (!props.textarea.parentElement || !props.textarea.isConnected) {
+    props.onClose();
+    return;
+  }
+  const parent = props.textarea.ownerDocument.createElement("span");
   const coords = getCoords(props.textarea);
   parent.style.position = "absolute";
   parent.style.left = `${coords.left}px`;
   parent.style.top = `${coords.top}px`;
   props.textarea.parentElement?.insertBefore(parent, props.textarea);
+  let closed = false;
+  const close = (): void => {
+    if (closed) return;
+    closed = true;
+    props.onClose();
+    ReactDOM.unmountComponentAtNode(parent);
+    parent.remove();
+  };
   ReactDOM.render(
-    <SmartblocksMenu
-      {...props}
-      onClose={() => {
-        props.onClose();
-        ReactDOM.unmountComponentAtNode(parent);
-        parent.remove();
-      }}
-    />,
-    parent
+    <SmartblocksMenu {...props} anchor={parent} onClose={close} />,
+    parent,
   );
 };
-
 export default SmartblocksMenu;

@@ -5,7 +5,7 @@ import handleTriggerMenuKeydown from "../src/utils/handleTriggerMenuKeydown";
 
 test("lets Left Arrow through after Ctrl+E moved the caret beyond the query", () => {
   const { window } = new JSDOM(
-    '<textarea></textarea><ul data-active-index="0"><li></li></ul>'
+    '<textarea></textarea><ul data-active-index="0"><li></li></ul>',
   );
   try {
     const editor = window.document.querySelector("textarea")!;
@@ -24,19 +24,18 @@ test("lets Left Arrow through after Ctrl+E moved the caret beyond the query", ()
     window.document.addEventListener("keydown", (event) => {
       if (event.key === "ArrowLeft") forwardedLeftArrows++;
     });
-    editor.addEventListener("keydown", (event) =>
+    editor.addEventListener("keydown", (event) => {
+      if (!menu.isConnected) return;
       handleTriggerMenuKeydown({
         event,
-        menu: menu.isConnected ? menu : null,
         editor,
         selection,
-        setActiveIndex: () => {},
-        onSelect: () => {
-          selectedWorkflow = true;
+        onAction: (action) => {
+          if (action === "run") selectedWorkflow = true;
         },
         onClose: () => menu.remove(),
-      })
-    );
+      });
+    });
     const press = (key: string, ctrlKey = false) =>
       editor.dispatchEvent(
         new window.KeyboardEvent("keydown", {
@@ -44,7 +43,7 @@ test("lets Left Arrow through after Ctrl+E moved the caret beyond the query", ()
           ctrlKey,
           bubbles: true,
           cancelable: true,
-        })
+        }),
       );
 
     expect(press("ArrowLeft")).toBe(false);
