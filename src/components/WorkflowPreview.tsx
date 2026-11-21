@@ -53,9 +53,6 @@ const WorkflowPreview = ({
       ) : (
         <div>This workflow has no child blocks.</div>
       )}
-      <div className="roamjs-smartblocks-preview-note">
-        Template preview · commands are not executed
-      </div>
     </aside>
   );
 };

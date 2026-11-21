@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Active Preview and Pin controls in the `jj` menu now use the flat highlight from Roam Advanced Search.
+- The open preview pane shows the workflow name and contents. The highlighted Preview control in the footer indicates that the pane is open.
+
 ## 1.15.0
 
 - The `jj` menu now has a shortcut footer styled after Roam Advanced Search. Use Ctrl+Shift+Enter or the Pin button to pin or unpin the selected SmartBlock. Pins stay in place after reloading Roam.
