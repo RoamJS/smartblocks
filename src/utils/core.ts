@@ -186,6 +186,83 @@ const getLevelsBelowParentUid = (
   return levels <= 0 || !levels ? tree : getTreeUptoLevel(tree, levels);
 };
 
+const getClipboardIndentUnit = (lines: string[]) => {
+  const spaceIndents = lines
+    .map((line) => line.match(/^[\t ]*/)?.[0] || "")
+    .filter((indent) => !indent.includes("\t"))
+    .map((indent) => indent.length)
+    .filter((length) => length > 0);
+  return spaceIndents.length ? Math.min(...spaceIndents) : 2;
+};
+
+const getClipboardIndentLevel = ({
+  line,
+  indentUnit,
+}: {
+  line: string;
+  indentUnit: number;
+}) => {
+  const indent = line.match(/^[\t ]*/)?.[0] || "";
+  const tabs = (indent.match(/\t/g) || []).length;
+  const spaces = indent.replace(/\t/g, "").length;
+  return tabs + (indentUnit > 0 ? Math.floor(spaces / indentUnit) : 0);
+};
+
+const normalizeClipboardNode = (node: InputTextNode): InputTextNode =>
+  node.children && node.children.length
+    ? { ...node, children: node.children.map(normalizeClipboardNode) }
+    : { ...node, children: undefined };
+
+const parseClipboardSplitText = ({
+  text,
+  noHyphens,
+  noExtraSpaces,
+}: {
+  text: string;
+  noHyphens: boolean;
+  noExtraSpaces: boolean;
+}): InputTextNode[] => {
+  const lines = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
+  const meaningful = lines.filter((line) => line.trim().length);
+  const indentUnit = getClipboardIndentUnit(meaningful);
+  const roots: InputTextNode[] = [];
+  const stack: InputTextNode[] = [];
+
+  lines.forEach((line) => {
+    if (!line.trim().length) {
+      roots.push({ text: "" });
+      stack.length = 0;
+      return;
+    }
+
+    const level = getClipboardIndentLevel({ line, indentUnit });
+    const cappedLevel = Math.min(Math.max(level, 0), stack.length);
+    let lineText = line.trimStart();
+    if (noHyphens) {
+      lineText = lineText.replace(/^[-*•]\s+/, "");
+    }
+    if (noExtraSpaces) {
+      lineText = lineText.replace(/\s\s+/g, " ");
+    }
+
+    const node: InputTextNode = { text: lineText, children: [] };
+
+    while (stack.length > cappedLevel) {
+      stack.pop();
+    }
+    if (!stack.length) {
+      roots.push(node);
+    } else {
+      const parent = stack[stack.length - 1];
+      parent.children = parent.children || [];
+      parent.children.push(node);
+    }
+    stack.push(node);
+  });
+
+  return roots.map(normalizeClipboardNode);
+};
+
 addNlpDateParser({
   pattern: () => /D[B,E]O(N)?[M,Y]/i,
   extract: (_, match) => {
@@ -1796,16 +1873,20 @@ export const COMMANDS: {
       const postCarriage = settings.has("returnasspace")
         ? postCarriageOne.replace(/(\r)?\n(\r)?/g, " ")
         : postTrim;
-      const postHyphens = settings.has("nohyphens")
-        ? postCarriage.replace(/- /g, "")
-        : postCarriage;
-      const postSpaces = settings.has("noextraspaces")
-        ? postHyphens.replace(/\s\s+/g, " ")
-        : postHyphens;
-      const postSplit = settings.has("split")
-        ? postSpaces.split(/(?:\r)?\n/)
-        : [postSpaces];
-      return postSplit;
+      if (!settings.has("split")) {
+        const postHyphens = settings.has("nohyphens")
+          ? postCarriage.replace(/- /g, "")
+          : postCarriage;
+        const postSpaces = settings.has("noextraspaces")
+          ? postHyphens.replace(/\s\s+/g, " ")
+          : postHyphens;
+        return [postSpaces];
+      }
+      return parseClipboardSplitText({
+        text: postCarriage,
+        noHyphens: settings.has("nohyphens"),
+        noExtraSpaces: settings.has("noextraspaces"),
+      });
     },
   },
   {
