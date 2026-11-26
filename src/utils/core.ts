@@ -453,6 +453,7 @@ export type SmartBlocksContext = {
   exitBlock: "yes" | "no" | "end" | "empty" | "childless";
   exitWorkflow: boolean;
   variables: Record<string, string>;
+  viewWrites: Record<string, { viewType?: true; blockViewType?: true }>;
   cursorPosition?: { uid: string; selection: number };
   currentUid?: string;
   currentContent: string;
@@ -469,6 +470,7 @@ export const smartBlocksContext: SmartBlocksContext = {
   exitBlock: "no",
   exitWorkflow: false,
   variables: {},
+  viewWrites: {},
   currentContent: "",
   indent: new Set(),
   unindent: new Set(),
@@ -484,6 +486,7 @@ export const resetContext = (context: Partial<SmartBlocksContext> = {}) => {
   smartBlocksContext.exitBlock = context.exitBlock || "no";
   smartBlocksContext.exitWorkflow = context.exitWorkflow || false;
   smartBlocksContext.variables = context.variables || {};
+  smartBlocksContext.viewWrites = context.viewWrites || {};
   smartBlocksContext.cursorPosition = context.cursorPosition;
   smartBlocksContext.currentUid = context.currentUid;
   smartBlocksContext.focusOnBlock = context.focusOnBlock;
@@ -554,6 +557,17 @@ const RandomChildOfMentionHandler = (
     ? getFormatter(format)({ uid }).text
     : "No blocks on page!";
 };
+
+const VIEW_TYPES = ["bullet", "numbered", "document", "toggle"] as const;
+const BLOCK_VIEW_TYPES = [
+  "outline",
+  "horizontal",
+  "popout",
+  "tabs",
+  "comment",
+  "side",
+  "vertical",
+] as const;
 
 export const COMMANDS: {
   text: string;
@@ -1869,6 +1883,14 @@ export const COMMANDS: {
                 },
                 variables: smartBlocksContext.variables,
               }).then((uid) => {
+                Object.entries(smartBlocksContext.viewWrites).forEach(
+                  ([blockUid, writes]) => {
+                    Object.assign(
+                      (parentContext.viewWrites[blockUid] ||= {}),
+                      writes
+                    );
+                  }
+                );
                 resetContext(parentContext);
                 return uid ? `((${uid}))` : "";
               });
@@ -1879,6 +1901,7 @@ export const COMMANDS: {
         const parentContext = { ...smartBlocksContext };
         resetContext({
           variables: parentContext.variables,
+          viewWrites: parentContext.viewWrites,
           triggerUid: parentContext.triggerUid,
           // `currentUid` doesn't exist yet, so can't do queries based off of it
           targetUid: parentContext.targetUid,
@@ -2229,6 +2252,51 @@ export const COMMANDS: {
       const text = rest.join(",");
       const normOut = smartBlocksContext.variables[text] || text;
       return updateBlock({ uid, text: normOut }).then(() => "");
+    },
+  },
+  {
+    text: "VIEWTYPE",
+    help: "Sets the children view of an existing block.\n\n1. Block reference\n\n2. bullet, numbered, document, or toggle",
+    handler: (ref = "", type = "") => {
+      const uid = getUidFromText(ref);
+      if (!uid) return `Could not find block: ${ref}`;
+      const arg = (smartBlocksContext.variables[type] || type).trim();
+      const view = VIEW_TYPES.find((t) => t === arg.toLowerCase());
+      if (!view) return `Invalid view type: ${arg}`;
+      let viewType: Exclude<(typeof VIEW_TYPES)[number], "toggle">;
+      if (view === "toggle") {
+        let ancestorUid = uid;
+        let currentView: string | undefined;
+        while (ancestorUid && !currentView) {
+          currentView = window.roamAlphaAPI.pull("[:children/view-type]", [
+            ":block/uid",
+            ancestorUid,
+          ])?.[":children/view-type"];
+          if (!currentView) ancestorUid = getParentUidByBlockUid(ancestorUid);
+        }
+        viewType = currentView === ":numbered" ? "bullet" : "numbered";
+      } else viewType = view;
+      return updateBlock({ uid, viewType }).then(() => {
+        (smartBlocksContext.viewWrites[uid] ||= {}).viewType = true;
+        return "";
+      });
+    },
+  },
+  {
+    text: "BLOCKVIEWTYPE",
+    help: "Sets the view of an existing block.\n\n1. Block reference\n\n2. outline, horizontal, popout, tabs, comment, side, or vertical",
+    handler: (ref = "", type = "") => {
+      const uid = getUidFromText(ref);
+      if (!uid) return `Could not find block: ${ref}`;
+      const arg = (smartBlocksContext.variables[type] || type).trim();
+      const blockViewType = BLOCK_VIEW_TYPES.find(
+        (t) => t === arg.toLowerCase()
+      );
+      if (!blockViewType) return `Invalid block view type: ${arg}`;
+      return updateBlock({ uid, blockViewType }).then(() => {
+        (smartBlocksContext.viewWrites[uid] ||= {}).blockViewType = true;
+        return "";
+      });
     },
   },
   {
@@ -2820,8 +2888,12 @@ export const sbBomb = async ({
                   .findIndex(
                     (c, i) => c !== (props.introContent || "").charAt(i)
                   );
+                const writes = smartBlocksContext.viewWrites[uid];
+                const { viewType, blockViewType, ...output } = firstChild;
                 return updateBlock({
-                  ...firstChild,
+                  ...output,
+                  ...(writes?.viewType ? {} : { viewType }),
+                  ...(writes?.blockViewType ? {} : { blockViewType }),
                   uid,
                   text: `${
                     indexDiffered < 0

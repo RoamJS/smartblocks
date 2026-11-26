@@ -581,6 +581,36 @@ Special note: if you want a comma to be a part of the output, put a \ in front o
 
 - `<%UPDATEBLOCK:ref,hello world!%>`
 
+## VIEWTYPE
+
+**Purpose**: Sets an existing block's children view and outputs nothing.
+
+**Parameters**:
+
+1. Block reference or UID; can be a SmartBlock variable.
+2. `bullet`, `numbered`, `document`, or `toggle`. Toggle changes numbered to bullet and any other view to numbered.
+
+**Example**:
+
+- `<%VIEWTYPE:((uid)),numbered%>`
+- `<%VIEWTYPE:<%TRIGGERREF%>,toggle%>` toggles the trigger block's list each time the workflow runs.
+
+## BLOCKVIEWTYPE
+
+**Purpose**: Sets an existing block's view and outputs nothing.
+
+**Parameters**:
+
+1. Block reference or UID; can be a SmartBlock variable.
+2. `outline`, `horizontal`, `popout`, `tabs`, `comment`, `side`, or `vertical`.
+
+**Example**:
+
+- `<%BLOCKVIEWTYPE:ref,tabs%>`
+
+Both commands match the type case-insensitively, ignore surrounding spaces, and accept a SmartBlock variable. They return an error for an invalid reference or type. The change is written when the command runs, not at the end of the workflow.
+On the trigger block, VIEWTYPE leaves the block view and BLOCKVIEWTYPE leaves the children view following the template, as on any workflow run.
+
 ## DELETEBLOCK
 
 **Purpose**: Deletes the block or page with the referenced UID.
