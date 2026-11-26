@@ -569,11 +569,6 @@ const BLOCK_VIEW_TYPES = [
   "vertical",
 ] as const;
 
-const withVariableType =
-  (handler: (ref?: string, type?: string) => ReturnType<CommandHandler>) =>
-  (ref = "", type = "") =>
-    handler(ref, smartBlocksContext.variables[type] || type);
-
 export const COMMANDS: {
   text: string;
   help: string;
@@ -1923,7 +1918,6 @@ export const COMMANDS: {
               ...smartBlocksContext.refMapping,
             },
             variables: smartBlocksContext.variables,
-            viewWrites: smartBlocksContext.viewWrites,
             cursorPosition: smartBlocksContext.cursorPosition,
           });
           return nodes;
@@ -2263,11 +2257,12 @@ export const COMMANDS: {
   {
     text: "VIEWTYPE",
     help: "Sets the children view of an existing block.\n\n1. Block reference\n\n2. bullet, numbered, document, or toggle",
-    handler: withVariableType((ref = "", type = "") => {
+    handler: (ref = "", type = "") => {
       const uid = getUidFromText(ref);
       if (!uid) return `Could not find block: ${ref}`;
-      const view = VIEW_TYPES.find((t) => t === type.trim().toLowerCase());
-      if (!view) return `Invalid view type: ${type.trim()}`;
+      const arg = (smartBlocksContext.variables[type] || type).trim();
+      const view = VIEW_TYPES.find((t) => t === arg.toLowerCase());
+      if (!view) return `Invalid view type: ${arg}`;
       let viewType: Exclude<(typeof VIEW_TYPES)[number], "toggle">;
       if (view === "toggle") {
         let ancestorUid = uid;
@@ -2285,23 +2280,24 @@ export const COMMANDS: {
         (smartBlocksContext.viewWrites[uid] ||= {}).viewType = true;
         return "";
       });
-    }),
+    },
   },
   {
     text: "BLOCKVIEWTYPE",
     help: "Sets the view of an existing block.\n\n1. Block reference\n\n2. outline, horizontal, popout, tabs, comment, side, or vertical",
-    handler: withVariableType((ref = "", type = "") => {
+    handler: (ref = "", type = "") => {
       const uid = getUidFromText(ref);
       if (!uid) return `Could not find block: ${ref}`;
+      const arg = (smartBlocksContext.variables[type] || type).trim();
       const blockViewType = BLOCK_VIEW_TYPES.find(
-        (t) => t === type.trim().toLowerCase()
+        (t) => t === arg.toLowerCase()
       );
-      if (!blockViewType) return `Invalid block view type: ${type.trim()}`;
+      if (!blockViewType) return `Invalid block view type: ${arg}`;
       return updateBlock({ uid, blockViewType }).then(() => {
         (smartBlocksContext.viewWrites[uid] ||= {}).blockViewType = true;
         return "";
       });
-    }),
+    },
   },
   {
     text: "UPDATEPAGE",
