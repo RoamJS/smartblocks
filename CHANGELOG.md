@@ -2,8 +2,7 @@
 
 ## Unreleased
 
-- Added VIEWTYPE and BLOCKVIEWTYPE commands to change existing blocks’ views.
-
+- Added VIEWTYPE and BLOCKVIEWTYPE commands to change existing blocks' views.
 - Active Preview and Pin controls in the `jj` menu now use the flat highlight from Roam Advanced Search.
 - The open preview pane shows the workflow name and contents. The highlighted Preview control in the footer indicates that the pane is open.
 

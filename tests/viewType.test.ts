@@ -11,7 +11,7 @@ import updateBlock from "roamjs-components/writes/updateBlock";
 let core: typeof import("../src/utils/core");
 const templates: Record<
   string,
-  { text: string; viewType: "bullet" | "numbered"; blockViewType: "outline" }
+  { text: string; parentView: ":bullet" | ":numbered"; blockViewType: "outline" }
 > = {};
 let parentUid = "";
 
@@ -34,7 +34,14 @@ test.beforeAll(() => {
     "roamjs-components/queries/getOrderByBlockUid": () => 0,
     "roamjs-components/queries/getParentUidByBlockUid": () => parentUid,
     "roamjs-components/queries/getFullTreeByParentUid": (uid: string) => ({
-      children: [templates[uid]],
+      children: [
+        {
+          text: templates[uid].text,
+          // The real reader derives a node's view from its nearest parent.
+          viewType: templates[uid].parentView.slice(1),
+          blockViewType: templates[uid].blockViewType,
+        },
+      ],
     }),
     "../Prompt": {},
     "./getDailyConfig": {},
@@ -104,14 +111,14 @@ test("workflow toggles the trigger without overwriting its views", async () => {
   const siblingBefore = { ...pull(siblingUid) };
   templates.toggle = {
     text: "<%VIEWTYPE:<%TRIGGERREF%>,toggle%>",
-    viewType: "bullet",
+    parentView: ":numbered",
     blockViewType: "outline",
   };
   const run = (srcUid: string) =>
     core.sbBomb({ srcUid, target: { uid }, fromDaily: true });
   await run("toggle");
   expect(pull(uid)[":children/view-type"]).toBe(":bullet");
-  expect(pull(uid)[":block/view-type"]).toBe(":tabs");
+  expect(pull(uid)[":block/view-type"]).toBe(":outline");
   await run("toggle");
   expect(pull(uid)[":children/view-type"]).toBe(":numbered");
   templates.double = {
@@ -129,7 +136,44 @@ test("workflow toggles the trigger without overwriting its views", async () => {
   };
   await run("blockView");
   expect(pull(uid)[":block/view-type"]).toBe(":tabs");
-  templates.explicit = { ...templates.toggle, viewType: "numbered" };
-  await run("explicit");
-  expect(pull(uid)[":children/view-type"]).toBe(":numbered");
+  await updateBlock({ uid, viewType: "numbered", blockViewType: "tabs" });
+  templates.plain = {
+    text: "Plain",
+    parentView: ":bullet",
+    blockViewType: "outline",
+  };
+  await run("plain");
+  expect(pull(uid)[":children/view-type"]).toBe(":bullet");
+  expect(pull(uid)[":block/view-type"]).toBe(":outline");
+});
+
+test("inline nested workflow preserves its view write", async () => {
+  parentUid = await createPage({ title: "Nested view test" });
+  const uid = await createBlock({ parentUid, node: { text: "Trigger" } });
+  await updateBlock({ uid, viewType: "numbered" });
+  templates.outer = {
+    text: "<%SMARTBLOCK:Nested%>",
+    parentView: ":numbered",
+    blockViewType: "outline",
+  };
+  templates.nested = {
+    text: "<%VIEWTYPE:<%TRIGGERREF%>,toggle%>",
+    parentView: ":numbered",
+    blockViewType: "outline",
+  };
+  const fast = window.roamAlphaAPI.data.fast;
+  const originalQuery = fast.q;
+  fast.q = (() => [
+    [{ ":block/uid": "nested", ":block/string": "Nested #SmartBlock" }],
+  ]) as typeof fast.q;
+  try {
+    await core.sbBomb({ srcUid: "outer", target: { uid }, fromDaily: true });
+    expect(
+      window.roamAlphaAPI.pull("[:children/view-type]", [":block/uid", uid])[
+        ":children/view-type"
+      ],
+    ).toBe(":bullet");
+  } finally {
+    fast.q = originalQuery;
+  }
 });

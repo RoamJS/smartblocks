@@ -608,7 +608,7 @@ Special note: if you want a comma to be a part of the output, put a \ in front o
 
 - `<%BLOCKVIEWTYPE:ref,tabs%>`
 
-Both commands return an error for an invalid reference or type. They write immediately; a template block that sets a non-default view applies that view to the trigger block afterward.
+Both commands return an error for an invalid reference or type. They write immediately.
 
 ## DELETEBLOCK
 

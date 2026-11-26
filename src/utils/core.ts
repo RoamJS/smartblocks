@@ -453,6 +453,7 @@ export type SmartBlocksContext = {
   exitBlock: "yes" | "no" | "end" | "empty" | "childless";
   exitWorkflow: boolean;
   variables: Record<string, string>;
+  viewWrites: Record<string, { viewType?: true; blockViewType?: true }>;
   cursorPosition?: { uid: string; selection: number };
   currentUid?: string;
   currentContent: string;
@@ -469,6 +470,7 @@ export const smartBlocksContext: SmartBlocksContext = {
   exitBlock: "no",
   exitWorkflow: false,
   variables: {},
+  viewWrites: {},
   currentContent: "",
   indent: new Set(),
   unindent: new Set(),
@@ -484,6 +486,7 @@ export const resetContext = (context: Partial<SmartBlocksContext> = {}) => {
   smartBlocksContext.exitBlock = context.exitBlock || "no";
   smartBlocksContext.exitWorkflow = context.exitWorkflow || false;
   smartBlocksContext.variables = context.variables || {};
+  smartBlocksContext.viewWrites = context.viewWrites || {};
   smartBlocksContext.cursorPosition = context.cursorPosition;
   smartBlocksContext.currentUid = context.currentUid;
   smartBlocksContext.focusOnBlock = context.focusOnBlock;
@@ -554,6 +557,17 @@ const RandomChildOfMentionHandler = (
     ? getFormatter(format)({ uid }).text
     : "No blocks on page!";
 };
+
+const VIEW_TYPES = ["bullet", "numbered", "document", "toggle"] as const;
+const BLOCK_VIEW_TYPES = [
+  "outline",
+  "horizontal",
+  "popout",
+  "tabs",
+  "comment",
+  "side",
+  "vertical",
+] as const;
 
 export const COMMANDS: {
   text: string;
@@ -1879,6 +1893,7 @@ export const COMMANDS: {
         const parentContext = { ...smartBlocksContext };
         resetContext({
           variables: parentContext.variables,
+          viewWrites: parentContext.viewWrites,
           triggerUid: parentContext.triggerUid,
           // `currentUid` doesn't exist yet, so can't do queries based off of it
           targetUid: parentContext.targetUid,
@@ -1895,6 +1910,7 @@ export const COMMANDS: {
               ...smartBlocksContext.refMapping,
             },
             variables: smartBlocksContext.variables,
+            viewWrites: smartBlocksContext.viewWrites,
             cursorPosition: smartBlocksContext.cursorPosition,
           });
           return nodes;
@@ -2237,9 +2253,8 @@ export const COMMANDS: {
     handler: (ref = "", type = "") => {
       const uid = getUidFromText(ref);
       if (!uid) return `Could not find block: ${ref}`;
-      const view = type.trim().toLowerCase();
-      if (!["bullet", "numbered", "document", "toggle"].includes(view))
-        return `Invalid view type: ${type.trim()}`;
+      const view = VIEW_TYPES.find((t) => t === type.trim().toLowerCase());
+      if (!view) return `Invalid view type: ${type.trim()}`;
       const viewType =
         view === "toggle"
           ? window.roamAlphaAPI.pull("[:children/view-type]", [
@@ -2248,8 +2263,11 @@ export const COMMANDS: {
             ])?.[":children/view-type"] === ":numbered"
             ? "bullet"
             : "numbered"
-          : (view as "bullet" | "numbered" | "document");
-      return updateBlock({ uid, viewType }).then(() => "");
+          : view;
+      return updateBlock({ uid, viewType }).then(() => {
+        (smartBlocksContext.viewWrites[uid] ||= {}).viewType = true;
+        return "";
+      });
     },
   },
   {
@@ -2258,19 +2276,14 @@ export const COMMANDS: {
     handler: (ref = "", type = "") => {
       const uid = getUidFromText(ref);
       if (!uid) return `Could not find block: ${ref}`;
-      const view = type.trim().toLowerCase();
-      const types = [
-        "outline",
-        "horizontal",
-        "popout",
-        "tabs",
-        "comment",
-        "side",
-        "vertical",
-      ] as const;
-      const blockViewType = types.find((t) => t === view);
+      const blockViewType = BLOCK_VIEW_TYPES.find(
+        (t) => t === type.trim().toLowerCase()
+      );
       if (!blockViewType) return `Invalid block view type: ${type.trim()}`;
-      return updateBlock({ uid, blockViewType }).then(() => "");
+      return updateBlock({ uid, blockViewType }).then(() => {
+        (smartBlocksContext.viewWrites[uid] ||= {}).blockViewType = true;
+        return "";
+      });
     },
   },
   {
@@ -2862,14 +2875,12 @@ export const sbBomb = async ({
                   .findIndex(
                     (c, i) => c !== (props.introContent || "").charAt(i)
                   );
-                // The tree reader supplies these defaults even when the template
-                // did not set a view; preserve the existing block's views then.
+                const writes = smartBlocksContext.viewWrites[uid];
                 const { viewType, blockViewType, ...output } = firstChild;
                 return updateBlock({
                   ...output,
-                  viewType: viewType === "bullet" ? undefined : viewType,
-                  blockViewType:
-                    blockViewType === "outline" ? undefined : blockViewType,
+                  ...(writes?.viewType ? {} : { viewType }),
+                  ...(writes?.blockViewType ? {} : { blockViewType }),
                   uid,
                   text: `${
                     indexDiffered < 0
