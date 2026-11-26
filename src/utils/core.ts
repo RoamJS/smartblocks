@@ -2232,6 +2232,48 @@ export const COMMANDS: {
     },
   },
   {
+    text: "VIEWTYPE",
+    help: "Sets the children view of an existing block.\n\n1. Block reference\n\n2. bullet, numbered, document, or toggle",
+    handler: (ref = "", type = "") => {
+      const uid = getUidFromText(ref);
+      if (!uid) return `Could not find block: ${ref}`;
+      const view = type.trim().toLowerCase();
+      if (!["bullet", "numbered", "document", "toggle"].includes(view))
+        return `Invalid view type: ${type.trim()}`;
+      const viewType =
+        view === "toggle"
+          ? window.roamAlphaAPI.pull("[:children/view-type]", [
+              ":block/uid",
+              uid,
+            ])?.[":children/view-type"] === ":numbered"
+            ? "bullet"
+            : "numbered"
+          : (view as "bullet" | "numbered" | "document");
+      return updateBlock({ uid, viewType }).then(() => "");
+    },
+  },
+  {
+    text: "BLOCKVIEWTYPE",
+    help: "Sets the view of an existing block.\n\n1. Block reference\n\n2. outline, horizontal, popout, tabs, comment, side, or vertical",
+    handler: (ref = "", type = "") => {
+      const uid = getUidFromText(ref);
+      if (!uid) return `Could not find block: ${ref}`;
+      const view = type.trim().toLowerCase();
+      const types = [
+        "outline",
+        "horizontal",
+        "popout",
+        "tabs",
+        "comment",
+        "side",
+        "vertical",
+      ] as const;
+      const blockViewType = types.find((t) => t === view);
+      if (!blockViewType) return `Invalid block view type: ${type.trim()}`;
+      return updateBlock({ uid, blockViewType }).then(() => "");
+    },
+  },
+  {
     text: "UPDATEPAGE",
     help: "Updates the page title from the first argument to the second\n\n1. Block reference\n\n2. Text to update with",
     handler: (from = "", title = "") => {
@@ -2820,8 +2862,14 @@ export const sbBomb = async ({
                   .findIndex(
                     (c, i) => c !== (props.introContent || "").charAt(i)
                   );
+                // The tree reader supplies these defaults even when the template
+                // did not set a view; preserve the existing block's views then.
+                const { viewType, blockViewType, ...output } = firstChild;
                 return updateBlock({
-                  ...firstChild,
+                  ...output,
+                  viewType: viewType === "bullet" ? undefined : viewType,
+                  blockViewType:
+                    blockViewType === "outline" ? undefined : blockViewType,
                   uid,
                   text: `${
                     indexDiffered < 0
