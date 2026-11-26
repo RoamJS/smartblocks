@@ -14,6 +14,7 @@ const templates: Record<
   { text: string; parentView: ":bullet" | ":numbered"; blockViewType: "outline" }
 > = {};
 let parentUid = "";
+const parents: Record<string, string> = {};
 
 test.beforeAll(() => {
   mockRoamEnvironment();
@@ -32,12 +33,14 @@ test.beforeAll(() => {
   const localRequire = createRequire(corePath);
   const stubs: Record<string, unknown> = {
     "roamjs-components/queries/getOrderByBlockUid": () => 0,
-    "roamjs-components/queries/getParentUidByBlockUid": () => parentUid,
+    "roamjs-components/queries/getParentUidByBlockUid": (uid: string) =>
+      parents[uid] ?? (uid === parentUid ? "" : parentUid),
+    // The real reader inherits the nearest parent's view, defaulting to bullet
+    // for children and outline for the block view when no value is present.
     "roamjs-components/queries/getFullTreeByParentUid": (uid: string) => ({
       children: [
         {
           text: templates[uid].text,
-          // The real reader derives a node's view from its nearest parent.
           viewType: templates[uid].parentView.slice(1),
           blockViewType: templates[uid].blockViewType,
         },
@@ -92,6 +95,45 @@ test("sets and toggles views on existing blocks", async () => {
   );
   expect(pull()).toEqual(before);
   expect(pull()[":block/string"]).toBe("Keep me");
+});
+
+test("toggle uses the nearest ancestor's children view", async () => {
+  const pageUid = await createPage({ title: "Inherited view test" });
+  const ancestorUid = await createBlock({
+    parentUid: pageUid,
+    node: { text: "Ancestor" },
+  });
+  const middleUid = await createBlock({
+    parentUid: ancestorUid,
+    node: { text: "Middle" },
+  });
+  const uid = await createBlock({ parentUid: middleUid, node: { text: "Target" } });
+  parents[uid] = middleUid;
+  parents[middleUid] = ancestorUid;
+  await updateBlock({ uid: ancestorUid, viewType: "numbered" });
+  expect(await core.handlerByCommand.VIEWTYPE.handler(uid, "toggle")).toBe("");
+  expect(
+    window.roamAlphaAPI.pull("[:children/view-type]", [":block/uid", uid])[
+      ":children/view-type"
+    ],
+  ).toBe(":bullet");
+});
+
+test("template view does not affect a write to another block", async () => {
+  parentUid = await createPage({ title: "Other block view test" });
+  const uid = await createBlock({ parentUid, node: { text: "Trigger" } });
+  const otherUid = await createBlock({ parentUid, node: { text: "Other" } });
+  templates.other = {
+    text: `<%VIEWTYPE:${otherUid},bullet%>`,
+    parentView: ":numbered",
+    blockViewType: "outline",
+  };
+  await core.sbBomb({ srcUid: "other", target: { uid }, fromDaily: true });
+  expect(
+    window.roamAlphaAPI.pull("[:children/view-type]", [":block/uid", otherUid])[
+      ":children/view-type"
+    ],
+  ).toBe(":bullet");
 });
 
 test("workflow toggles the trigger without overwriting its views", async () => {

@@ -2263,15 +2263,19 @@ export const COMMANDS: {
       if (!uid) return `Could not find block: ${ref}`;
       const view = VIEW_TYPES.find((t) => t === type.trim().toLowerCase());
       if (!view) return `Invalid view type: ${type.trim()}`;
-      const viewType =
-        view === "toggle"
-          ? window.roamAlphaAPI.pull("[:children/view-type]", [
-              ":block/uid",
-              uid,
-            ])?.[":children/view-type"] === ":numbered"
-            ? "bullet"
-            : "numbered"
-          : view;
+      let viewType: (typeof VIEW_TYPES)[number] = view;
+      if (view === "toggle") {
+        let ancestorUid = uid;
+        let currentView: string | undefined;
+        while (ancestorUid && !currentView) {
+          currentView = window.roamAlphaAPI.pull("[:children/view-type]", [
+            ":block/uid",
+            ancestorUid,
+          ])?.[":children/view-type"];
+          if (!currentView) ancestorUid = getParentUidByBlockUid(ancestorUid);
+        }
+        viewType = currentView === ":numbered" ? "bullet" : "numbered";
+      }
       return updateBlock({ uid, viewType }).then(() => {
         (smartBlocksContext.viewWrites[uid] ||= {}).viewType = true;
         return "";
