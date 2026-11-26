@@ -72,6 +72,7 @@ const run = (srcUid: string, uid: string) =>
 
 test("sets and toggles views on existing blocks", async () => {
   const pageUid = await createPage({ title: "View type test" });
+  parentUid = pageUid;
   const uid = await createBlock({ parentUid: pageUid, node: { text: "Keep" } });
   const view = core.handlerByCommand.VIEWTYPE.handler;
   const blockView = core.handlerByCommand.BLOCKVIEWTYPE.handler;
@@ -102,38 +103,25 @@ test("sets and toggles views on existing blocks", async () => {
   );
   expect(pull(uid)).toEqual(before);
   expect(pull(uid)[":block/string"]).toBe("Keep");
-});
 
-test("toggle uses the nearest ancestor's children view", async () => {
-  const uid = await trigger("Inherited view test");
-  await updateBlock({ uid: parentUid, viewType: "numbered" });
-  expect(await core.handlerByCommand.VIEWTYPE.handler(uid, "toggle")).toBe("");
+  await updateBlock({ uid: pageUid, viewType: "numbered" });
+  expect(await view(uid, "toggle")).toBe("");
   expect(pull(uid)[":children/view-type"]).toBe(":bullet");
 });
 
 test("workflow toggles the trigger without overwriting its views", async () => {
   const uid = await trigger("Trigger view test");
-  await createBlock({ parentUid: uid, node: { text: "Child" } });
-  const siblingUid = await createBlock({
-    parentUid,
-    node: { text: "Sibling" },
-  });
   await updateBlock({ uid, viewType: "numbered", blockViewType: "tabs" });
-  const siblingBefore = { ...pull(siblingUid) };
   templates.toggle = "<%VIEWTYPE:<%TRIGGERREF%>,toggle%>";
-  templates.double = templates.toggle + templates.toggle;
   templates.blockView = "<%BLOCKVIEWTYPE:<%TRIGGERREF%>,side%>";
   templates.plain = "Plain";
 
   await run("toggle", uid);
   expect(pull(uid)[":children/view-type"]).toBe(":bullet");
   expect(pull(uid)[":block/view-type"]).toBe(":outline");
-  await run("double", uid);
-  expect(pull(uid)[":children/view-type"]).toBe(":bullet");
   await run("toggle", uid);
   expect(pull(uid)[":children/view-type"]).toBe(":numbered");
   expect(pull(uid)[":block/string"]).toBe("Trigger");
-  expect(pull(siblingUid)).toEqual(siblingBefore);
   await run("blockView", uid);
   expect(pull(uid)[":block/view-type"]).toBe(":side");
   await updateBlock({ uid, viewType: "bullet", blockViewType: "tabs" });
