@@ -1883,6 +1883,14 @@ export const COMMANDS: {
                 },
                 variables: smartBlocksContext.variables,
               }).then((uid) => {
+                Object.entries(smartBlocksContext.viewWrites).forEach(
+                  ([blockUid, writes]) => {
+                    Object.assign(
+                      (parentContext.viewWrites[blockUid] ||= {}),
+                      writes
+                    );
+                  }
+                );
                 resetContext(parentContext);
                 return uid ? `((${uid}))` : "";
               });

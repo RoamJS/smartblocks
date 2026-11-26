@@ -44,8 +44,8 @@ test.beforeAll(() => {
       ],
     }),
     "../Prompt": {},
-    "./getDailyConfig": {},
-    "./scheduleNextDailyRun": {},
+    "./getDailyConfig": () => ({}),
+    "./scheduleNextDailyRun": () => {},
     "./zodTypes": {},
   };
   const { outputText } = ts.transpileModule(readFileSync(corePath, "utf8"), {
@@ -168,6 +168,38 @@ test("inline nested workflow preserves its view write", async () => {
   ]) as typeof fast.q;
   try {
     await core.sbBomb({ srcUid: "outer", target: { uid }, fromDaily: true });
+    expect(
+      window.roamAlphaAPI.pull("[:children/view-type]", [":block/uid", uid])[
+        ":children/view-type"
+      ],
+    ).toBe(":bullet");
+  } finally {
+    fast.q = originalQuery;
+  }
+});
+
+test("remote nested workflow preserves its view write to the outer trigger", async () => {
+  parentUid = await createPage({ title: "Remote nested view test" });
+  const uid = await createBlock({ parentUid, node: { text: "Trigger" } });
+  await createPage({ title: "Dest" });
+  await updateBlock({ uid, viewType: "numbered" });
+  templates.outerRemote = {
+    text: "<%SET:t,<%TRIGGERREF%>%><%SMARTBLOCK:Nested,Dest%>",
+    parentView: ":numbered",
+    blockViewType: "outline",
+  };
+  templates.nested = {
+    text: "<%VIEWTYPE:t,toggle%>",
+    parentView: ":numbered",
+    blockViewType: "outline",
+  };
+  const fast = window.roamAlphaAPI.data.fast;
+  const originalQuery = fast.q;
+  fast.q = (() => [
+    [{ ":block/uid": "nested", ":block/string": "Nested #SmartBlock" }],
+  ]) as typeof fast.q;
+  try {
+    await core.sbBomb({ srcUid: "outerRemote", target: { uid }, fromDaily: true });
     expect(
       window.roamAlphaAPI.pull("[:children/view-type]", [":block/uid", uid])[
         ":children/view-type"
