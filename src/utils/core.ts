@@ -2261,9 +2261,10 @@ export const COMMANDS: {
     handler: (ref = "", type = "") => {
       const uid = getUidFromText(ref);
       if (!uid) return `Could not find block: ${ref}`;
-      const view = VIEW_TYPES.find((t) => t === type.trim().toLowerCase());
-      if (!view) return `Invalid view type: ${type.trim()}`;
-      let viewType: (typeof VIEW_TYPES)[number] = view;
+      const normType = smartBlocksContext.variables[type] || type;
+      const view = VIEW_TYPES.find((t) => t === normType.trim().toLowerCase());
+      if (!view) return `Invalid view type: ${normType.trim()}`;
+      let viewType: Exclude<(typeof VIEW_TYPES)[number], "toggle">;
       if (view === "toggle") {
         let ancestorUid = uid;
         let currentView: string | undefined;
@@ -2275,7 +2276,7 @@ export const COMMANDS: {
           if (!currentView) ancestorUid = getParentUidByBlockUid(ancestorUid);
         }
         viewType = currentView === ":numbered" ? "bullet" : "numbered";
-      }
+      } else viewType = view;
       return updateBlock({ uid, viewType }).then(() => {
         (smartBlocksContext.viewWrites[uid] ||= {}).viewType = true;
         return "";
@@ -2288,10 +2289,11 @@ export const COMMANDS: {
     handler: (ref = "", type = "") => {
       const uid = getUidFromText(ref);
       if (!uid) return `Could not find block: ${ref}`;
+      const normType = smartBlocksContext.variables[type] || type;
       const blockViewType = BLOCK_VIEW_TYPES.find(
-        (t) => t === type.trim().toLowerCase()
+        (t) => t === normType.trim().toLowerCase()
       );
-      if (!blockViewType) return `Invalid block view type: ${type.trim()}`;
+      if (!blockViewType) return `Invalid block view type: ${normType.trim()}`;
       return updateBlock({ uid, blockViewType }).then(() => {
         (smartBlocksContext.viewWrites[uid] ||= {}).blockViewType = true;
         return "";

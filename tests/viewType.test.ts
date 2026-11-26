@@ -119,6 +119,48 @@ test("toggle uses the nearest ancestor's children view", async () => {
   ).toBe(":bullet");
 });
 
+test("toggle changes a block's document children view to numbered", async () => {
+  const pageUid = await createPage({ title: "Document view test" });
+  const uid = await createBlock({ parentUid: pageUid, node: { text: "Target" } });
+  await updateBlock({ uid, viewType: "document" });
+  expect(await core.handlerByCommand.VIEWTYPE.handler(uid, "toggle")).toBe("");
+  expect(
+    window.roamAlphaAPI.pull("[:children/view-type]", [":block/uid", uid])[":children/view-type"],
+  ).toBe(":numbered");
+});
+
+test("workflow resolves a variable for the children view type", async () => {
+  parentUid = await createPage({ title: "Variable children view test" });
+  const uid = await createBlock({ parentUid, node: { text: "Trigger" } });
+  templates.variableView = {
+    text: "<%SET:t,numbered%><%VIEWTYPE:<%TRIGGERREF%>,t%>",
+    parentView: ":bullet",
+    blockViewType: "outline",
+  };
+  await core.sbBomb({ srcUid: "variableView", target: { uid }, fromDaily: true });
+  const block = window.roamAlphaAPI.pull("[:block/string :children/view-type]", [
+    ":block/uid", uid,
+  ]);
+  expect(block[":block/string"]).toBe("Trigger");
+  expect(block[":children/view-type"]).toBe(":numbered");
+});
+
+test("workflow resolves a variable for the block view type", async () => {
+  parentUid = await createPage({ title: "Variable block view test" });
+  const uid = await createBlock({ parentUid, node: { text: "Trigger" } });
+  templates.variableBlockView = {
+    text: "<%SET:t,tabs%><%BLOCKVIEWTYPE:<%TRIGGERREF%>,t%>",
+    parentView: ":bullet",
+    blockViewType: "outline",
+  };
+  await core.sbBomb({ srcUid: "variableBlockView", target: { uid }, fromDaily: true });
+  const block = window.roamAlphaAPI.pull("[:block/string :block/view-type]", [
+    ":block/uid", uid,
+  ]);
+  expect(block[":block/string"]).toBe("Trigger");
+  expect(block[":block/view-type"]).toBe(":tabs");
+});
+
 test("template view does not affect a write to another block", async () => {
   parentUid = await createPage({ title: "Other block view test" });
   const uid = await createBlock({ parentUid, node: { text: "Trigger" } });
