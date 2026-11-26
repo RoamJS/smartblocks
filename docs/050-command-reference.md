@@ -608,8 +608,8 @@ Special note: if you want a comma to be a part of the output, put a \ in front o
 
 - `<%BLOCKVIEWTYPE:ref,tabs%>`
 
-Both commands return an error for an invalid reference or type. They write immediately.
-On the trigger block, a view that the command did not change still follows the template, as on any workflow run.
+Both commands match the type case-insensitively, ignore surrounding spaces, and accept a SmartBlock variable. They return an error for an invalid reference or type. The change is written when the command runs, not at the end of the workflow.
+On the trigger block, the unchanged view (children view for BLOCKVIEWTYPE, block view for VIEWTYPE) still follows the template, as on any workflow run.
 
 ## DELETEBLOCK
 
