@@ -78,3 +78,26 @@ test("Dark Age buttons show the row surface and retain the active footer highlig
   await expect(buttons.nth(1)).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
   await expect(buttons.nth(2)).toHaveCSS("background-color", "rgb(62, 61, 61)");
 });
+
+test("the picker follows a starter palette and returns to its default when disabled", async ({ page }) => {
+  await page.setContent(`
+    <div class="roamjs-smartblocks-picker">
+      <div class="roamjs-smartblocks-menu-row is-active"><button class="roamjs-smartblocks-workflow"><span class="bp3-text-overflow-ellipsis">Workflow</span></button></div>
+      <div class="roamjs-smartblocks-preview"><span class="roamjs-smartblocks-preview-title">Preview</span></div>
+      <footer class="roamjs-smartblocks-footer">Run</footer>
+    </div>`);
+  await page.addStyleTag({ content: smartblocksMenuStyles });
+  const picker = page.locator(".roamjs-smartblocks-picker");
+  const theme = await page.addStyleTag({ content: `:root {
+    --theme-surface: #281e40; --theme-text: #efe9fb; --theme-control-active: #48376e;
+    --theme-bg-soft: #1e1631; --theme-text-muted: #b3a6cf;
+  }` });
+  await expect(picker).toHaveCSS("background-color", "rgb(40, 30, 64)");
+  await expect(picker.locator("button span")).toHaveCSS("color", "rgb(239, 233, 251)");
+  await expect(picker.locator(".is-active")).toHaveCSS("background-color", "rgb(72, 55, 110)");
+  await expect(picker.locator(".roamjs-smartblocks-preview-title")).toHaveCSS("color", "rgb(179, 166, 207)");
+  await expect(picker.locator("footer")).toHaveCSS("background-color", "rgb(30, 22, 49)");
+  await theme.evaluate((el) => el.remove());
+  await expect(picker).toHaveCSS("background-color", "rgb(255, 255, 255)");
+  await expect(picker.locator("footer")).toHaveCSS("background-color", "rgb(235, 236, 235)");
+});

@@ -1,11 +1,17 @@
 const smartblocksMenuStyles = `
 .roamjs-smartblocks-picker {
+  --smartblocks-palette-surface: var(--roamjs-surface, var(--theme-surface));
+  --smartblocks-palette-text: var(--roamjs-text, var(--theme-text));
+  --smartblocks-palette-selected: var(--roamjs-selected, var(--theme-control-active));
+  --smartblocks-palette-footer: var(--roamjs-footer, var(--theme-bg-soft));
+  --smartblocks-palette-muted: var(--roamjs-muted, var(--theme-text-muted));
+  --smartblocks-palette-border: var(--roamjs-border, var(--theme-border));
   --smartblocks-menu-width: min(400px, calc(100vw - 24px));
   display: grid; grid-template-columns: minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr);
   width: var(--smartblocks-menu-width);
-  background: var(--roamjs-surface, var(--bc-menu, var(--dropdown-menu-background, var(--rm-menu__background, white))));
-  color: var(--roamjs-text, var(--co-menu__item, var(--dropdown-menu-text, var(--rm-menu__color, #394b59))));
+  background: var(--smartblocks-palette-surface, var(--bc-menu, var(--dropdown-menu-background, var(--rm-menu__background, white))));
+  color: var(--smartblocks-palette-text, var(--co-menu__item, var(--dropdown-menu-text, var(--rm-menu__color, #394b59))));
   height: min(380px, calc(100vh - 24px));
   height: min(380px, calc(100dvh - 24px));
   border-radius: 8px; box-shadow: 0 8px 28px rgba(0, 0, 0, 0.18);
@@ -27,7 +33,7 @@ const smartblocksMenuStyles = `
 }
 .roamjs-smartblocks-menu-row.is-active {
   --co-button__minimal: var(--co-menu__item--active, var(--smartblocks-text, currentColor));
-  background: var(--roamjs-selected, var(--bc-menu__item--active, var(--dropdown-menu-highlight, var(--rm-search__background-color_selected-row, #d6d7df))));
+  background: var(--smartblocks-palette-selected, var(--bc-menu__item--active, var(--dropdown-menu-highlight, var(--rm-search__background-color_selected-row, #d6d7df))));
 }
 .roamjs-smartblocks-menu-row .roamjs-smartblocks-workflow {
   flex: 1; min-width: 0; min-height: 33px; border-radius: 3px;
@@ -40,12 +46,12 @@ const smartblocksMenuStyles = `
 }
 .roamjs-smartblocks-picker .roamjs-smartblocks-workflow .bp3-text-overflow-ellipsis {
   overflow-wrap: anywhere; white-space: normal;
-  color: var(--roamjs-text, var(--co-menu__item, inherit));
+  color: var(--smartblocks-palette-text, var(--co-menu__item, inherit));
 }
 @supports (color: contrast-color(white)) {
   .roamjs-smartblocks-picker .roamjs-smartblocks-workflow .bp3-text-overflow-ellipsis {
     /* Some legacy themes use the same low-contrast accent for icons and menu text. */
-    color: var(--roamjs-text, var(--co-menu__item, contrast-color(var(--rm-menu__background))));
+    color: var(--smartblocks-palette-text, var(--co-menu__item, contrast-color(var(--rm-menu__background))));
   }
 }
 /* Power Themes applies its link accent to every legacy label, even in light popovers. */
@@ -53,7 +59,7 @@ const smartblocksMenuStyles = `
 .roamjs-smartblocks-menu-row .bp3-button:hover,
 .roamjs-smartblocks-menu-row .bp3-button:active { background: rgba(0, 0, 0, 0.04); }
 .roamjs-smartblocks-menu-row .roamjs-smartblocks-pin {
-  min-width: 26px; min-height: 27px; padding: 4px; color: var(--roamjs-muted, var(--co-menu__item, #5c7080));
+  min-width: 26px; min-height: 27px; padding: 4px; color: var(--smartblocks-palette-muted, var(--co-menu__item, #5c7080));
 }
 .roamjs-smartblocks-pin .bp3-icon svg { width: 12px; height: 12px; }
 .roamjs-smartblocks-pin[aria-pressed="true"] {
@@ -66,21 +72,21 @@ const smartblocksMenuStyles = `
   .roamjs-smartblocks-pin[aria-pressed="false"]:focus-visible { opacity: 1; pointer-events: auto; }
 }
 .roamjs-smartblocks-pin-divider { border-top: 1px solid #e1e4e8; margin: 5px 7px; }
-.roamjs-smartblocks-empty { padding: 20px 12px; color: var(--roamjs-muted, var(--co-menu__item, #5c7080)); }
+.roamjs-smartblocks-empty { padding: 20px 12px; color: var(--smartblocks-palette-muted, var(--co-menu__item, #5c7080)); }
 .roamjs-smartblocks-footer {
-  --smartblocks-active-fill: var(--roamjs-selected, var(--bc-menu__item--active, var(--dropdown-menu-highlight, #d3d4d4)));
+  --smartblocks-active-fill: var(--smartblocks-palette-selected, var(--bc-menu__item--active, var(--dropdown-menu-highlight, #d3d4d4)));
   flex-shrink: 0;
   box-sizing: border-box; min-height: 30px; display: flex; align-items: center;
   justify-content: flex-end; flex-wrap: wrap; gap: 3px; padding: 3px 6px;
-  background: var(--roamjs-footer, var(--bc-popover, var(--dropdown-menu-background, var(--rm-menu__background, var(--background2, #ebeceb)))));
-  border-top: 1px solid var(--roamjs-border, var(--bc-menu__item--hover, #d3d4d4));
-  --smartblocks-footer-text: var(--roamjs-text, var(--co-menu__item, var(--dropdown-menu-text, var(--rm-menu__color, var(--foreground, #182026)))));
+  background: var(--smartblocks-palette-footer, var(--bc-popover, var(--dropdown-menu-background, var(--rm-menu__background, var(--background2, #ebeceb)))));
+  border-top: 1px solid var(--smartblocks-palette-border, var(--bc-menu__item--hover, #d3d4d4));
+  --smartblocks-footer-text: var(--smartblocks-palette-text, var(--co-menu__item, var(--dropdown-menu-text, var(--rm-menu__color, var(--foreground, #182026)))));
   color: var(--smartblocks-footer-text);
   font-size: 12px; line-height: 14px;
 }
 @supports (color: contrast-color(white)) {
   .roamjs-smartblocks-footer {
-    --smartblocks-footer-text: var(--smartblocks-text, var(--roamjs-text, var(--co-menu__item, var(--dropdown-menu-text, var(--foreground, contrast-color(var(--rm-menu__background, #ebeceb)))))));
+    --smartblocks-footer-text: var(--smartblocks-text, var(--smartblocks-palette-text, var(--co-menu__item, var(--dropdown-menu-text, var(--foreground, contrast-color(var(--rm-menu__background, #ebeceb)))))));
   }
 }
 .darkage .roamjs-smartblocks-picker .roamjs-smartblocks-footer .bp3-button:is([aria-expanded="true"], [aria-pressed="true"]) {
@@ -113,30 +119,30 @@ const smartblocksMenuStyles = `
   background: transparent;
 }
 .roamjs-smartblocks-preview {
-  color: var(--smartblocks-text, var(--roamjs-text, var(--co-menu__item, var(--dropdown-menu-text, var(--rm-menu__color, #394b59)))));
+  color: var(--smartblocks-text, var(--smartblocks-palette-text, var(--co-menu__item, var(--dropdown-menu-text, var(--rm-menu__color, #394b59)))));
   min-width: 0; min-height: 0; max-height: 380px; overflow: auto; padding: 14px 16px;
   border-left: 1px solid #dfe3e6; overflow-wrap: anywhere; white-space: pre-wrap;
 }
-.roamjs-smartblocks-preview-title { display: block; color: var(--roamjs-muted, var(--co-menu__item, var(--dropdown-menu-text, #5c7080))); margin-bottom: 14px; }
+.roamjs-smartblocks-preview-title { display: block; color: var(--smartblocks-palette-muted, var(--co-menu__item, var(--dropdown-menu-text, #5c7080))); margin-bottom: 14px; }
 .roamjs-smartblocks-preview-tree { margin: 0; padding-left: 18px; list-style: disc; }
 .roamjs-smartblocks-preview-tree li { padding: 3px 0; }
-.roamjs-smartblocks-preview-tree code { color: var(--co-menu__item, #106ba3); background: transparent; font-size: 12px; white-space: pre-wrap; }
+.roamjs-smartblocks-preview-tree code { color: var(--theme-link, var(--co-menu__item, #106ba3)); background: transparent; font-size: 12px; white-space: pre-wrap; }
 .bp3-dark .roamjs-smartblocks-picker {
-  --smartblocks-text: var(--roamjs-text, var(--cdt-primary-text, #f5f8fa));
+  --smartblocks-text: var(--smartblocks-palette-text, var(--cdt-primary-text, #f5f8fa));
   --smartblocks-pinned-icon: #8cc8ee;
   --co-button__minimal: var(--smartblocks-text);
-  --co-button__minimal-icon: var(--roamjs-muted, var(--cdt-secondary-text, #bbcbd6));
-  background: var(--roamjs-surface, var(--cdt-popover-surface, #293742));
+  --co-button__minimal-icon: var(--smartblocks-palette-muted, var(--cdt-secondary-text, #bbcbd6));
+  background: var(--smartblocks-palette-surface, var(--cdt-popover-surface, #293742));
   color: var(--smartblocks-text);
 }
 .bp3-dark .roamjs-smartblocks-picker .roamjs-smartblock-menu { color: var(--smartblocks-text); }
 .bp3-dark .roamjs-smartblocks-menu-row.is-active {
-  background: var(--roamjs-selected, var(--cdt-hover-surface, #495761));
+  background: var(--smartblocks-palette-selected, var(--cdt-hover-surface, #495761));
 }
 .bp3-dark .roamjs-smartblocks-footer {
   --smartblocks-footer-text: var(--smartblocks-text);
-  --smartblocks-active-fill: var(--roamjs-selected, rgba(255, 255, 255, 0.14));
-  background: var(--roamjs-footer, var(--cdt-elevated-surface, #202b33));
+  --smartblocks-active-fill: var(--smartblocks-palette-selected, rgba(255, 255, 255, 0.14));
+  background: var(--smartblocks-palette-footer, var(--cdt-elevated-surface, #202b33));
   color: var(--smartblocks-text);
 }
 .bp3-dark .roamjs-smartblocks-footer kbd { background: rgba(255, 255, 255, 0.12); }
