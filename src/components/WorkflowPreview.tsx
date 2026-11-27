@@ -45,7 +45,7 @@ const WorkflowPreview = ({
   }, [uid, children]);
   return (
     <aside className="roamjs-smartblocks-preview" aria-label="Workflow preview">
-      <div className="roamjs-smartblocks-preview-title">{name}</div>
+      <span className="roamjs-smartblocks-preview-title">{name}</span>
       {result.error ? (
         <div role="alert">{result.error}</div>
       ) : result.nodes.length ? (

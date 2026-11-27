@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- The `jj` workflow list, preview, and shortcut footer follow the active Live Themes or Roam Studio palette in dark and automatic appearance modes. Keyboard selection also uses Custom Dark Mode’s palette. Workflow labels stay readable with the historical Apple Dark, Dark Age and Rails Purple themes.
+
 - Active Preview and Pin controls in the `jj` menu now use the flat highlight from Roam Advanced Search.
 - The open preview pane shows the workflow name and contents. The highlighted Preview control in the footer indicates that the pane is open.
 

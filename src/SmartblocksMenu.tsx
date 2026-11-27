@@ -387,7 +387,7 @@ const SmartblocksMenu = ({
                         data-name={workflow.name}
                         onClick={(): void => onSelect(i, true)}
                         text={
-                          <>
+                          <span className="bp3-text-overflow-ellipsis">
                             {workflow.displayName
                               .split(/<b>(.*?)<\/b>/)
                               .map((part, partIndex) =>
@@ -399,7 +399,7 @@ const SmartblocksMenu = ({
                                   </React.Fragment>
                                 ),
                               )}
-                          </>
+                          </span>
                         }
                       />
                       <Button
