@@ -20,7 +20,7 @@ test("the picker follows the host menu palette when its portal has no Blueprint 
       --bc-menu: #262626;
       --co-menu__item: #e5e5e5;
       --bc-popover: #292929;
-      --bc-menu__item--hover: #404040;
+      --bc-menu__item--active: #404040;
     }`,
   });
   await expect(picker).toHaveCSS("background-color", "rgb(38, 38, 38)");
