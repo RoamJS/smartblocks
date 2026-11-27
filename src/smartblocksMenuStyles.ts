@@ -3,7 +3,9 @@ const smartblocksMenuStyles = `
   --smartblocks-menu-width: min(400px, calc(100vw - 24px));
   display: grid; grid-template-columns: minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr);
-  width: var(--smartblocks-menu-width); background: white; color: #394b59;
+  width: var(--smartblocks-menu-width);
+  background: var(--roamjs-surface, var(--bc-menu, white));
+  color: var(--roamjs-text, var(--co-menu__item, #394b59));
   height: min(380px, calc(100vh - 24px));
   height: min(380px, calc(100dvh - 24px));
   border-radius: 8px; box-shadow: 0 8px 28px rgba(0, 0, 0, 0.18);
@@ -23,7 +25,7 @@ const smartblocksMenuStyles = `
   display: flex; align-items: center; min-height: 33px;
   border-radius: 3px; padding-right: 3px;
 }
-.roamjs-smartblocks-menu-row.is-active { background: #d6d7df; }
+.roamjs-smartblocks-menu-row.is-active { background: var(--roamjs-selected, var(--bc-menu__item--hover, #d6d7df)); }
 .roamjs-smartblocks-menu-row .roamjs-smartblocks-workflow {
   flex: 1; min-width: 0; min-height: 33px; border-radius: 3px;
   padding: 6px 9px; color: inherit; text-align: left;
@@ -32,7 +34,7 @@ const smartblocksMenuStyles = `
 .roamjs-smartblocks-menu-row .bp3-button:hover,
 .roamjs-smartblocks-menu-row .bp3-button:active { background: rgba(0, 0, 0, 0.04); }
 .roamjs-smartblocks-menu-row .roamjs-smartblocks-pin {
-  min-width: 26px; min-height: 27px; padding: 4px; color: #5c7080;
+  min-width: 26px; min-height: 27px; padding: 4px; color: var(--roamjs-muted, var(--co-menu__item, #5c7080));
 }
 .roamjs-smartblocks-pin .bp3-icon svg { width: 12px; height: 12px; }
 .roamjs-smartblocks-pin[aria-pressed="true"] {
@@ -45,13 +47,15 @@ const smartblocksMenuStyles = `
   .roamjs-smartblocks-pin[aria-pressed="false"]:focus-visible { opacity: 1; pointer-events: auto; }
 }
 .roamjs-smartblocks-pin-divider { border-top: 1px solid #e1e4e8; margin: 5px 7px; }
-.roamjs-smartblocks-empty { padding: 20px 12px; color: #5c7080; }
+.roamjs-smartblocks-empty { padding: 20px 12px; color: var(--roamjs-muted, var(--co-menu__item, #5c7080)); }
 .roamjs-smartblocks-footer {
-  --smartblocks-active-fill: var(--roamjs-selected, #d3d4d4);
+  --smartblocks-active-fill: var(--roamjs-selected, var(--bc-menu__item--hover, #d3d4d4));
   flex-shrink: 0;
   box-sizing: border-box; min-height: 30px; display: flex; align-items: center;
   justify-content: flex-end; flex-wrap: wrap; gap: 3px; padding: 3px 6px;
-  background: #ebeceb; border-top: 1px solid #d3d4d4; color: #182026;
+  background: var(--roamjs-footer, var(--bc-popover, #ebeceb));
+  border-top: 1px solid var(--roamjs-border, var(--bc-menu__item--hover, #d3d4d4));
+  color: var(--roamjs-text, var(--co-menu__item, #182026));
   font-size: 12px; line-height: 14px;
 }
 .roamjs-smartblocks-footer .bp3-button {
@@ -84,10 +88,10 @@ const smartblocksMenuStyles = `
   min-width: 0; min-height: 0; max-height: 380px; overflow: auto; padding: 14px 16px;
   border-left: 1px solid #dfe3e6; overflow-wrap: anywhere; white-space: pre-wrap;
 }
-.roamjs-smartblocks-preview-title { color: #5c7080; margin-bottom: 14px; }
+.roamjs-smartblocks-preview-title { color: var(--roamjs-muted, var(--co-menu__item, #5c7080)); margin-bottom: 14px; }
 .roamjs-smartblocks-preview-tree { margin: 0; padding-left: 18px; list-style: disc; }
 .roamjs-smartblocks-preview-tree li { padding: 3px 0; }
-.roamjs-smartblocks-preview-tree code { color: #106ba3; background: transparent; font-size: 12px; white-space: pre-wrap; }
+.roamjs-smartblocks-preview-tree code { color: var(--co-menu__item, #106ba3); background: transparent; font-size: 12px; white-space: pre-wrap; }
 .bp3-dark .roamjs-smartblocks-picker {
   --smartblocks-text: var(--roamjs-text, var(--cdt-primary-text, #f5f8fa));
   --smartblocks-pinned-icon: #8cc8ee;
