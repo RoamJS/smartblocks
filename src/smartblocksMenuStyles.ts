@@ -25,7 +25,10 @@ const smartblocksMenuStyles = `
   display: flex; align-items: center; min-height: 33px;
   border-radius: 3px; padding-right: 3px;
 }
-.roamjs-smartblocks-menu-row.is-active { background: var(--roamjs-selected, var(--bc-menu__item--active, #d6d7df)); }
+.roamjs-smartblocks-menu-row.is-active {
+  --co-button__minimal: var(--co-menu__item--active, var(--smartblocks-text, currentColor));
+  background: var(--roamjs-selected, var(--bc-menu__item--active, #d6d7df));
+}
 .roamjs-smartblocks-menu-row .roamjs-smartblocks-workflow {
   flex: 1; min-width: 0; min-height: 33px; border-radius: 3px;
   padding: 6px 9px; color: inherit; text-align: left;

@@ -7,7 +7,7 @@ test("the picker follows the host menu palette when its portal has no Blueprint 
   await page.setContent(`
     <div class="bp3-portal">
       <div class="roamjs-smartblocks-picker">
-        <div class="roamjs-smartblocks-menu-row is-active"></div>
+        <div class="roamjs-smartblocks-menu-row is-active"><button>Workflow</button></div>
         <div class="roamjs-smartblocks-preview-title">Preview</div>
         <footer class="roamjs-smartblocks-footer">Run</footer>
       </div>
@@ -21,7 +21,9 @@ test("the picker follows the host menu palette when its portal has no Blueprint 
       --co-menu__item: #e5e5e5;
       --bc-popover: #292929;
       --bc-menu__item--active: #404040;
-    }`,
+      --co-menu__item--active: #ffffff;
+    }
+    button { color: var(--co-button__minimal); }`,
   });
   await expect(picker).toHaveCSS("background-color", "rgb(38, 38, 38)");
   await expect(picker).toHaveCSS("color", "rgb(229, 229, 229)");
@@ -36,6 +38,10 @@ test("the picker follows the host menu palette when its portal has no Blueprint 
   await expect(picker.locator("footer")).toHaveCSS(
     "background-color",
     "rgb(41, 41, 41)",
+  );
+  await expect(picker.locator("button")).toHaveCSS(
+    "color",
+    "rgb(255, 255, 255)",
   );
   await palette.evaluate((element) => element.remove());
   await expect(picker).toHaveCSS("background-color", "rgb(255, 255, 255)");
