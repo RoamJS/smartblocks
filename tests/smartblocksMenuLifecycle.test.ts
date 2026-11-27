@@ -193,6 +193,16 @@ const menuFixture = ({
   };
 };
 
+test("workflow labels expose the menu selectors used by legacy Roam themes", () => {
+  const menu = menuFixture({ initialText: "jj" });
+  try {
+    const option = menu.document.querySelector("button.roamjs-smartblocks-workflow");
+    expect(option?.querySelector(".bp3-text-overflow-ellipsis")?.textContent).toBe("Alpha");
+  } finally {
+    menu.cleanup();
+  }
+});
+
 test("the footer and keyboard toggle pinning without changing the editor", () => {
   const menu = menuFixture({ initialText: "jj" });
   try {
