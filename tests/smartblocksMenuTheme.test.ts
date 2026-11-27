@@ -1,6 +1,9 @@
 import { expect, test } from "@playwright/test";
 import smartblocksMenuStyles from "../src/smartblocksMenuStyles";
 
+// The bundled Chromium predates contrast-color(); exercise the current browser.
+test.use({ channel: "chrome" });
+
 test("the picker follows the host menu palette when its portal has no Blueprint dark ancestor", async ({
   page,
 }) => {
