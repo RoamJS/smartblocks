@@ -10,7 +10,12 @@ test("the picker follows the host menu palette when its portal has no Blueprint 
   await page.setContent(`
     <div class="bp3-portal">
       <div class="roamjs-smartblocks-picker">
-        <div class="roamjs-smartblocks-menu-row is-active"><button>Workflow</button></div>
+        <div class="roamjs-smartblocks-menu-row is-active">
+          <button class="roamjs-smartblocks-workflow"><span class="bp3-text-overflow-ellipsis">Selected workflow</span></button>
+        </div>
+        <div class="roamjs-smartblocks-menu-row">
+          <button class="roamjs-smartblocks-workflow"><span class="bp3-text-overflow-ellipsis">Other workflow</span></button>
+        </div>
         <div class="roamjs-smartblocks-preview-title">Preview</div>
         <footer class="roamjs-smartblocks-footer">Run</footer>
       </div>
@@ -20,31 +25,35 @@ test("the picker follows the host menu palette when its portal has no Blueprint 
   await expect(picker).toHaveCSS("background-color", "rgb(255, 255, 255)");
   const palette = await page.addStyleTag({
     content: `:root {
-      --bc-menu: #262626;
-      --co-menu__item: #e5e5e5;
+      --bc-menu: #fafafa;
+      --co-menu__item: #222222;
       --bc-popover: #292929;
       --bc-menu__item--active: #404040;
       --co-menu__item--active: #ffffff;
     }
     button { color: var(--co-button__minimal); }`,
   });
-  await expect(picker).toHaveCSS("background-color", "rgb(38, 38, 38)");
-  await expect(picker).toHaveCSS("color", "rgb(229, 229, 229)");
+  await expect(picker).toHaveCSS("background-color", "rgb(250, 250, 250)");
+  await expect(picker).toHaveCSS("color", "rgb(34, 34, 34)");
   await expect(picker.locator(".is-active")).toHaveCSS(
     "background-color",
     "rgb(64, 64, 64)",
   );
   await expect(picker.locator(".roamjs-smartblocks-preview-title")).toHaveCSS(
     "color",
-    "rgb(229, 229, 229)",
+    "rgb(34, 34, 34)",
   );
   await expect(picker.locator("footer")).toHaveCSS(
     "background-color",
     "rgb(41, 41, 41)",
   );
-  await expect(picker.locator("button")).toHaveCSS(
+  await expect(picker.getByText("Selected workflow")).toHaveCSS(
     "color",
     "rgb(255, 255, 255)",
+  );
+  await expect(picker.getByText("Other workflow")).toHaveCSS(
+    "color",
+    "rgb(34, 34, 34)",
   );
   await palette.evaluate((element) => element.remove());
   await expect(picker).toHaveCSS("background-color", "rgb(255, 255, 255)");

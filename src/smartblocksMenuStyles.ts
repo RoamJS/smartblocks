@@ -32,7 +32,8 @@ const smartblocksMenuStyles = `
   border-radius: 3px; padding-right: 3px;
 }
 .roamjs-smartblocks-menu-row.is-active {
-  --co-button__minimal: var(--co-menu__item--active, var(--smartblocks-text, currentColor));
+  --smartblocks-active-text: var(--co-menu__item--active);
+  --co-button__minimal: var(--smartblocks-active-text, var(--smartblocks-text, currentColor));
   background: var(--smartblocks-palette-selected, var(--bc-menu__item--active, var(--dropdown-menu-highlight, var(--rm-search__background-color_selected-row, #d6d7df))));
 }
 .roamjs-smartblocks-menu-row .roamjs-smartblocks-workflow {
@@ -46,16 +47,18 @@ const smartblocksMenuStyles = `
 }
 .roamjs-smartblocks-picker .roamjs-smartblocks-workflow .bp3-text-overflow-ellipsis {
   overflow-wrap: anywhere; white-space: normal;
-  color: var(--smartblocks-palette-text, var(--co-menu__item, inherit));
+  color: var(--smartblocks-active-text, var(--smartblocks-palette-text, var(--co-menu__item, inherit)));
 }
 @supports (color: contrast-color(white)) {
   .roamjs-smartblocks-picker .roamjs-smartblocks-workflow .bp3-text-overflow-ellipsis {
     /* Some legacy themes use the same low-contrast accent for icons and menu text. */
-    color: var(--smartblocks-palette-text, var(--co-menu__item, contrast-color(var(--rm-menu__background))));
+    color: var(--smartblocks-active-text, var(--smartblocks-palette-text, var(--co-menu__item, contrast-color(var(--rm-menu__background)))));
   }
 }
 /* Power Themes applies its link accent to every legacy label, even in light popovers. */
-.roam-power-theme .roamjs-smartblocks-picker .bp3-text-overflow-ellipsis { color: inherit !important; }
+.roam-power-theme .roamjs-smartblocks-picker .bp3-text-overflow-ellipsis {
+  color: var(--smartblocks-active-text, inherit) !important;
+}
 .roamjs-smartblocks-menu-row .bp3-button:hover,
 .roamjs-smartblocks-menu-row .bp3-button:active { background: rgba(0, 0, 0, 0.04); }
 .roamjs-smartblocks-menu-row .roamjs-smartblocks-pin {
